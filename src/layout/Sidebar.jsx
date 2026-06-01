@@ -27,28 +27,28 @@ const menuItems = [
     { name: "Dashboard", icon: LayoutDashboard, path: "/" },
     { name: "Leads", icon: Users, path: "/leads" },
     // { name: "Enrollment", icon: FileText, path: "/enrollment" },
-    {
-        name: "Academic",
-        icon: BookOpen,
-        children: [
-            { name: "Student Management", path: "/academic/student-manage" },
-            { name: "Teacher Management", path: "/academic/teacher-manage" },
-            { name: "Classroom/Session", path: "/academic/classroom-session" },
-            { name: "Assessment", path: "/academic/assessment" },
-        ]
-    },
-    { name: "Form", icon: Clipboard, path: "/form" },
-    { name: "Content", icon: Folder, path: "/content" },
-    { name: "Task", icon: CheckSquare, path: "/task" },
-    { name: "Invoices", icon: FileText, path: "/invoices" },
-    { name: "Products", icon: Package, path: "/products" },
-    { name: "Campaigns", icon: Layers, path: "/campaigns" },
-    { name: "Template", icon: Layers, path: "/template" },
-    { name: "WhatsApp Bots", icon: MessageCircle, path: "/whatsapp-bots" },
-    { name: "Sales Targets", icon: BarChart, path: "/sales-targets" },
-    { name: "WABA Info", icon: ImageIcon, path: "/waba-info" },
-    { name: "Integration", icon: Settings, path: "/integration" },
-    { name: "Appearance", icon: Palette, path: "/appearance" },
+    // {
+    //     name: "Academic",
+    //     icon: BookOpen,
+    //     children: [
+    //         { name: "Student Management", path: "/academic/student-manage" },
+    //         { name: "Teacher Management", path: "/academic/teacher-manage" },
+    //         { name: "Classroom/Session", path: "/academic/classroom-session" },
+    //         { name: "Assessment", path: "/academic/assessment" },
+    //     ]
+    // },
+    // { name: "Form", icon: Clipboard, path: "/form" },
+    // { name: "Content", icon: Folder, path: "/content" },
+    // { name: "Task", icon: CheckSquare, path: "/task" },
+    // { name: "Invoices", icon: FileText, path: "/invoices" },
+    // { name: "Products", icon: Package, path: "/products" },
+    // { name: "Campaigns", icon: Layers, path: "/campaigns" },
+    // { name: "Template", icon: Layers, path: "/template" },
+    // { name: "WhatsApp Bots", icon: MessageCircle, path: "/whatsapp-bots" },
+    // { name: "Sales Targets", icon: BarChart, path: "/sales-targets" },
+    // { name: "WABA Info", icon: ImageIcon, path: "/waba-info" },
+    // { name: "Integration", icon: Settings, path: "/integration" },
+    // { name: "Appearance", icon: Palette, path: "/appearance" },
 ];
 
 const Sidebar = ({ setMobileOpen, isMobileOpen }) => {
@@ -69,14 +69,14 @@ const Sidebar = ({ setMobileOpen, isMobileOpen }) => {
 
     return (
         <div
-            className="lg:w-[250px] w-[280px] h-screen text-white flex flex-col py-4 pl-2 pr-0 overflow-hidden transition-colors duration-500"
-            style={{ background: `linear-gradient(to top, var(--color-one), var(--color-two), var(--color-three))` }}
+            className="lg:w-[250px] w-[280px] h-screen text-white bg-primary  flex flex-col py-4 pl-2 pr-0 overflow-hidden transition-colors duration-500"
+            // style={{ background: `linear-gradient(to top, var(--color-one), var(--color-two), var(--color-three))` }}
         >
             {/* Logo & Close Button Header */}
             <div className="mb-4 pb-6 pr-4 flex-shrink-0 border-b border-white/10 flex items-center justify-between gap-4">
                 <div className={`transition-all duration-300 ${isMobileOpen ? "opacity-100 w-auto" : "opacity-0 w-0 lg:opacity-100 lg:w-auto overflow-hidden"}`}>
                     <Image
-                        src="/image/logo1.webp"
+                        src="/image/logo.png"
                         alt="Logo"
                         width={150}
                         height={50}

@@ -2,18 +2,18 @@
 
 /* root  */
 :root {
-  --color-primary: #682c74;
-  --color-secondary: #fcecff;
-  --color-secondary-light: #fef8ff;
+  --color-primary: #C84487;
+  --color-secondary: #fce8f4;
+  --color-secondary-light: #fef5fb;
   --color-black: #000000;
   --color-white: #ffffff;
   --color-grey: #f4f4f4;
   --color-green: #00722e;
   --color-red: #ee4544;
 
-  --color-one: #3b0a45;
-  --color-two: #682c74;
-  --color-three: #8e3a9e;
+  --color-one: #87358A;
+  --color-two: #C84487;
+  --color-three: #8038A2;
 
   --font-1: "Poppins", sans-serif;
 }
@@ -254,18 +254,6 @@ svg {
     animation: slide-out-right 0.25s cubic-bezier(0.4, 0, 1, 1) forwards;
   }
 
-  /* animation in appearance module */
-  @keyframes fadeIn {
-    from {
-      opacity: 0;
-      transform: translateY(6px);
-    }
-
-    to {
-      opacity: 1;
-      transform: translateY(0);
-    }
-  }
 }
 
 /* ─────────────────────────────────────────────
