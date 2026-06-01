@@ -1,26 +1,417 @@
 @import "tailwindcss";
 
+/* root  */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --color-primary: #682c74;
+  --color-secondary: #fcecff;
+  --color-secondary-light: #fef8ff;
+  --color-black: #000000;
+  --color-white: #ffffff;
+  --color-grey: #f4f4f4;
+  --color-green: #00722e;
+  --color-red: #ee4544;
+
+  --color-one: #3b0a45;
+  --color-two: #682c74;
+  --color-three: #8e3a9e;
+
+  --font-1: "Poppins", sans-serif;
+}
+
+/* Dark Mode Overrides */
+.dark {
+  color-scheme: dark;
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-primary: var(--color-primary);
+  --color-secondary: var(--color-secondary);
+  --color-secondary-light: var(--color-secondary-light);
+  --color-black: #000000;
+  --color-white: #ffffff;
+  --color-grey: #f4f4f4;
+  --color-green: #00722e;
+  --color-red: #ee4544;
+
+  --color-one: var(--color-one);
+  --color-two: var(--color-two);
+  --color-three: var(--color-three);
+
+  --font-1: "Poppins", sans-serif;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+button,
+svg {
+  cursor: pointer;
+}
+
+.page-header {
+  @apply text-[22px] font-semibold text-gray-900 leading-tight;
+}
+
+.label {
+  @apply text-[13px] font-medium text-gray-900;
+}
+
+.required {
+  @apply text-red-500;
+}
+
+/* body {
+  font-family: var(--font-1);
+}
+
+.custom-scrollbar::-webkit-scrollbar {
+  width: 4px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(252, 236, 255, 0.2);
+  border-radius: 10px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(252, 236, 255, 0.4);
+}
+
+.custom-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(252, 236, 255, 0.2) transparent;
+  scrollbar-gutter: stable;
+} */
+
+@layer base {
+  body {
+    font-family: var(--font-1);
+  }
+
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: var(--color-two) transparent;
+  }
+
+  /* General/Table Scrollbar (Custom Gradient) */
+  .custom-scrollbar::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-track {
+    background: #f8fafc;
+    border-radius: 10px;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    background: var(--color-primary);
+    border-radius: 10px;
+    border: 1.5px solid #f8fafc;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: var(--color-primary);
+    filter: brightness(0.9);
+  }
+
+  /* Sidebar Scrollbar (Enhanced Visibility) */
+  .sidebar-scrollbar {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255, 255, 255, 0.4) transparent;
+  }
+
+  .sidebar-scrollbar::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  .sidebar-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .sidebar-scrollbar::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.3);
+    border-radius: 20px;
+    border: 1px solid transparent;
+  }
+
+  .sidebar-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.5);
+  }
+
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+@layer utilities {
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  /* Modal */
+  @keyframes modal-content-in {
+    from {
+      opacity: 0;
+      transform: scale(0.96) translateY(-12px);
+    }
+
+    to {
+      opacity: 1;
+      transform: scale(1) translateY(0);
+    }
+  }
+
+  @keyframes modal-content-out {
+    from {
+      opacity: 1;
+      transform: scale(1) translateY(0);
+    }
+
+    to {
+      opacity: 0;
+      transform: scale(0.96) translateY(8px);
+    }
+  }
+
+  .animate-modal-in {
+    animation: modal-content-in 0.28s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  }
+
+  .animate-modal-out {
+    animation: modal-content-out 0.22s cubic-bezier(0.4, 0, 1, 1) forwards;
+  }
+
+  /* Lead List top to bottom Animations */
+  @keyframes top-in {
+    from {
+      opacity: 0;
+      transform: translateY(-15px);
+    }
+
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  @keyframes top-out {
+    from {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    to {
+      opacity: 0;
+      transform: translateY(-15px);
+    }
+  }
+
+  .animate-top-in {
+    animation: top-in 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  }
+
+  .animate-top-out {
+    animation: top-out 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  }
+
+  /* Drawer Right Animations */
+  @keyframes slide-in-right {
+    from {
+      opacity: 0.5;
+      transform: translateX(100%);
+    }
+
+    to {
+      opacity: 1;
+      transform: translateX(0);
+    }
+  }
+
+  @keyframes slide-out-right {
+    from {
+      opacity: 1;
+      transform: translateX(0);
+    }
+
+    to {
+      opacity: 0.5;
+      transform: translateX(100%);
+    }
+  }
+
+  .animate-slide-in-right {
+    animation: slide-in-right 0.3s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  }
+
+  .animate-slide-out-right {
+    animation: slide-out-right 0.25s cubic-bezier(0.4, 0, 1, 1) forwards;
+  }
+
+  /* animation in appearance module */
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+      transform: translateY(6px);
+    }
+
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+}
+
+/* ─────────────────────────────────────────────
+   FormPreviewModal.css
+   All keyframe animations and animation utility
+   classes for the form submission success overlay.
+───────────────────────────────────────────── */
+
+/* ── Keyframes ── */
+
+@keyframes dotAppear {
+  0% {
+    transform: scale(0);
+    opacity: 0;
+  }
+
+  60% {
+    transform: scale(1.15);
+    opacity: 1;
+  }
+
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes circleExpand {
+  0% {
+    width: 12px;
+    height: 12px;
+  }
+
+  100% {
+    width: 96px;
+    height: 96px;
+  }
+}
+
+@keyframes outerToRing {
+  0% {
+    background-color: #2563eb;
+    border: 0px solid #2563eb;
+  }
+
+  100% {
+    background-color: transparent;
+    border: 4px solid #2563eb;
+  }
+}
+
+@keyframes innerDotGrow {
+  0% {
+    transform: scale(0);
+    opacity: 0;
+  }
+
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes innerDotToRing {
+  0% {
+    width: 14px;
+    height: 14px;
+    background-color: white;
+    border: none;
+  }
+
+  100% {
+    width: 56px;
+    height: 56px;
+    background-color: transparent;
+    border: 4px solid white;
+  }
+}
+
+@keyframes checkAppear {
+  0% {
+    opacity: 0;
+    transform: scale(0) rotate(-20deg);
+  }
+
+  60% {
+    transform: scale(1.2) rotate(5deg);
+    opacity: 1;
+  }
+
+  100% {
+    opacity: 1;
+    transform: scale(1) rotate(0deg);
+  }
+}
+
+@keyframes textFadeUp {
+  0% {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes overlayFadeIn {
+  0% {
+    opacity: 0;
+  }
+
+  100% {
+    opacity: 1;
+  }
+}
+
+/* ── Animation Utility Classes ── */
+
+.anim-overlay {
+  animation: overlayFadeIn 0.3s ease forwards;
+}
+
+.anim-circle-expand {
+  animation:
+    circleExpand 0.5s cubic-bezier(0.34, 1.2, 0.64, 1) 0.35s both,
+    outerToRing 0.4s ease 1.4s both;
+}
+
+.anim-inner-dot-ring {
+  animation:
+    innerDotGrow 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) 0.85s both,
+    innerDotToRing 0.4s cubic-bezier(0.34, 1.2, 0.64, 1) 1.4s both;
+}
+
+.anim-check {
+  animation: checkAppear 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) 1.85s both;
+}
+
+.anim-text {
+  animation: textFadeUp 0.4s ease 0.7s both;
+}
+
+
+.btn-disabled-wrapper button:disabled {
+  cursor: not-allowed !important;
+  pointer-events: all !important;
 }
