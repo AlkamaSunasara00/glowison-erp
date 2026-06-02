@@ -56,8 +56,6 @@ const statusConfig = {
 const LeadDetail = ({ open, onClose, lead }) => {
   const data = lead || leadData;
 
-  if (!open) return null;
-
   const detailInfo = data.info || {
     "Doctor / clinic": `${data.name || data.doctor || "—"}${data.clinic ? `, ${data.clinic}` : ""}`,
     Location: data.location || "—",
@@ -79,10 +77,15 @@ const LeadDetail = ({ open, onClose, lead }) => {
   const currentStageIndex = stageIndex >= 0 ? stageIndex : data.currentStage ?? 2;
 
   return (
-    <div className="fixed inset-0 lg:top-0 top-16 z-100 flex justify-end">
+    <div
+      className={`fixed inset-x-0 bottom-0 top-16 z-[1000] flex justify-end md:inset-0 ${
+        open ? "pointer-events-auto" : "pointer-events-none"
+      }`}
+      aria-hidden={!open}
+    >
       {/* Backdrop */}
       <div
-        className={`absolute inset-0 bg-black/40 backdrop-blur-[2px] h-[calc(100dvh-4rem)] md:h-screen ${
+        className={`absolute inset-0 bg-black/40 backdrop-blur-[2px] ${
           open ? "animate-overlay-in" : "animate-overlay-out"
         }`}
         onClick={onClose}
@@ -90,7 +93,7 @@ const LeadDetail = ({ open, onClose, lead }) => {
 
       {/* Drawer Panel */}
       <div
-        className={`relative bg-white shadow-2xl w-full md:w-[90%] max-w-full h-[calc(100dvh-4rem)] md:h-screen flex flex-col ${
+        className={`relative flex h-full w-full max-w-full flex-col bg-white shadow-2xl md:w-[90%] md:h-screen ${
           open ? "animate-slide-in-right" : "animate-slide-out-right"
         }`}
         onClick={(e) => e.stopPropagation()}

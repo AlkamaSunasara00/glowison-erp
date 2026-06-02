@@ -162,6 +162,34 @@ svg {
     animation: modal-content-out 0.22s cubic-bezier(0.4, 0, 1, 1) forwards;
   }
 
+  @keyframes overlay-in {
+    from {
+      opacity: 0;
+    }
+
+    to {
+      opacity: 1;
+    }
+  }
+
+  @keyframes overlay-out {
+    from {
+      opacity: 1;
+    }
+
+    to {
+      opacity: 0;
+    }
+  }
+
+  .animate-overlay-in {
+    animation: overlay-in 0.28s ease forwards;
+  }
+
+  .animate-overlay-out {
+    animation: overlay-out 0.22s ease forwards;
+  }
+
   /* Lead List top to bottom Animations */
   @keyframes top-in {
     from {

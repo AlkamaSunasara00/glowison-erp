@@ -75,23 +75,25 @@ const AddLead = ({ open, onClose }) => {
 
   return (
     <div
-      className={`fixed inset-0 z-[1000] flex items-center justify-center p-4 transition-opacity duration-200 ${
-        open ? "pointer-events-auto opacity-100" : "pointer-events-none opacity-0"
+      className={`fixed inset-x-0 bottom-0 top-16 z-[1000] flex items-start justify-center p-4 md:inset-0 md:items-center md:p-6 ${
+        open ? "pointer-events-auto" : "pointer-events-none"
       }`}
       aria-hidden={!open}
     >
       <div
-        className="absolute inset-0 bg-black/30"
+        className={`absolute inset-0 bg-black/40 backdrop-blur-[2px] ${
+          open ? "animate-overlay-in" : "animate-overlay-out"
+        }`}
         aria-hidden="true"
         onClick={onClose}
       />
 
       <div
-        className={`relative w-full max-w-5xl rounded-md border border-gray-200 bg-white shadow-lg ${
+        className={`relative flex max-h-full w-full max-w-5xl flex-col rounded-md border border-gray-200 bg-white shadow-lg md:max-h-[90vh] ${
           open ? "animate-modal-in" : "animate-modal-out"
         }`}
       >
-        <form onSubmit={handleSubmit} className="flex max-h-[90vh] flex-col">
+        <form onSubmit={handleSubmit} className="flex max-h-full flex-col">
           <div className="flex items-center justify-between border-b border-gray-200 px-6 py-4 shrink-0">
             <div>
               <h2 className="text-base font-semibold text-gray-900">

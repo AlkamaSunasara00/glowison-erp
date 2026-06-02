@@ -413,10 +413,6 @@ const KanbanModal = ({ open, onClose, onAddLead }) => {
     };
   }, [draggingLead]);
 
-  if (!open) {
-    return null;
-  }
-
   const updateBoardAutoScroll = (clientX) => {
     const board = boardScrollRef.current;
     if (!board) {
@@ -503,7 +499,7 @@ const KanbanModal = ({ open, onClose, onAddLead }) => {
 
   return (
     <div
-      className={`fixed inset-0 z-[1000] flex justify-end ${
+      className={`fixed inset-x-0 bottom-0 top-16 z-[1000] flex justify-end md:inset-0 ${
         open ? "pointer-events-auto" : "pointer-events-none"
       }`}
       aria-hidden={!open}
@@ -517,9 +513,9 @@ const KanbanModal = ({ open, onClose, onAddLead }) => {
       />
 
       <div
-        className={`relative flex h-[100dvh] w-full max-w-full flex-col overflow-hidden bg-[#f7f6fb] shadow-2xl ${
+        className={`relative flex h-full w-full max-w-full flex-col overflow-hidden bg-[#f7f6fb] shadow-2xl md:h-screen ${
           open ? "animate-slide-in-right" : "animate-slide-out-right"
-        } sm:w-[96vw] md:w-[92vw] md:max-w-[1280px]`}
+        } sm:w-[100vw] md:w-[100vw] md:max-w-[1480px]`}
         onClick={(event) => event.stopPropagation()}
       >
         <div className="border-b border-black/5 bg-white px-4 py-3 sm:px-5 md:px-6">
