@@ -89,32 +89,34 @@ const AddLead = ({ open, onClose }) => {
       />
 
       <div
-        className={`relative flex max-h-full w-full max-w-5xl flex-col rounded-md border border-gray-200 bg-white shadow-lg md:max-h-[90vh] ${
+        className={`relative flex h-full w-full max-w-5xl flex-col overflow-hidden rounded-md border border-gray-200 bg-white shadow-lg md:h-auto md:max-h-[90vh] ${
           open ? "animate-modal-in" : "animate-modal-out"
         }`}
       >
-        <form onSubmit={handleSubmit} className="flex max-h-full flex-col">
-          <div className="flex items-center justify-between border-b border-gray-200 px-6 py-4 shrink-0">
-            <div>
-              <h2 className="text-base font-semibold text-gray-900">
-                Add new lead
-              </h2>
-              <p className="mt-1 text-sm text-gray-500">
-                Create a lead and assign the next task in one step.
-              </p>
-            </div>
+        <form onSubmit={handleSubmit} className="flex h-full min-h-0 flex-col">
+          <div className="shrink-0 border-b border-gray-200 px-6 py-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-base font-semibold text-gray-900">
+                  Add new lead
+                </h2>
+                <p className="mt-1 text-sm text-gray-500">
+                  Create a lead and assign the next task in one step.
+                </p>
+              </div>
 
-            <button type="button" onClick={onClose}>
-              <Icons
-                name="X"
-                size={18}
-                className="text-gray-500 hover:text-gray-700"
-              />
-            </button>
+              <button type="button" onClick={onClose}>
+                <Icons
+                  name="X"
+                  size={18}
+                  className="text-gray-500 hover:text-gray-700"
+                />
+              </button>
+            </div>
           </div>
 
-          <div className="flex-1 overflow-y-auto px-6 py-5 custom-scrollbar">
-            <div className="mb-5">
+          <div className="min-h-0 flex-1 overflow-y-auto px-6 py-5 custom-scrollbar">
+            <div>
               <h3 className="text-sm font-semibold text-gray-800">
                 Lead information
               </h3>
@@ -123,7 +125,7 @@ const AddLead = ({ open, onClose }) => {
               </p>
             </div>
 
-            <div className="grid grid-cols-1 gap-x-6 gap-y-5 md:grid-cols-2">
+            <div className="mt-5 grid grid-cols-1 gap-x-6 gap-y-5 md:grid-cols-2">
               <div className="space-y-1.5">
                 <label className="label">
                   Doctor / contact name <span className="required">*</span>
@@ -250,7 +252,8 @@ const AddLead = ({ open, onClose }) => {
             </div>
           </div>
 
-          <div className="flex flex-col-reverse gap-2 border-t border-gray-200 bg-gray-50 px-6 py-4 sm:flex-row sm:items-center sm:justify-end shrink-0">
+          <div className="shrink-0 border-t border-gray-200 bg-gray-50 px-6 py-4">
+            <div className="flex flex-col-reverse gap-2 sm:flex-row sm:items-center sm:justify-end">
             <Button type="button" variant="secondary" onClick={onClose}>
               Cancel
             </Button>
@@ -263,6 +266,7 @@ const AddLead = ({ open, onClose }) => {
             >
               Create lead & assign task
             </Button>
+            </div>
           </div>
         </form>
       </div>

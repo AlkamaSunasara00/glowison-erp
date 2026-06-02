@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import Button from "@/common/Button";
 import EmptyState from "@/common/EmptyState";
 import Icons from "@/common/Icons";
@@ -151,9 +151,30 @@ export const Leads = () => {
   const [employeeFilter, setEmployeeFilter] = useState("all");
   const [timeFilter, setTimeFilter] = useState("all");
   const [isAddLeadOpen, setIsAddLeadOpen] = useState(false);
+  const [isAddLeadMounted, setIsAddLeadMounted] = useState(false);
   const [selectedLead, setSelectedLead] = useState(null);
   const [isLeadDetailOpen, setIsLeadDetailOpen] = useState(false);
-    const [isKanbanOpen, setIsKanbanOpen] = useState(false);
+  const [isLeadDetailMounted, setIsLeadDetailMounted] = useState(false);
+  const [isKanbanOpen, setIsKanbanOpen] = useState(false);
+  const [isKanbanMounted, setIsKanbanMounted] = useState(false);
+  const addLeadCloseTimerRef = useRef(null);
+  const leadDetailCloseTimerRef = useRef(null);
+  const kanbanCloseTimerRef = useRef(null);
+
+  const clearCloseTimer = (timerRef) => {
+    if (timerRef.current) {
+      clearTimeout(timerRef.current);
+      timerRef.current = null;
+    }
+  };
+
+  useEffect(() => {
+    return () => {
+      clearCloseTimer(addLeadCloseTimerRef);
+      clearCloseTimer(leadDetailCloseTimerRef);
+      clearCloseTimer(kanbanCloseTimerRef);
+    };
+  }, []);
 
   const hasActiveFilters =
     activeStage !== "all" ||
@@ -195,14 +216,50 @@ export const Leads = () => {
   });
 
   const handleRowClick = (lead) => {
+    clearCloseTimer(leadDetailCloseTimerRef);
     setSelectedLead(lead);
+    setIsLeadDetailMounted(true);
     setIsLeadDetailOpen(true);
+  };
+
+  const handleOpenAddLead = () => {
+    clearCloseTimer(addLeadCloseTimerRef);
+    setIsAddLeadMounted(true);
+    setIsAddLeadOpen(true);
+  };
+
+  const handleCloseAddLead = () => {
+    setIsAddLeadOpen(false);
+    clearCloseTimer(addLeadCloseTimerRef);
+    addLeadCloseTimerRef.current = setTimeout(() => {
+      setIsAddLeadMounted(false);
+      addLeadCloseTimerRef.current = null;
+    }, 300);
   };
 
   const handleCloseLeadDetail = () => {
     setIsLeadDetailOpen(false);
-    // small delay before clearing selected so close animation can finish
-    setTimeout(() => setSelectedLead(null), 300);
+    clearCloseTimer(leadDetailCloseTimerRef);
+    leadDetailCloseTimerRef.current = setTimeout(() => {
+      setIsLeadDetailMounted(false);
+      setSelectedLead(null);
+      leadDetailCloseTimerRef.current = null;
+    }, 300);
+  };
+
+  const handleOpenKanban = () => {
+    clearCloseTimer(kanbanCloseTimerRef);
+    setIsKanbanMounted(true);
+    setIsKanbanOpen(true);
+  };
+
+  const handleCloseKanban = () => {
+    setIsKanbanOpen(false);
+    clearCloseTimer(kanbanCloseTimerRef);
+    kanbanCloseTimerRef.current = setTimeout(() => {
+      setIsKanbanMounted(false);
+      kanbanCloseTimerRef.current = null;
+    }, 300);
   };
 
   return (
@@ -221,7 +278,7 @@ export const Leads = () => {
             <Button
               variant="ghost"
               className="justify-start sm:justify-center bg-transparent"
-              onClick={() => setIsKanbanOpen(true)}
+              onClick={handleOpenKanban}
               rightIcon={(props) => <Icons name="ArrowUpRight" {...props} />}
             >
               Kanban view
@@ -236,7 +293,7 @@ export const Leads = () => {
             <Button
               variant="solid"
               className="justify-start sm:justify-center"
-              onClick={() => setIsAddLeadOpen(true)}
+              onClick={handleOpenAddLead}
               leftIcon={(props) => (
                 <Icons name="Plus" color="white" {...props} />
               )}
@@ -457,24 +514,30 @@ export const Leads = () => {
         )}
       </div>
 
-      <AddLead
-        open={isAddLeadOpen}
-        onClose={() => setIsAddLeadOpen(false)}
-      />
+      {isAddLeadMounted && (
+        <AddLead
+          open={isAddLeadOpen}
+          onClose={handleCloseAddLead}
+        />
+      )}
 
-      <LeadDetail
-        open={isLeadDetailOpen}
-        onClose={handleCloseLeadDetail}
-        lead={selectedLead}
-      />
-      <KanbanModal
-        open={isKanbanOpen}
-        onClose={() => setIsKanbanOpen(false)}
-        onAddLead={() => {
-          setIsKanbanOpen(false);
-          setIsAddLeadOpen(true);
-        }}
-      />
+      {isLeadDetailMounted && (
+        <LeadDetail
+          open={isLeadDetailOpen}
+          onClose={handleCloseLeadDetail}
+          lead={selectedLead}
+        />
+      )}
+      {isKanbanMounted && (
+        <KanbanModal
+          open={isKanbanOpen}
+          onClose={handleCloseKanban}
+          onAddLead={() => {
+            handleCloseKanban();
+            handleOpenAddLead();
+          }}
+        />
+      )}
     </div>
   );
 };
