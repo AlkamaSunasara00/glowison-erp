@@ -4,6 +4,8 @@ import EmptyState from "@/common/EmptyState";
 import Icons from "@/common/Icons";
 import Input from "@/common/Input";
 import AddLead from "@/components/leads/leadsModal/AddLead";
+import LeadDetail from "./leadsModal/LeadDetail";
+import KanbanModal from "./leadsModal/KanbanModal";
 
 const stageOptions = [
   { key: "all", label: "All", count: 47 },
@@ -149,6 +151,10 @@ export const Leads = () => {
   const [employeeFilter, setEmployeeFilter] = useState("all");
   const [timeFilter, setTimeFilter] = useState("all");
   const [isAddLeadOpen, setIsAddLeadOpen] = useState(false);
+  const [selectedLead, setSelectedLead] = useState(null);
+  const [isLeadDetailOpen, setIsLeadDetailOpen] = useState(false);
+    const [isKanbanOpen, setIsKanbanOpen] = useState(false);
+
   const hasActiveFilters =
     activeStage !== "all" ||
     sourceFilter !== "all" ||
@@ -188,9 +194,20 @@ export const Leads = () => {
     );
   });
 
+  const handleRowClick = (lead) => {
+    setSelectedLead(lead);
+    setIsLeadDetailOpen(true);
+  };
+
+  const handleCloseLeadDetail = () => {
+    setIsLeadDetailOpen(false);
+    // small delay before clearing selected so close animation can finish
+    setTimeout(() => setSelectedLead(null), 300);
+  };
+
   return (
     <div className="flex flex-col min-h-screen w-full relative gap-4">
-      <div className="flex flex-col gap-4 rounded-lg bg-secondary p-4 md:p-5">
+      <div className="flex flex-col gap-4 rounded-lg ">
         <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
           <div>
             <h1 className="page-header">Lead pipeline</h1>
@@ -204,6 +221,7 @@ export const Leads = () => {
             <Button
               variant="ghost"
               className="justify-start sm:justify-center bg-transparent"
+              onClick={() => setIsKanbanOpen(true)}
               rightIcon={(props) => <Icons name="ArrowUpRight" {...props} />}
             >
               Kanban view
@@ -228,8 +246,8 @@ export const Leads = () => {
           </div>
         </div>
 
-        <div className="overflow-x-auto no-scrollbar">
-          <div className="inline-flex min-w-max rounded-2xl border border-white/70 bg-white/80 p-1.5 shadow-sm">
+        <div className="w-full overflow-x-auto no-scrollbar">
+          <div className="flex w-full min-w-full flex-wrap rounded-2xl border border-white/70 bg-white/80 p-1.5 shadow-sm">
             {stageOptions.map((stage) => {
               const isActive = activeStage === stage.key;
 
@@ -238,13 +256,13 @@ export const Leads = () => {
                   key={stage.key}
                   type="button"
                   onClick={() => setActiveStage(stage.key)}
-                  className={`relative rounded-xl px-4 py-3 text-left transition-all duration-200 ${
+                  className={`relative min-w-fit flex-1 rounded-xl px-4 py-3 text-left transition-all duration-200 ${
                     isActive
                       ? "bg-secondary text-primary"
                       : "text-gray-600 hover:bg-white hover:text-gray-900"
                   }`}
                 >
-                  <div className="flex items-center gap-3">
+                  <div className="flex w-fit items-center gap-3">
                     <div>
                       <p
                         className={`text-xs font-medium transition-colors ${
@@ -278,7 +296,7 @@ export const Leads = () => {
               className="rounded-lg border border-white/70 bg-white p-4 shadow-sm"
             >
               <p className="text-sm font-medium text-gray-500">{metric.title}</p>
-              <p className="mt-3 text-4xl font-semibold text-gray-900">
+              <p className="mt-3 text-2xl font-semibold text-gray-900">
                 {metric.value}
               </p>
               <p className="mt-2 text-sm text-gray-500">{metric.helper}</p>
@@ -360,7 +378,8 @@ export const Leads = () => {
                   {filteredLeads.map((lead) => (
                     <tr
                       key={lead.id}
-                      className="border-b border-gray-100 hover:bg-gray-50/60 transition-colors"
+                      onClick={() => handleRowClick(lead)}
+                      className="border-b border-gray-100 hover:bg-gray-50/60 transition-colors cursor-pointer"
                     >
                       <td className="px-4 py-4">
                         <div className="text-sm font-semibold text-gray-800">
@@ -441,6 +460,20 @@ export const Leads = () => {
       <AddLead
         open={isAddLeadOpen}
         onClose={() => setIsAddLeadOpen(false)}
+      />
+
+      <LeadDetail
+        open={isLeadDetailOpen}
+        onClose={handleCloseLeadDetail}
+        lead={selectedLead}
+      />
+      <KanbanModal
+        open={isKanbanOpen}
+        onClose={() => setIsKanbanOpen(false)}
+        onAddLead={() => {
+          setIsKanbanOpen(false);
+          setIsAddLeadOpen(true);
+        }}
       />
     </div>
   );

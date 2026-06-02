@@ -2,18 +2,18 @@
 
 /* root  */
 :root {
-  --color-primary: #C84487;
-  --color-secondary: #fce8f4;
-  --color-secondary-light: #fef5fb;
+  --color-primary: #8038A1;
+  --color-secondary: #f0e6f7;
+  --color-secondary-light: #f8f2fc;
   --color-black: #000000;
   --color-white: #ffffff;
   --color-grey: #f4f4f4;
   --color-green: #00722e;
   --color-red: #ee4544;
 
-  --color-one: #87358A;
-  --color-two: #C84487;
-  --color-three: #8038A2;
+  --color-one: #4C2896;
+  --color-two: #8038A1;
+  --color-three: #4C2896;
 
   --font-1: "Poppins", sans-serif;
 }
@@ -27,17 +27,18 @@
   --color-primary: var(--color-primary);
   --color-secondary: var(--color-secondary);
   --color-secondary-light: var(--color-secondary-light);
-  --color-black: #000000;
-  --color-white: #ffffff;
-  --color-grey: #f4f4f4;
-  --color-green: #00722e;
-  --color-red: #ee4544;
+
+  --color-black: var(--color-black);
+  --color-white: var(--color-white);
+  --color-grey: var(--color-grey);
+  --color-green: var(--color-green);
+  --color-red: var(--color-red);
 
   --color-one: var(--color-one);
   --color-two: var(--color-two);
   --color-three: var(--color-three);
 
-  --font-1: "Poppins", sans-serif;
+  --font-1: var(--font-1);
 }
 
 button,
@@ -57,33 +58,6 @@ svg {
   @apply text-red-500;
 }
 
-/* body {
-  font-family: var(--font-1);
-}
-
-.custom-scrollbar::-webkit-scrollbar {
-  width: 4px;
-}
-
-.custom-scrollbar::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-.custom-scrollbar::-webkit-scrollbar-thumb {
-  background: rgba(252, 236, 255, 0.2);
-  border-radius: 10px;
-}
-
-.custom-scrollbar::-webkit-scrollbar-thumb:hover {
-  background: rgba(252, 236, 255, 0.4);
-}
-
-.custom-scrollbar {
-  scrollbar-width: thin;
-  scrollbar-color: rgba(252, 236, 255, 0.2) transparent;
-  scrollbar-gutter: stable;
-} */
-
 @layer base {
   body {
     font-family: var(--font-1);
@@ -94,7 +68,7 @@ svg {
     scrollbar-color: var(--color-two) transparent;
   }
 
-  /* General/Table Scrollbar (Custom Gradient) */
+  /* General/Table Scrollbar */
   .custom-scrollbar::-webkit-scrollbar {
     width: 6px;
     height: 6px;
@@ -116,7 +90,7 @@ svg {
     filter: brightness(0.9);
   }
 
-  /* Sidebar Scrollbar (Enhanced Visibility) */
+  /* Sidebar Scrollbar */
   .sidebar-scrollbar {
     scrollbar-width: thin;
     scrollbar-color: rgba(255, 255, 255, 0.4) transparent;
@@ -253,126 +227,53 @@ svg {
   .animate-slide-out-right {
     animation: slide-out-right 0.25s cubic-bezier(0.4, 0, 1, 1) forwards;
   }
-
 }
 
 /* ─────────────────────────────────────────────
    FormPreviewModal.css
-   All keyframe animations and animation utility
-   classes for the form submission success overlay.
 ───────────────────────────────────────────── */
 
-/* ── Keyframes ── */
-
 @keyframes dotAppear {
-  0% {
-    transform: scale(0);
-    opacity: 0;
-  }
-
-  60% {
-    transform: scale(1.15);
-    opacity: 1;
-  }
-
-  100% {
-    transform: scale(1);
-    opacity: 1;
-  }
+  0% { transform: scale(0); opacity: 0; }
+  60% { transform: scale(1.15); opacity: 1; }
+  100% { transform: scale(1); opacity: 1; }
 }
 
 @keyframes circleExpand {
-  0% {
-    width: 12px;
-    height: 12px;
-  }
-
-  100% {
-    width: 96px;
-    height: 96px;
-  }
+  0% { width: 12px; height: 12px; }
+  100% { width: 96px; height: 96px; }
 }
 
 @keyframes outerToRing {
-  0% {
-    background-color: #2563eb;
-    border: 0px solid #2563eb;
-  }
-
-  100% {
-    background-color: transparent;
-    border: 4px solid #2563eb;
-  }
+  0% { background-color: #4C2896; border: 0px solid #4C2896; }
+  100% { background-color: transparent; border: 4px solid #4C2896; }
 }
 
 @keyframes innerDotGrow {
-  0% {
-    transform: scale(0);
-    opacity: 0;
-  }
-
-  100% {
-    transform: scale(1);
-    opacity: 1;
-  }
+  0% { transform: scale(0); opacity: 0; }
+  100% { transform: scale(1); opacity: 1; }
 }
 
 @keyframes innerDotToRing {
-  0% {
-    width: 14px;
-    height: 14px;
-    background-color: white;
-    border: none;
-  }
-
-  100% {
-    width: 56px;
-    height: 56px;
-    background-color: transparent;
-    border: 4px solid white;
-  }
+  0% { width: 14px; height: 14px; background-color: white; border: none; }
+  100% { width: 56px; height: 56px; background-color: transparent; border: 4px solid white; }
 }
 
 @keyframes checkAppear {
-  0% {
-    opacity: 0;
-    transform: scale(0) rotate(-20deg);
-  }
-
-  60% {
-    transform: scale(1.2) rotate(5deg);
-    opacity: 1;
-  }
-
-  100% {
-    opacity: 1;
-    transform: scale(1) rotate(0deg);
-  }
+  0% { opacity: 0; transform: scale(0) rotate(-20deg); }
+  60% { transform: scale(1.2) rotate(5deg); opacity: 1; }
+  100% { opacity: 1; transform: scale(1) rotate(0deg); }
 }
 
 @keyframes textFadeUp {
-  0% {
-    opacity: 0;
-    transform: translateY(8px);
-  }
-
-  100% {
-    opacity: 1;
-    transform: translateY(0);
-  }
+  0% { opacity: 0; transform: translateY(8px); }
+  100% { opacity: 1; transform: translateY(0); }
 }
 
 @keyframes overlayFadeIn {
-  0% {
-    opacity: 0;
-  }
-
-  100% {
-    opacity: 1;
-  }
+  0% { opacity: 0; }
+  100% { opacity: 1; }
 }
-
-/* ── Animation Utility Classes ── */
 
 .anim-overlay {
   animation: overlayFadeIn 0.3s ease forwards;
@@ -397,7 +298,6 @@ svg {
 .anim-text {
   animation: textFadeUp 0.4s ease 0.7s both;
 }
-
 
 .btn-disabled-wrapper button:disabled {
   cursor: not-allowed !important;

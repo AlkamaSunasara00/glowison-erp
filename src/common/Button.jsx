@@ -15,7 +15,6 @@ const Button = ({
   className = "",
   disabled = false,
 }) => {
-  // Determine which icons to use
   const LIcon = LeftIcon || (iconPosition === "left" ? Icon : null);
   const RIcon = RightIcon || (iconPosition === "right" ? Icon : null);
 
@@ -30,22 +29,37 @@ const Button = ({
     square: "h-10 w-10 p-0",
   };
 
+  /*
+   * Color logic:
+   *  - Solid / primary CTA actions  → #4C2896 (deep indigo-blue)
+   *  - Background / secondary tints → #8038A1 (violet-purple)
+   */
   const variants = {
-    primary: "text-primary bg-white hover:bg-primary hover:text-white",
-    secondary:
-      "border-gray-300 text-gray-600 bg-white hover:bg-gray-100 border border-gray-300",
-    third:
-      "border-primary text-primary bg-secondary hover:bg-primary/20 hover:text-primary border border-primary/20",
+    // Solid CTA — deep indigo #4C2896
+    primary:
+      "text-[#4C2896] bg-white border border-[#4C2896]/20 hover:bg-[#4C2896] hover:text-white hover:border-[#4C2896]",
     solid:
-      "bg-primary text-white border-primary hover:bg-primary/90 hover:text-white",
-    outline: "border border-gray-300 text-gray-700 bg-white hover:bg-gray-100",
-    success:
-      "bg-green-50 text-green-700 border-green-200 hover:bg-green-600 hover:text-white",
-    danger:
-      "bg-red-200 text-red-700 border-red-200 hover:bg-red-600 hover:text-white",
-    info: "bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-600 hover:text-white",
+      "bg-[#4C2896] text-white border border-[#4C2896] hover:bg-[#3a1e70] hover:border-[#3a1e70]",
+
+    // Tinted / background — violet #8038A1
+    third:
+      "bg-[#f0e6f7] text-[#8038A1] border border-[#8038A1]/20 hover:bg-[#8038A1]/20 hover:text-[#8038A1]",
     ghost:
-      "border-transparent text-gray-500 hover:text-primary hover:bg-primary/5",
+      "border-transparent text-[#8038A1] hover:text-[#8038A1] hover:bg-[#f0e6f7]",
+
+    // Neutral
+    secondary:
+      "border border-gray-300 text-gray-600 bg-white hover:bg-gray-100",
+    outline:
+      "border border-gray-300 text-gray-700 bg-white hover:bg-gray-100",
+
+    // Semantic
+    success:
+      "bg-green-50 text-green-700 border border-green-200 hover:bg-green-600 hover:text-white",
+    danger:
+      "bg-red-50 text-red-700 border border-red-200 hover:bg-red-600 hover:text-white",
+    info:
+      "bg-[#f0e6f7] text-[#4C2896] border border-[#4C2896]/20 hover:bg-[#4C2896] hover:text-white",
   };
 
   const iconSize =
@@ -61,7 +75,7 @@ const Button = ({
         variants[variant] || variants.primary,
         sizes[size] || sizes.md,
         disabled && "opacity-50 cursor-not-allowed",
-        className,
+        className
       )}
     >
       {LIcon && <LIcon size={iconSize} className="flex-shrink-0" />}

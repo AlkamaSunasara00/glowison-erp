@@ -23,10 +23,18 @@ const Input = ({
     xl: "h-12 text-base px-4",
   };
 
+  /*
+   * Focus ring → violet #8038A1 (bg tint)
+   * Error ring → red (unchanged)
+   */
   const baseInputClasses = `
-  w-full border ${error ? "border-red-500 ring-1 ring-red-500/20" : "border-gray-100"} 
-  text-gray-800 outline-none 
-  ${error ? "focus:border-red-500 focus:ring-2 focus:ring-red-500/20" : "focus:border-primary focus:ring-2 focus:ring-primary/10"} 
+  w-full border ${error ? "border-red-500 ring-1 ring-red-500/20" : "border-gray-100"}
+  text-gray-800 outline-none
+  ${
+    error
+      ? "focus:border-red-500 focus:ring-2 focus:ring-red-500/20"
+      : "focus:border-[#8038A1] focus:ring-2 focus:ring-[#8038A1]/10"
+  }
   bg-white rounded-sm shadow-sm truncate transition-all
   ${sizes[size]}
   ${startIcon ? "pl-10" : ""}
@@ -42,15 +50,19 @@ const Input = ({
   };
 
   const textareaClasses = `
-  w-full border ${error ? "border-red-500 ring-1 ring-red-500/20" : "border-gray-100"} 
-  text-gray-800 outline-none 
-  ${error ? "focus:border-red-500 focus:ring-2 focus:ring-red-500/20" : "focus:border-primary focus:ring-2 focus:ring-primary/10"} 
+  w-full border ${error ? "border-red-500 ring-1 ring-red-500/20" : "border-gray-100"}
+  text-gray-800 outline-none
+  ${
+    error
+      ? "focus:border-red-500 focus:ring-2 focus:ring-red-500/20"
+      : "focus:border-[#8038A1] focus:ring-2 focus:ring-[#8038A1]/10"
+  }
   bg-white rounded-sm shadow-sm resize-none transition-all
   ${textareaSizes[size]}
   ${className}
 `;
 
-  // ──----------- SELECT --------------------──
+  // ── SELECT ──
   if (type === "select") {
     return (
       <div className="flex flex-col gap-1 w-full">
@@ -70,7 +82,6 @@ const Input = ({
               </option>
             ))}
           </select>
-          {/* Add Icon on the start */}
           {startIcon && (
             <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none">
               {startIcon}
@@ -90,7 +101,7 @@ const Input = ({
     );
   }
 
-  // -------------------- DATE --------------------
+  // ── DATE ──
   if (type === "date") {
     return (
       <div className="flex flex-col gap-1 w-full">
@@ -113,7 +124,6 @@ const Input = ({
     );
   }
 
-  // -------------------- TEXTAREA --------------------
   // ── TEXTAREA ──
   if (type === "textarea") {
     return (
@@ -140,14 +150,13 @@ const Input = ({
 
   const handleKeyDown = (e) => {
     if (type === "number") {
-      // block minus (-), plus (+), e (scientific notation)
       if (["e", "E", "+", "-"].includes(e.key)) {
         e.preventDefault();
       }
     }
   };
 
-  // -------------------- DEFAULT INPUT --------------------
+  // ── DEFAULT INPUT ──
   return (
     <div className="flex flex-col gap-1 w-full">
       <div className="relative w-full">
@@ -164,13 +173,11 @@ const Input = ({
           className={baseInputClasses}
           {...props}
         />
-
         {startIcon && (
           <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none">
             {startIcon}
           </div>
         )}
-
         {endIcon && (
           <div className="absolute inset-y-0 right-3 flex items-center">
             {endIcon}

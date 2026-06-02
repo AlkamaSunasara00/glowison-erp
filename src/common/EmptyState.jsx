@@ -12,10 +12,11 @@ const EmptyState = ({
 }) => {
   return (
     <div className="flex flex-col items-center justify-center h-full mt-[15%] text-center p-4">
-      <div className="w-16 h-16 rounded-full bg-secondary flex items-center justify-center mb-4">
+      {/* Icon bubble — violet bg #8038A1 tint */}
+      <div className="w-16 h-16 rounded-full bg-[#f0e6f7] flex items-center justify-center mb-4">
         <Icons
           name={search ? "SearchX" : entityIcon}
-          className="text-primary"
+          color="#8038A1"
           size={28}
         />
       </div>
@@ -33,6 +34,7 @@ const EmptyState = ({
         </Button>
       ) : (
         onAdd && (
+          /* CTA button — deep indigo #4C2896 via solid variant */
           <Button variant="solid" onClick={onAdd}>
             {addLabel || `Add ${entityName}`}
           </Button>
