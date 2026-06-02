@@ -304,7 +304,7 @@ export const Leads = () => {
         </div>
 
         <div className="w-full overflow-x-auto no-scrollbar">
-          <div className="flex w-full min-w-full flex-wrap rounded-2xl border border-white/70 bg-white/80 p-1.5 shadow-sm">
+          <div className="flex w-full min-w-full flex-wrap rounded-xl border border-white/70 bg-white/80 p-1.5 shadow-sm">
             {stageOptions.map((stage) => {
               const isActive = activeStage === stage.key;
 
@@ -331,7 +331,7 @@ export const Leads = () => {
                     </div>
 
                     <span
-                      className={`inline-flex min-w-8 items-center justify-center rounded-full px-2.5 py-1 text-xs font-semibold transition-colors ${
+                      className={`inline-flex min-w-8 items-center justify-center rounded-xl px-2.5 py-1 text-xs font-semibold transition-colors ${
                         isActive
                           ? "bg-primary text-white"
                           : "bg-gray-100 text-gray-600"
@@ -346,17 +346,17 @@ export const Leads = () => {
           </div>
         </div>
 
-        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+        <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-4">
           {metricCards.map((metric) => (
             <div
               key={metric.title}
-              className="rounded-lg border border-white/70 bg-white p-4 shadow-sm"
+              className="rounded-xl border border-white/70 bg-white p-4 shadow-sm"
             >
               <p className="text-sm font-medium text-gray-500">{metric.title}</p>
-              <p className="mt-3 text-2xl font-semibold text-gray-900">
+              <p className="mt-1 text-xl font-bold text-gray-900">
                 {metric.value}
               </p>
-              <p className="mt-2 text-sm text-gray-500">{metric.helper}</p>
+              <p className="mt-1 text-sm text-gray-500">{metric.helper}</p>
             </div>
           ))}
         </div>
@@ -439,10 +439,10 @@ export const Leads = () => {
                       className="border-b border-gray-100 hover:bg-gray-50/60 transition-colors cursor-pointer"
                     >
                       <td className="px-4 py-4">
-                        <div className="text-sm font-semibold text-gray-800">
+                        <div className="text-[13px] font-semibold text-gray-800">
                           {lead.doctor}
                         </div>
-                        <p className="mt-1 text-sm text-gray-500">
+                        <p className="mt-1 text-[13px] text-gray-500">
                           {lead.clinic}
                         </p>
                       </td>
@@ -453,7 +453,7 @@ export const Leads = () => {
 
                       <td className="px-4 py-4">
                         <span
-                          className={`inline-flex rounded-full px-3 py-1 text-xs font-medium ${lead.stageClass}`}
+                          className={`inline-flex rounded-full px-2 py-1 text-[13px] font-medium ${lead.stageClass}`}
                         >
                           {lead.stageLabel}
                         </span>
@@ -461,10 +461,10 @@ export const Leads = () => {
 
                       <td className="px-4 py-4">
                         <div className="flex items-center gap-2.5">
-                          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 text-xs font-semibold text-primary">
+                          <div className="flex h-7 w-7 items-center justify-center rounded-full bg-primary/10 text-xs font-semibold text-primary">
                             {lead.initials}
                           </div>
-                          <span className="text-sm font-medium text-gray-800">
+                          <span className="text-[13px] font-medium text-gray-800">
                             {lead.assignedTo}
                           </span>
                         </div>

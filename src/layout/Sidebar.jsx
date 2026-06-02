@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import {
     LayoutDashboard,
     Users,
+    ListChecks,
     Folder,
     CheckSquare,
     FileText,
@@ -27,16 +28,16 @@ const menuItems = [
     { name: "Dashboard", icon: LayoutDashboard, path: "/" },
     { name: "Leads", icon: Users, path: "/leads" },
     // { name: "Enrollment", icon: FileText, path: "/enrollment" },
-    // {
-    //     name: "Academic",
-    //     icon: BookOpen,
-    //     children: [
-    //         { name: "Student Management", path: "/academic/student-manage" },
-    //         { name: "Teacher Management", path: "/academic/teacher-manage" },
-    //         { name: "Classroom/Session", path: "/academic/classroom-session" },
-    //         { name: "Assessment", path: "/academic/assessment" },
-    //     ]
-    // },
+    {
+        name: "Task",
+        icon: ListChecks,
+        children: [
+            { name: "All Task", path: "/task/all-task" },
+            { name: "GPS Tracker", path: "/task/gps-tracker" },
+            { name: "Attendance", path: "/task/attendance" },
+            { name: "Travel Claims", path: "/task/travel-claims" },
+        ]
+    },
     // { name: "Form", icon: Clipboard, path: "/form" },
     // { name: "Content", icon: Folder, path: "/content" },
     // { name: "Task", icon: CheckSquare, path: "/task" },
