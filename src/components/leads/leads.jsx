@@ -363,7 +363,7 @@ export const Leads = () => {
       </div>
 
       <div className="flex-1 bg-white rounded-lg shadow-sm border border-gray-100 flex flex-col overflow-hidden">
-        <div className="flex flex-col gap-3 border-b border-gray-100 px-4 py-4 md:px-5 lg:flex-row lg:items-center lg:justify-between">
+        <div className="flex flex-col gap-3 border-b border-gray-100 px-4 py-4 md:px-4 lg:flex-row lg:items-center lg:justify-between">
           <div className="w-full lg:max-w-sm">
             <Input
               id="search-leads"

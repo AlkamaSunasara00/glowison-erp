@@ -7,64 +7,57 @@ const COLUMNS = [
   {
     key: "new",
     label: "New",
-    color: "bg-blue-500",
-    light: "bg-blue-50",
-    text: "text-blue-700",
-    border: "border-blue-200",
+    color: "bg-sky-400",
+    light: "bg-sky-50/100",
+    border: "border-sky-100",
     pipeline: "Rs. 0 pipeline",
   },
   {
     key: "contacted",
     label: "Contacted",
-    color: "bg-teal-500",
-    light: "bg-teal-50",
-    text: "text-teal-700",
-    border: "border-teal-200",
+    color: "bg-indigo-400",
+    light: "bg-indigo-50/100",
+    border: "border-indigo-100",
     pipeline: "Rs. 3.2L pipeline",
   },
   {
     key: "demo",
     label: "Demo",
-    color: "bg-amber-500",
-    light: "bg-amber-50",
-    text: "text-amber-700",
-    border: "border-amber-200",
+    color: "bg-amber-400",
+    light: "bg-amber-50/100",
+    border: "border-amber-100",
     pipeline: "Rs. 6.1L pipeline",
   },
   {
     key: "negotiation",
     label: "Negotiation",
-    color: "bg-violet-500",
-    light: "bg-violet-50",
-    text: "text-violet-700",
-    border: "border-violet-200",
+    color: "bg-violet-400",
+    light: "bg-violet-50/100",
+    border: "border-violet-100",
     pipeline: "Rs. 5.8L pipeline",
   },
   {
     key: "won",
     label: "Won",
-    color: "bg-emerald-500",
-    light: "bg-emerald-50",
-    text: "text-emerald-700",
-    border: "border-emerald-200",
+    color: "bg-emerald-400",
+    light: "bg-emerald-50/100",
+    border: "border-emerald-100",
     pipeline: "Rs. 8.4L won",
   },
   {
     key: "lost",
     label: "Lost",
-    color: "bg-red-500",
-    light: "bg-red-50",
-    text: "text-red-600",
-    border: "border-red-200",
+    color: "bg-rose-400",
+    light: "bg-rose-50/100",
+    border: "border-rose-100",
     pipeline: "Rs. 1.1L lost",
   },
   {
     key: "not-interested",
     label: "Not interested",
-    color: "bg-gray-400",
-    light: "bg-gray-50",
-    text: "text-gray-600",
-    border: "border-gray-200",
+    color: "bg-slate-400",
+    light: "bg-slate-50/100",
+    border: "border-slate-100",
     pipeline: "",
   },
 ];
@@ -83,11 +76,20 @@ const ASSIGNEE_LABELS = {
   NJ: "Neel Joshi",
 };
 
-const avatarColors = {
-  AP: "bg-violet-100 text-violet-700",
-  SM: "bg-pink-100 text-pink-700",
-  RS: "bg-sky-100 text-sky-700",
-  NJ: "bg-amber-100 text-amber-700",
+// Simplified tag color helper to keep styles premium and cohesive
+const getTagStyles = (tag) => {
+  if (!tag) return "";
+  const t = tag.toLowerCase();
+  if (t.includes("overdue") || t.includes("urgent") || t.includes("budget") || t.includes("lost")) {
+    return "bg-rose-50 text-rose-700 border border-rose-100/80";
+  }
+  if (t.includes("won") || t.includes("success") || t.includes("quotation")) {
+    return "bg-emerald-50 text-emerald-700 border border-emerald-100/80";
+  }
+  if (t.includes("pending") || t.includes("meeting") || t.includes("demo")) {
+    return "bg-amber-50 text-amber-700 border border-amber-100/80";
+  }
+  return "bg-slate-100 text-slate-700 border border-slate-200/60";
 };
 
 const INITIAL_LEADS = [
@@ -237,55 +239,81 @@ const INITIAL_LEADS = [
   },
 ];
 
-const LeadCard = ({ lead, column, onDragStart, onDragEnd, isDragging }) => (
+const LeadCard = ({ lead, column, onDragStart, onDragEnd, isDragging, onMoveLead }) => (
   <article
     draggable
     onDragStart={(event) => onDragStart(event, lead)}
     onDragEnd={onDragEnd}
-    className={`group relative rounded-xl bg-white p-3 shadow-[0_8px_18px_-16px_rgba(15,23,42,0.22)] transition-all duration-200 select-none ${
+    className={`group relative rounded-sm border border-slate-200/60 bg-white p-3 shadow-[0_2px_8px_rgba(15,23,42,0.03)] transition-all duration-200 select-none ${
       isDragging
         ? "scale-[0.98] cursor-grabbing opacity-40"
-        : "cursor-grab hover:-translate-y-0.5 hover:shadow-[0_12px_24px_-18px_rgba(15,23,42,0.28)]"
+        : "cursor-grab hover:-translate-y-0.5 hover:shadow-[0_8px_16px_rgba(15,23,42,0.06)] hover:border-slate-300/80"
     }`}
   >
-    <div className={`absolute inset-x-0 top-0 h-1 rounded-t-xl ${column.color}`} />
+    {/* Thin status strip on top */}
+    <div className={`absolute inset-x-0 top-0 h-[2.5px] rounded-t-xl ${column.color}`} />
 
-    <div className="pt-1.5">
-      {(lead.tag || lead.tag2) && (
-        <div className="mb-1.5 flex flex-wrap gap-1">
-          {lead.tag && (
-            <span
-              className={`inline-flex rounded-full px-2 py-0.5 text-[10px] font-semibold ${lead.tagCls}`}
-            >
-              {lead.tag}
-            </span>
+    <div className="pt-1">
+      <div className="flex items-start justify-between gap-2">
+        <div className="min-w-0 flex-1">
+          {(lead.tag || lead.tag2) && (
+            <div className="mb-1.5 flex flex-wrap gap-1">
+              {lead.tag && (
+                <span
+                  className={`inline-flex rounded-full px-2 py-0.5 text-[9px] font-semibold border ${getTagStyles(lead.tag)}`}
+                >
+                  {lead.tag}
+                </span>
+              )}
+              {lead.tag2 && (
+                <span className={`inline-flex rounded-full px-2 py-0.5 text-[9px] font-semibold border ${getTagStyles(lead.tag2)}`}>
+                  {lead.tag2}
+                </span>
+              )}
+            </div>
           )}
-          {lead.tag2 && (
-            <span className="inline-flex rounded-full bg-teal-50 px-2 py-0.5 text-[10px] font-semibold text-teal-700">
-              {lead.tag2}
-            </span>
-          )}
+          <p className="truncate text-sm font-semibold text-slate-800">
+            {lead.doctor}
+          </p>
         </div>
-      )}
 
-      <p className="truncate text-sm font-semibold text-gray-900">
-        {lead.doctor}
-      </p>
-      <p className="mt-1 truncate text-xs text-gray-500">{lead.clinic}</p>
+        {/* Quick move stage dropdown - Highly accessible and mobile friendly */}
+        <div className="relative inline-flex items-center shrink-0 lg:hidden">
+          <select
+            value={lead.col}
+            onChange={(e) => onMoveLead(lead.id, e.target.value)}
+            className="appearance-none cursor-pointer rounded-md border border-slate-200 bg-slate-50/50 pl-2 pr-5 py-0.5 text-[10px] font-medium text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-700 focus:border-slate-400 focus:outline-none"
+          >
+            {COLUMNS.map((c) => (
+              <option key={c.key} value={c.key}>
+                {c.label}
+              </option>
+            ))}
+          </select>
+          <Icons
+            name="ChevronDown"
+            size={10}
+            className="absolute right-1.5 pointer-events-none text-slate-400"
+          />
+        </div>
+      </div>
 
-      <div className="mt-3 flex items-center gap-2 text-xs text-gray-500">
+      <p className="mt-1 truncate text-xs text-slate-500">{lead.clinic}</p>
+
+      <div className="mt-3 flex items-center gap-2 text-xs text-slate-500 border-t border-slate-100/85 pt-2.5">
         <div
-          className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[10px] font-bold ${avatarColors[lead.initials] || "bg-gray-100 text-gray-600"}`}
+          className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-slate-100 border border-slate-200/50 text-[9px] font-semibold text-slate-600"
+          title={ASSIGNEE_LABELS[lead.initials] || lead.initials}
         >
           {lead.initials}
         </div>
-        <span className="min-w-0 truncate text-xs font-medium text-gray-700">
+        <span className="min-w-0 truncate text-[11px] font-medium text-slate-500">
           {ASSIGNEE_LABELS[lead.initials] || lead.initials}
         </span>
-        <span className="ml-auto text-sm font-semibold text-gray-800">
+        <span className="ml-auto text-xs font-bold text-slate-800">
           {lead.cost}
         </span>
-        <span className="rounded-full bg-gray-100 px-2.5 py-1 text-[11px] font-medium text-gray-500">
+        <span className="rounded-full bg-slate-50 border border-slate-150 px-2 py-0.5 text-[10px] font-medium text-slate-500 shrink-0">
           {lead.days}
         </span>
       </div>
@@ -303,22 +331,23 @@ const KanbanColumn = ({
   onDragOver,
   onDragLeave,
   isOver,
+  onMoveLead,
 }) => (
-  <section className="flex h-full min-h-0 min-w-[78vw] snap-start flex-col rounded-xl bg-white/50 p-2 sm:min-w-[260px] lg:min-w-[280px]">
-    <div className="mb-2 flex items-start justify-between gap-2 px-1">
+  <section className="flex h-full min-h-0 w-full sm:w-auto shrink-0 flex-col rounded-xl bg-slate-50/80 border border-slate-200/50 p-2.5 sm:min-w-[260px] lg:min-w-[280px]">
+    <div className="mb-2.5 flex items-center justify-between gap-2 px-1">
       <div className="min-w-0">
         <div className="flex items-center gap-2">
-          <span className={`h-2.5 w-2.5 rounded-full ${col.color}`} />
-          <h3 className="truncate text-sm font-semibold text-gray-800">
+          <span className={`h-2 w-2 rounded-full ${col.color}`} />
+          <h3 className="truncate text-sm font-semibold text-slate-800">
             {col.label}
           </h3>
         </div>
         {col.pipeline && (
-          <p className={`mt-1 text-xs font-medium ${col.text}`}>{col.pipeline}</p>
+          <p className="mt-0.5 text-[11px] font-medium text-slate-500">{col.pipeline}</p>
         )}
       </div>
 
-      <span className="inline-flex min-w-8 items-center justify-center rounded-full bg-white px-2.5 py-1 text-xs font-semibold text-gray-600">
+      <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-white border border-slate-200/60 px-1.5 text-[10px] font-bold text-slate-600 shadow-sm">
         {leads.length}
       </span>
     </div>
@@ -339,15 +368,16 @@ const KanbanColumn = ({
           onDragStart={onDragStart}
           onDragEnd={onDragEnd}
           isDragging={draggingId === lead.id}
+          onMoveLead={onMoveLead}
         />
       ))}
 
       {leads.length === 0 && (
-        <div className="flex flex-1 items-center justify-center rounded-xl bg-white/70 px-3 py-6 text-center">
+        <div className="flex flex-1 items-center justify-center rounded-xl bg-white border border-slate-100 px-3 py-6 text-center shadow-sm">
           <div>
-            <p className="text-sm font-medium text-gray-500">Drop lead here</p>
-            <p className="mt-1 text-xs text-gray-400">
-              Move cards to update the stage.
+            <p className="text-xs font-semibold text-slate-500">Drop lead here</p>
+            <p className="mt-0.5 text-[10px] text-slate-400">
+              Move cards to update stage.
             </p>
           </div>
         </div>
@@ -362,6 +392,7 @@ const KanbanModal = ({ open, onClose, onAddLead }) => {
   const [overCol, setOverCol] = useState(null);
   const [assigneeFilter, setAssigneeFilter] = useState("");
   const [search, setSearch] = useState("");
+  const [activeTab, setActiveTab] = useState(COLUMNS[0].key);
   const boardScrollRef = useRef(null);
   const autoScrollFrameRef = useRef(null);
   const autoScrollVelocityRef = useRef(0);
@@ -470,6 +501,7 @@ const KanbanModal = ({ open, onClose, onAddLead }) => {
     if (!draggingLead || draggingLead.col === colKey) {
       setDraggingLead(null);
       setOverCol(null);
+      autoScrollVelocityRef.current = 0;
       return;
     }
 
@@ -481,6 +513,14 @@ const KanbanModal = ({ open, onClose, onAddLead }) => {
     setDraggingLead(null);
     setOverCol(null);
     autoScrollVelocityRef.current = 0;
+  };
+
+  const handleMoveLead = (leadId, targetColKey) => {
+    setLeads((prev) =>
+      prev.map((item) =>
+        item.id === leadId ? { ...item, col: targetColKey } : item
+      )
+    );
   };
 
   const visibleLeads = leads.filter((lead) => {
@@ -513,7 +553,7 @@ const KanbanModal = ({ open, onClose, onAddLead }) => {
       />
 
       <div
-        className={`relative flex h-full w-full max-w-full flex-col overflow-hidden bg-[#f7f6fb] shadow-2xl md:h-screen ${
+        className={`relative flex h-full w-full max-w-full flex-col overflow-hidden bg-[#f8fafc] shadow-2xl md:h-screen ${
           open ? "animate-slide-in-right" : "animate-slide-out-right"
         } sm:w-[100vw] md:w-[100vw] md:max-w-[1480px]`}
         onClick={(event) => event.stopPropagation()}
@@ -525,12 +565,12 @@ const KanbanModal = ({ open, onClose, onAddLead }) => {
                 <h2 className="text-lg font-semibold text-gray-900">
                   Lead pipeline
                 </h2>
-                <span className="rounded-full bg-gray-100 px-2.5 py-1 text-xs font-medium text-gray-600">
+                <span className="rounded-full bg-gray-150 border border-gray-250 px-2.5 py-0.5 text-xs font-semibold text-gray-600">
                   {totalLeads} leads
                 </span>
               </div>
               <p className="mt-1 text-sm text-gray-500">
-                Drag cards between stages and keep follow-ups moving.
+                Drag cards between stages or use the quick switcher menus.
               </p>
             </div>
 
@@ -601,7 +641,35 @@ const KanbanModal = ({ open, onClose, onAddLead }) => {
           </div>
         </div>
 
-        <div className="flex-1 overflow-hidden">
+        <div className="flex flex-1 flex-col overflow-hidden">
+          {/* Mobile Column Tabs Switcher (Visible only on mobile screen widths) */}
+          <div className="flex sm:hidden overflow-x-auto gap-2 pb-2.5 px-4 pt-2 border-b border-black/5 bg-white no-scrollbar select-none shrink-0">
+            {COLUMNS.map((col) => {
+              const colLeads = visibleLeads.filter((lead) => lead.col === col.key);
+              const isActive = activeTab === col.key;
+              return (
+                <button
+                  key={col.key}
+                  type="button"
+                  onClick={() => setActiveTab(col.key)}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-all border ${
+                    isActive
+                      ? "bg-slate-900 text-white border-slate-900 shadow-sm"
+                      : "bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100"
+                  }`}
+                >
+                  <span className={`w-1.5 h-1.5 rounded-full ${col.color}`} />
+                  <span>{col.label}</span>
+                  <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-bold ${
+                    isActive ? "bg-white/20 text-white" : "bg-slate-200/80 text-slate-500"
+                  }`}>
+                    {colLeads.length}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+
           <div
             ref={boardScrollRef}
             onDragOver={(event) => {
@@ -611,9 +679,10 @@ const KanbanModal = ({ open, onClose, onAddLead }) => {
             onDragLeave={() => {
               autoScrollVelocityRef.current = 0;
             }}
-            className="h-full overflow-x-auto overflow-y-hidden px-3 py-3 custom-scrollbar sm:px-4 md:px-5 md:py-4"
+            className="flex-1 overflow-x-auto overflow-y-hidden px-3 py-3 custom-scrollbar sm:px-4 md:px-5 md:py-4"
           >
-            <div className="flex h-full min-w-max items-stretch gap-3 pb-1">
+            {/* Desktop View (Side-by-Side Grid Layout) */}
+            <div className="hidden sm:flex h-full min-w-max items-stretch gap-3 pb-1">
               {COLUMNS.map((col) => {
                 const colLeads = visibleLeads.filter((lead) => lead.col === col.key);
 
@@ -629,6 +698,29 @@ const KanbanModal = ({ open, onClose, onAddLead }) => {
                     onDragOver={(event) => handleDragOver(event, col.key)}
                     onDragLeave={handleDragLeave}
                     isOver={overCol === col.key}
+                    onMoveLead={handleMoveLead}
+                  />
+                );
+              })}
+            </div>
+
+            {/* Mobile View (Single Active Column View based on tab selection) */}
+            <div className="flex sm:hidden h-full flex-col">
+              {COLUMNS.filter((col) => col.key === activeTab).map((col) => {
+                const colLeads = visibleLeads.filter((lead) => lead.col === col.key);
+                return (
+                  <KanbanColumn
+                    key={col.key}
+                    col={col}
+                    leads={colLeads}
+                    onDragStart={handleDragStart}
+                    onDragEnd={handleDragEnd}
+                    draggingId={draggingLead?.id}
+                    onDrop={(event) => handleDrop(event, col.key)}
+                    onDragOver={(event) => handleDragOver(event, col.key)}
+                    onDragLeave={handleDragLeave}
+                    isOver={overCol === col.key}
+                    onMoveLead={handleMoveLead}
                   />
                 );
               })}
