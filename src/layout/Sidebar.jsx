@@ -3,6 +3,7 @@ import {
     LayoutDashboard,
     Users,
     ListChecks,
+    CalendarCheck,
     Folder,
     CheckSquare,
     FileText,
@@ -34,11 +35,10 @@ const menuItems = [
         children: [
             { name: "All Task", path: "/task/all-task" },
             { name: "GPS Tracker", path: "/task/gps-tracker" },
-            { name: "Attendance", path: "/task/attendance" },
             { name: "Travel Claims", path: "/task/travel-claims" },
         ]
     },
-    // { name: "Form", icon: Clipboard, path: "/form" },
+    { name: "Attendance", icon: CalendarCheck, path: "/attendance" },
     // { name: "Content", icon: Folder, path: "/content" },
     // { name: "Task", icon: CheckSquare, path: "/task" },
     // { name: "Invoices", icon: FileText, path: "/invoices" },
