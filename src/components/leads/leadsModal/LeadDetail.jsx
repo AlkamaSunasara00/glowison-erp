@@ -100,21 +100,26 @@ const LeadDetail = ({ open, onClose, lead }) => {
       >
         {/* ── HEADER ─────────────────────────────────────────── */}
         <div className="flex items-center justify-between px-7 py-4 border-b border-gray-100 bg-white">
-          {/* Left: identity */}
-          <div className="flex items-center gap-4">
-            <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
-              <Icons name="User" size={18} className="text-primary" />
-            </div>
-            <div>
-              <h2 className="text-base font-bold text-gray-900 leading-tight">
-                {data.name || data.doctor}
-              </h2>
-              <p className="text-xs text-gray-400 mt-0.5">{data.clinic}</p>
-            </div>
-            <span className="ml-1 text-xs font-semibold px-2.5 py-1 rounded-full bg-amber-50 text-amber-700 border border-amber-200">
-              {data.stageLabel || "Demo"}
-            </span>
+        {/* Left: identity with back navigation arrow */}
+        <div className="flex items-center gap-4">
+          <button
+            type="button"
+            onClick={onClose}
+            className="text-gray-500 hover:text-gray-700 transition-colors shrink-0"
+            title="Go back"
+          >
+            <Icons name="ArrowLeft" size={20} />
+          </button>
+          <div>
+            <h2 className="text-base font-bold text-gray-900 leading-tight">
+              {data.name || data.doctor}
+            </h2>
+            <p className="text-xs text-gray-400 mt-0.5">{data.clinic}</p>
           </div>
+          <span className="ml-1 text-xs font-semibold px-2.5 py-1 rounded-full bg-amber-50 text-amber-700 border border-amber-200">
+            {data.stageLabel || "Demo"}
+          </span>
+        </div>
 
           {/* Right: actions */}
           <div className="flex items-center gap-2">
