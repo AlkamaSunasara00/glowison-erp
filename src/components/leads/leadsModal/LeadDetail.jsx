@@ -197,11 +197,11 @@ const LeadDetail = ({ open, onClose, lead }) => {
         </div>
 
         {/* ── BODY ───────────────────────────────────────────── */}
-        <div className="flex-1 overflow-y-auto">
-          <div className="grid grid-cols-1 lg:grid-cols-[1fr_340px] h-full divide-y lg:divide-y-0 lg:divide-x divide-gray-100">
+<div className="flex-1 overflow-hidden">
+  <div className="grid h-full grid-cols-1 lg:grid-cols-[1fr_340px] divide-y lg:divide-y-0 lg:divide-x divide-gray-100">
 
             {/* ── LEFT ── */}
-            <div className="px-7 py-6 space-y-7 overflow-y-auto">
+            <div className="h-full overflow-y-auto px-7 py-6 space-y-7">
 
               {/* Lead Information */}
               <section>
@@ -315,7 +315,7 @@ const LeadDetail = ({ open, onClose, lead }) => {
             </div>
 
             {/* ── RIGHT ── */}
-            <div className="px-6 py-6 space-y-6 bg-gray-50/40">
+            <div className="h-full overflow-y-auto px-6 py-6 space-y-6 bg-gray-50/40">
 
               {/* Quick Actions */}
               <section>
