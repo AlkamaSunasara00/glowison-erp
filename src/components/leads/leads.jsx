@@ -4,8 +4,9 @@ import EmptyState from "@/common/EmptyState";
 import Icons from "@/common/Icons";
 import Input from "@/common/Input";
 import AddLead from "@/components/leads/leadsModal/AddLead";
-import LeadDetail from "./leadsModal/LeadDetail";
+import LeadDetail from "./LeadDetail";
 import KanbanModal from "./leadsModal/KanbanModal";
+import { useRouter } from "next/router";
 
 const stageOptions = [
   { key: "all", label: "All", count: 47 },
@@ -41,7 +42,7 @@ const metricCards = [
   },
 ];
 
-const leadsData = [
+export const leadsData = [
   {
     id: 1,
     doctor: "Dr. Priya Sharma",
@@ -145,6 +146,7 @@ const timeOptions = [
 const normalize = (value) => value.toLowerCase().replace(/\s+/g, "-");
 
 export const Leads = () => {
+  const router = useRouter();
   const [search, setSearch] = useState("");
   const [activeStage, setActiveStage] = useState("all");
   const [sourceFilter, setSourceFilter] = useState("all");
@@ -216,10 +218,7 @@ export const Leads = () => {
   });
 
   const handleRowClick = (lead) => {
-    clearCloseTimer(leadDetailCloseTimerRef);
-    setSelectedLead(lead);
-    setIsLeadDetailMounted(true);
-    setIsLeadDetailOpen(true);
+    router.push(`/leads/${lead.id}`);
   };
 
   const handleOpenAddLead = () => {
@@ -313,27 +312,24 @@ export const Leads = () => {
                   key={stage.key}
                   type="button"
                   onClick={() => setActiveStage(stage.key)}
-                  className={`relative flex-1 min-w-max rounded-xl px-3 py-2 transition-all duration-200 ${
-                    isActive
+                  className={`relative flex-1 min-w-max rounded-xl px-3 py-2 transition-all duration-200 ${isActive
                       ? "bg-secondary text-primary"
                       : "text-gray-600 hover:bg-white hover:text-gray-900"
-                  }`}
+                    }`}
                 >
                   <div className="flex items-center justify-center gap-3 whitespace-nowrap">
                     <p
-                      className={`whitespace-nowrap text-[13px] font-medium transition-colors ${
-                        isActive ? "text-primary" : "text-gray-500"
-                      }`}
+                      className={`whitespace-nowrap text-[13px] font-medium transition-colors ${isActive ? "text-primary" : "text-gray-500"
+                        }`}
                     >
                       {stage.label}
                     </p>
 
                     <span
-                      className={`inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[11px] font-semibold transition-colors ${
-                        isActive
+                      className={`inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[11px] font-semibold transition-colors ${isActive
                           ? "bg-primary text-white"
                           : "bg-gray-100 text-gray-600"
-                      }`}
+                        }`}
                     >
                       {stage.count}
                     </span>

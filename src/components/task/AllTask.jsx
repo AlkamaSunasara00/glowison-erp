@@ -3,7 +3,8 @@ import Button from "@/common/Button";
 import EmptyState from "@/common/EmptyState";
 import Icons from "@/common/Icons";
 import Input from "@/common/Input";
-import AddTask from "./taskModal/AddTask";
+import AddTask from "./AddTask";
+import { useRouter } from "next/router";
 
 const pageStats = [
   { title: "Total tasks", value: "64", helper: "this month" },
@@ -534,9 +535,8 @@ const TaskDetailCard = ({ task }) => {
             ].map((height, index) => (
               <span
                 key={`${task.id}-wave-${index}`}
-                className={`w-1 rounded-full ${
-                  index < 12 ? "bg-[#5a48c8]" : "bg-[#d8d3ff]"
-                }`}
+                className={`w-1 rounded-full ${index < 12 ? "bg-[#5a48c8]" : "bg-[#d8d3ff]"
+                  }`}
                 style={{ height }}
               />
             ))}
@@ -808,26 +808,27 @@ const TaskDetailCard = ({ task }) => {
       </div>
 
       <div className="mt-3 flex flex-wrap gap-2">
-          <Button
-            size="sm"
-            variant="outline"
-            leftIcon={(props) => <Icons name="Eye" {...props} />}
-          >
-            Preview quote
-          </Button>
-          <Button
-            size="sm"
-            variant="solid"
-            leftIcon={(props) => <Icons name="Send" color="white" {...props} />}
-          >
-            Send now
-          </Button>
-        </div>
+        <Button
+          size="sm"
+          variant="outline"
+          leftIcon={(props) => <Icons name="Eye" {...props} />}
+        >
+          Preview quote
+        </Button>
+        <Button
+          size="sm"
+          variant="solid"
+          leftIcon={(props) => <Icons name="Send" color="white" {...props} />}
+        >
+          Send now
+        </Button>
+      </div>
     </div>
   );
 };
 
 export const AllTask = () => {
+  const router = useRouter();
   const [activeTab, setActiveTab] = useState("all");
   const [search, setSearch] = useState("");
   const [employeeFilter, setEmployeeFilter] = useState("all");
@@ -852,9 +853,7 @@ export const AllTask = () => {
   }, []);
 
   const handleOpenAddTask = () => {
-    clearCloseTimer(addTaskCloseTimerRef);
-    setIsAddTaskMounted(true);
-    setIsAddTaskOpen(true);
+    router.push("/task/add-task");
   };
 
   const handleCloseAddTask = () => {
@@ -1000,16 +999,14 @@ export const AllTask = () => {
                     key={tab.key}
                     type="button"
                     onClick={() => setActiveTab(tab.key)}
-                    className={`px-4 py-2 text-sm font-medium transition-all duration-200 whitespace-nowrap rounded-lg ${
-                      isActive
+                    className={`px-4 py-2 text-sm font-medium transition-all duration-200 whitespace-nowrap rounded-lg ${isActive
                         ? "bg-primary text-white"
                         : "text-gray-600 hover:bg-gray-100 hover:text-gray-900"
-                    }`}
+                      }`}
                   >
                     <span>{tab.label}</span>
-                    <span className={`ml-2 text-xs font-semibold ${
-                      isActive ? "bg-white/20" : "bg-gray-200"
-                    } px-2 py-0.5 rounded-full`}>
+                    <span className={`ml-2 text-xs font-semibold ${isActive ? "bg-white/20" : "bg-gray-200"
+                      } px-2 py-0.5 rounded-full`}>
                       {tab.count}
                     </span>
                   </button>
@@ -1041,11 +1038,10 @@ export const AllTask = () => {
                     <button
                       key={task.id}
                       onClick={() => setSelectedTaskId(task.id)}
-                      className={`w-full rounded-lg border transition-all p-3 text-left ${
-                        selectedTask?.id === task.id
+                      className={`w-full rounded-lg border transition-all p-3 text-left ${selectedTask?.id === task.id
                           ? "border-primary bg-primary/5 shadow-sm"
                           : "border-gray-100 bg-white hover:border-gray-200 hover:shadow-sm"
-                      }`}
+                        }`}
                     >
                       <div className="flex items-start justify-between gap-2 mb-1.5">
                         <div className="flex items-start gap-2 min-w-0 flex-1">

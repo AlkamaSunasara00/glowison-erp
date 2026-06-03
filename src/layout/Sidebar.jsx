@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
     LayoutDashboard,
     Users,
@@ -56,6 +56,20 @@ const Sidebar = ({ setMobileOpen, isMobileOpen }) => {
     const router = useRouter();
     const [openMenus, setOpenMenus] = useState([]); // Default closed
 
+    useEffect(() => {
+        // Find which menu item has active child or segment and add it to openMenus
+        const activeMenu = menuItems.find(item => {
+            if (item.children && item.children.length > 0) {
+                const firstSegment = router.pathname.split("/")[1];
+                return item.children.some(child => child.path.split("/")[1] === firstSegment);
+            }
+            return false;
+        });
+        if (activeMenu && !openMenus.includes(activeMenu.name)) {
+            setOpenMenus(prev => [...prev, activeMenu.name]);
+        }
+    }, [router.pathname]);
+
     const toggleMenu = (name) => {
         setOpenMenus(prev =>
             prev.includes(name)
@@ -65,7 +79,8 @@ const Sidebar = ({ setMobileOpen, isMobileOpen }) => {
     };
 
     const isChildActive = (children) => {
-        return children.some(child => router.pathname === child.path);
+        const firstSegment = router.pathname.split("/")[1];
+        return children.some(child => child.path.split("/")[1] === firstSegment);
     };
 
     return (
@@ -101,7 +116,9 @@ const Sidebar = ({ setMobileOpen, isMobileOpen }) => {
                     const Icon = item.icon;
                     const hasChildren = item.children && item.children.length > 0;
                     const isOpen = openMenus.includes(item.name);
-                    const isActive = router.pathname === item.path || (hasChildren && isChildActive(item.children));
+                    const isActive = item.path === "/"
+                        ? router.pathname === "/"
+                        : (item.path && router.pathname.split("/")[1] === item.path.split("/")[1]) || (hasChildren && isChildActive(item.children));
 
                     if (hasChildren) {
                         return (

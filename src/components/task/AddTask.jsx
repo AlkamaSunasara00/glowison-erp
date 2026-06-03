@@ -1,7 +1,8 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import Button from "@/common/Button";
 import Icons from "@/common/Icons";
 import Input from "@/common/Input";
+import { useRouter } from "next/router";
 
 const taskTypeOptions = [
   { label: "Demo (device required)", value: "demo" },
@@ -58,21 +59,30 @@ const initialFormData = {
   conversionBonus: "",
 };
 
-const AddTask = ({ open, onClose }) => {
+const AddTask = ({ open, onClose, isPage = false }) => {
+  const router = useRouter();
   const [formData, setFormData] = useState(initialFormData);
 
+  const handleBack = useCallback(() => {
+    if (isPage) {
+      router.push("/task/all-task");
+    } else {
+      onClose?.();
+    }
+  }, [isPage, router, onClose]);
+
   useEffect(() => {
-    if (!open) return undefined;
+    if (!open && !isPage) return undefined;
 
     const handleKeyDown = (event) => {
       if (event.key === "Escape") {
-        onClose();
+        handleBack();
       }
     };
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [open, onClose]);
+  }, [open, onClose, isPage, handleBack]);
 
   const handleChange = (event) => {
     const { name, value } = event.target;
@@ -84,7 +94,7 @@ const AddTask = ({ open, onClose }) => {
 
   const handleSubmit = (event) => {
     event.preventDefault();
-    onClose();
+    handleBack();
   };
 
   const selectedTaskType = taskTypeOptions.find(
@@ -96,59 +106,63 @@ const AddTask = ({ open, onClose }) => {
   const selectedAssignee = employeeOptions.find(
     (e) => e.value === formData.primaryAssignee
   )?.label;
+  const selectedJointEmployee = employeeOptions.find(
+    (e) => e.value === formData.jointEmployee
+  )?.label;
+  const selectedDemoDevice = demoDeviceOptions.find(
+    (d) => d.value === formData.demoDevice
+  )?.label;
+  const selectedDuration = estimatedDurationOptions.find(
+    (d) => d.value === formData.estimatedDuration
+  )?.label;
 
-  return (
+  const formContent = (
     <div
-      className={`fixed inset-x-0 bottom-0 top-16 z-[1000] flex justify-end md:inset-0 ${
-        open ? "pointer-events-auto" : "pointer-events-none"
+      className={isPage ? "flex flex-col gap-4 w-full animate-fade-in" : `relative flex h-full w-full max-w-full flex-col bg-white shadow-2xl md:w-[90%] md:h-screen ${
+        open ? "animate-slide-in-right" : "animate-slide-out-right"
       }`}
-      aria-hidden={!open}
+      onClick={(e) => e.stopPropagation()}
     >
-      {/* Backdrop */}
-      <div
-        className={`absolute inset-0 bg-black/40 backdrop-blur-[2px] ${
-          open ? "animate-overlay-in" : "animate-overlay-out"
-        }`}
-        onClick={onClose}
-        aria-hidden="true"
-      />
-
-      {/* Drawer Panel */}
-      <div
-        className={`relative flex h-full w-full max-w-full flex-col bg-white shadow-2xl md:w-[90%] md:h-screen ${
-          open ? "animate-slide-in-right" : "animate-slide-out-right"
-        }`}
-        onClick={(e) => e.stopPropagation()}
-      >
-        <form onSubmit={handleSubmit} className="flex h-full min-h-0 flex-col">
-          {/* ── HEADER ─────────────────────────────────────────── */}
-          <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 bg-white shrink-0">
-            {/* Left: Back button + Title */}
-            <div className="flex items-center gap-3">
-              <button
-                type="button"
-                onClick={onClose}
-                className="text-gray-500 hover:text-gray-700 transition-colors"
-              >
-                <Icons name="ArrowLeft" size={20} />
-              </button>
-              <h2 className="text-base font-semibold text-gray-900">Add task</h2>
-            </div>
-
-            {/* Right: Close button */}
-            <Button
+      <form onSubmit={handleSubmit} className={isPage ? "flex flex-col gap-4 w-full" : "flex h-full min-h-0 flex-col"}>
+        <div className={isPage ? "flex items-center justify-between px-6 py-4 bg-white border border-slate-200/60 rounded-xl shadow-sm" : "flex items-center justify-between px-6 py-4 border-b border-gray-100 bg-white shrink-0"}>
+          {/* Left: Back button + Title */}
+          <div className="flex items-center gap-3">
+            <button
               type="button"
-              variant="danger"
-              onClick={onClose}
+              onClick={handleBack}
+              className="text-gray-500 hover:text-gray-700 transition-colors"
             >
-              Cancel
-            </Button>
+              <Icons name="ArrowLeft" size={20} />
+            </button>
+            <h2 className="text-base font-semibold text-gray-900">Add task</h2>
           </div>
 
+          {/* Right: Actions */}
+          <div className="flex items-center gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              leftIcon={(props) => <Icons name="Save" {...props} />}
+              onClick={handleBack}
+            >
+              Save as draft
+            </Button>
+            <Button
+              type="submit"
+              variant="solid"
+              rightIcon={(props) => (
+                <Icons name="Plus" color="white" {...props} />
+              )}
+            >
+              Assign task
+            </Button>
+          </div>
+        </div>
+
           {/* ── MIDDLE CONTENT ─────────────────────────────────────────── */}
-          <div className="flex-1 overflow-hidden flex min-h-0">
+          <div className={isPage ? "grid grid-cols-1 lg:grid-cols-[1fr_288px] gap-4" : "flex-1 overflow-hidden flex min-h-0"}>
             {/* Left: Form Fields */}
-            <div className="flex-1 overflow-y-auto custom-scrollbar px-6 py-5 border-r border-gray-100">
+            <div className={isPage ? "bg-white border border-slate-200/60 rounded-xl p-6 shadow-sm" : "flex-1 overflow-y-auto custom-scrollbar px-6 py-5 border-r border-gray-100"}>
               <div className="space-y-5">
                 <div className="space-y-1.5">
                   <label className="label">
@@ -238,17 +252,19 @@ const AddTask = ({ open, onClose }) => {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-1.5">
-                    <label className="label">Demo device</label>
-                    <Input
-                      type="select"
-                      name="demoDevice"
-                      value={formData.demoDevice}
-                      onChange={handleChange}
-                      options={demoDeviceOptions}
-                    />
-                  </div>
+                <div className={formData.taskType === "demo" ? "grid grid-cols-2 gap-4 animate-fade-in" : "space-y-1.5"}>
+                  {formData.taskType === "demo" && (
+                    <div className="space-y-1.5">
+                      <label className="label">Demo device</label>
+                      <Input
+                        type="select"
+                        name="demoDevice"
+                        value={formData.demoDevice}
+                        onChange={handleChange}
+                        options={demoDeviceOptions}
+                      />
+                    </div>
+                  )}
 
                   <div className="space-y-1.5">
                     <label className="label">Estimated duration</label>
@@ -277,9 +293,9 @@ const AddTask = ({ open, onClose }) => {
             </div>
 
             {/* Right: Incentive + Preview */}
-            <div className="w-72 bg-gray-50 overflow-y-auto custom-scrollbar flex flex-col border-l border-gray-100">
+            <div className={isPage ? "flex flex-col gap-4" : "w-72 bg-gray-50 overflow-y-auto custom-scrollbar flex flex-col border-l border-gray-100"}>
               {/* Incentive Section */}
-              <div className="px-4 py-5 border-b border-gray-100 bg-white">
+              <div className={isPage ? "bg-white border border-slate-200/60 rounded-xl p-5 shadow-sm" : "px-4 py-5 border-b border-gray-100 bg-white"}>
                 <h3 className="text-sm font-semibold text-gray-900 mb-3">
                   Incentive (optional)
                 </h3>
@@ -312,7 +328,7 @@ const AddTask = ({ open, onClose }) => {
               </div>
 
               {/* Preview Section */}
-              <div className="px-4 py-5 flex-1">
+              <div className={isPage ? "bg-white border border-slate-200/60 rounded-xl p-5 shadow-sm" : "px-4 py-5 flex-1"}>
                 <h3 className="text-sm font-semibold text-gray-900 mb-3">
                   Task preview
                 </h3>
@@ -330,7 +346,7 @@ const AddTask = ({ open, onClose }) => {
                   )}
 
                   {/* Task Details */}
-                  {(selectedTaskType || selectedLead || selectedAssignee) && (
+                  {(selectedTaskType || selectedLead || selectedAssignee || selectedJointEmployee || (formData.taskType === "demo" && selectedDemoDevice) || selectedDuration || formData.dueDate) && (
                     <div className="rounded-lg border border-gray-200 bg-white p-3 space-y-2">
                       <p className="text-xs font-semibold text-gray-500">
                         DETAILS
@@ -348,7 +364,7 @@ const AddTask = ({ open, onClose }) => {
                       {selectedLead && (
                         <div className="flex items-center justify-between text-xs">
                           <span className="text-gray-600">Lead:</span>
-                          <span className="font-medium text-gray-900 truncate">
+                          <span className="font-medium text-gray-900 truncate max-w-[150px]" title={selectedLead}>
                             {selectedLead}
                           </span>
                         </div>
@@ -359,6 +375,33 @@ const AddTask = ({ open, onClose }) => {
                           <span className="text-gray-600">Assigned:</span>
                           <span className="font-medium text-gray-900">
                             {selectedAssignee}
+                          </span>
+                        </div>
+                      )}
+
+                      {selectedJointEmployee && (
+                        <div className="flex items-center justify-between text-xs">
+                          <span className="text-gray-600">Joint:</span>
+                          <span className="font-medium text-gray-900">
+                            {selectedJointEmployee}
+                          </span>
+                        </div>
+                      )}
+
+                      {formData.taskType === "demo" && selectedDemoDevice && (
+                        <div className="flex items-center justify-between text-xs">
+                          <span className="text-gray-600">Device:</span>
+                          <span className="font-medium text-gray-900 truncate max-w-[150px]" title={selectedDemoDevice}>
+                            {selectedDemoDevice}
+                          </span>
+                        </div>
+                      )}
+
+                      {selectedDuration && (
+                        <div className="flex items-center justify-between text-xs">
+                          <span className="text-gray-600">Duration:</span>
+                          <span className="font-medium text-gray-900">
+                            {selectedDuration}
                           </span>
                         </div>
                       )}
@@ -374,6 +417,18 @@ const AddTask = ({ open, onClose }) => {
                           </span>
                         </div>
                       )}
+                    </div>
+                  )}
+
+                  {/* Instructions Preview */}
+                  {formData.instructions && (
+                    <div className="rounded-lg border border-gray-200 bg-white p-3">
+                      <p className="text-xs font-semibold text-gray-500 mb-1">
+                        INSTRUCTIONS / NOTES
+                      </p>
+                      <p className="text-xs text-gray-700 whitespace-pre-wrap leading-relaxed">
+                        {formData.instructions}
+                      </p>
                     </div>
                   )}
 
@@ -400,28 +455,31 @@ const AddTask = ({ open, onClose }) => {
             </div>
           </div>
 
-          {/* ── FOOTER ─────────────────────────────────────────── */}
-          <div className="border-t border-gray-100 bg-white px-6 py-4 flex items-center justify-end gap-2 shrink-0">
 
-            <Button
-              type="button"
-              variant="outline"
-              leftIcon={(props) => <Icons name="Save" {...props} />}
-            >
-              Save as draft
-            </Button>
-            <Button
-              type="submit"
-              variant="solid"
-              rightIcon={(props) => (
-                <Icons name="Plus" color="white" {...props} />
-              )}
-            >
-              Assign task
-            </Button>
-          </div>
-        </form>
-      </div>
+      </form>
+    </div>
+  );
+
+  if (isPage) {
+    return formContent;
+  }
+
+  return (
+    <div
+      className={`fixed inset-x-0 bottom-0 top-16 z-[1000] flex justify-end md:inset-0 ${
+        open ? "pointer-events-auto" : "pointer-events-none"
+      }`}
+      aria-hidden={!open}
+    >
+      {/* Backdrop */}
+      <div
+        className={`absolute inset-0 bg-black/40 backdrop-blur-[2px] ${
+          open ? "animate-overlay-in" : "animate-overlay-out"
+        }`}
+        onClick={handleBack}
+        aria-hidden="true"
+      />
+      {formContent}
     </div>
   );
 };

@@ -1,6 +1,7 @@
 import React from "react";
 import Button from "@/common/Button";
 import Icons from "@/common/Icons";
+import { useRouter } from "next/router";
 
 const stages = ["New", "Contacted", "Demo", "Negotiation", "Won"];
 
@@ -53,8 +54,17 @@ const statusConfig = {
   Pending:   { cls: "bg-amber-50 text-amber-700 border border-amber-200",        icon: "AlertCircle" },
 };
 
-const LeadDetail = ({ open, onClose, lead }) => {
+const LeadDetail = ({ open, onClose, lead, isPage = false }) => {
+  const router = useRouter();
   const data = lead || leadData;
+
+  const handleBack = () => {
+    if (isPage) {
+      router.push("/leads");
+    } else {
+      onClose?.();
+    }
+  };
 
   const detailInfo = data.info || {
     "Doctor / clinic": `${data.name || data.doctor || "—"}${data.clinic ? `, ${data.clinic}` : ""}`,
@@ -76,35 +86,20 @@ const LeadDetail = ({ open, onClose, lead }) => {
   );
   const currentStageIndex = stageIndex >= 0 ? stageIndex : data.currentStage ?? 2;
 
-  return (
+  const detailPanelContent = (
     <div
-      className={`fixed inset-x-0 bottom-0 top-16 z-[1000] flex justify-end md:inset-0 ${
-        open ? "pointer-events-auto" : "pointer-events-none"
+      className={isPage ? "flex flex-col gap-4 w-full animate-fade-in" : `relative flex h-full w-full max-w-full flex-col bg-white shadow-2xl md:w-[90%] md:h-screen ${
+        open ? "animate-slide-in-right" : "animate-slide-out-right"
       }`}
-      aria-hidden={!open}
+      onClick={(e) => e.stopPropagation()}
     >
-      {/* Backdrop */}
-      <div
-        className={`absolute inset-0 bg-black/40 backdrop-blur-[2px] ${
-          open ? "animate-overlay-in" : "animate-overlay-out"
-        }`}
-        onClick={onClose}
-      />
-
-      {/* Drawer Panel */}
-      <div
-        className={`relative flex h-full w-full max-w-full flex-col bg-white shadow-2xl md:w-[90%] md:h-screen ${
-          open ? "animate-slide-in-right" : "animate-slide-out-right"
-        }`}
-        onClick={(e) => e.stopPropagation()}
-      >
         {/* ── HEADER ─────────────────────────────────────────── */}
-        <div className="flex items-center justify-between px-7 py-4 border-b border-gray-100 bg-white">
+        <div className={isPage ? "flex items-center justify-between px-7 py-4 bg-white border border-slate-200/60 rounded-xl shadow-sm" : "flex items-center justify-between px-7 py-4 border-b border-gray-100 bg-white"}>
         {/* Left: identity with back navigation arrow */}
         <div className="flex items-center gap-4">
           <button
             type="button"
-            onClick={onClose}
+            onClick={handleBack}
             className="text-gray-500 hover:text-gray-700 transition-colors shrink-0"
             title="Go back"
           >
@@ -147,18 +142,11 @@ const LeadDetail = ({ open, onClose, lead }) => {
             >
               Convert to customer
             </Button>
-            <Button
-              onClick={onClose}
-              variant="danger"
-              size="square"
-              icon={(props) => <LeadActionIcon name="X" {...props} />}
-              className="ml-1 rounded-lg"
-            />
           </div>
         </div>
 
         {/* ── STAGE PROGRESS ─────────────────────────────────── */}
-        <div className="px-7 py-4 bg-gray-50/60 border-b border-gray-100">
+        <div className={isPage ? "px-7 py-5 bg-white border border-slate-200/60 rounded-xl shadow-sm" : "px-7 py-4 bg-gray-50/60 border-b border-gray-100"}>
           <div className="flex items-center">
             {stages.map((stage, i) => {
               const isCompleted = i < currentStageIndex;
@@ -202,14 +190,14 @@ const LeadDetail = ({ open, onClose, lead }) => {
         </div>
 
         {/* ── BODY ───────────────────────────────────────────── */}
-<div className="flex-1 overflow-hidden">
-  <div className="grid h-full grid-cols-1 lg:grid-cols-[1fr_340px] divide-y lg:divide-y-0 lg:divide-x divide-gray-100">
+        <div className={isPage ? "" : "flex-1 overflow-hidden"}>
+          <div className={isPage ? "grid grid-cols-1 lg:grid-cols-[1fr_340px] gap-4" : "grid h-full grid-cols-1 lg:grid-cols-[1fr_340px] divide-y lg:divide-y-0 lg:divide-x divide-gray-100"}>
 
             {/* ── LEFT ── */}
-            <div className="h-full overflow-y-auto px-7 py-6 space-y-7">
+            <div className={isPage ? "flex flex-col gap-4" : "h-full overflow-y-auto px-7 py-6 space-y-7"}>
 
               {/* Lead Information */}
-              <section>
+              <section className={isPage ? "bg-white border border-slate-200/60 rounded-xl p-6 shadow-sm" : ""}>
                 <div className="flex items-center justify-between mb-4">
                   <h3 className="text-sm font-bold text-gray-800 tracking-wide uppercase">
                     Lead Information
@@ -241,10 +229,10 @@ const LeadDetail = ({ open, onClose, lead }) => {
                 </div>
               </section>
 
-              <div className="h-px bg-gray-100" />
+              {!isPage && <div className="h-px bg-gray-100" />}
 
               {/* Tasks */}
-              <section>
+              <section className={isPage ? "bg-white border border-slate-200/60 rounded-xl p-6 shadow-sm" : ""}>
                 <div className="flex items-center justify-between mb-4">
                   <h3 className="text-sm font-bold text-gray-800 tracking-wide uppercase">Tasks</h3>
                   <Button
@@ -284,10 +272,10 @@ const LeadDetail = ({ open, onClose, lead }) => {
                 </div>
               </section>
 
-              <div className="h-px bg-gray-100" />
+              {!isPage && <div className="h-px bg-gray-100" />}
 
               {/* Cost & Time Tracker */}
-              <section>
+              <section className={isPage ? "bg-white border border-slate-200/60 rounded-xl p-6 shadow-sm" : ""}>
                 <div className="flex items-center justify-between mb-4">
                   <h3 className="text-sm font-bold text-gray-800 tracking-wide uppercase">
                     Cost &amp; Time Tracker
@@ -320,10 +308,10 @@ const LeadDetail = ({ open, onClose, lead }) => {
             </div>
 
             {/* ── RIGHT ── */}
-            <div className="h-full overflow-y-auto px-6 py-6 space-y-6 bg-gray-50/40">
+            <div className={isPage ? "flex flex-col gap-4" : "h-full overflow-y-auto px-6 py-6 space-y-6 bg-gray-50/40"}>
 
               {/* Quick Actions */}
-              <section>
+              <section className={isPage ? "bg-white border border-slate-200/60 rounded-xl p-6 shadow-sm" : ""}>
                 <h3 className="text-sm font-bold text-gray-800 tracking-wide uppercase mb-3">
                   Quick Actions
                 </h3>
@@ -348,10 +336,10 @@ const LeadDetail = ({ open, onClose, lead }) => {
                 </div>
               </section>
 
-              <div className="h-px bg-gray-200" />
+              {!isPage && <div className="h-px bg-gray-200" />}
 
               {/* Incentives */}
-              <section>
+              <section className={isPage ? "bg-white border border-slate-200/60 rounded-xl p-6 shadow-sm" : ""}>
                 <h3 className="text-sm font-bold text-gray-800 tracking-wide uppercase mb-3">
                   Incentives
                 </h3>
@@ -386,10 +374,10 @@ const LeadDetail = ({ open, onClose, lead }) => {
                 </Button>
               </section>
 
-              <div className="h-px bg-gray-200" />
+              {!isPage && <div className="h-px bg-gray-200" />}
 
               {/* Activity Timeline */}
-              <section>
+              <section className={isPage ? "bg-white border border-slate-200/60 rounded-xl p-6 shadow-sm" : ""}>
                 <h3 className="text-sm font-bold text-gray-800 tracking-wide uppercase mb-3">
                   Activity Timeline
                 </h3>
@@ -419,6 +407,27 @@ const LeadDetail = ({ open, onClose, lead }) => {
           </div>
         </div>
       </div>
+    );
+
+  if (isPage) {
+    return detailPanelContent;
+  }
+
+  return (
+    <div
+      className={`fixed inset-x-0 bottom-0 top-16 z-[1000] flex justify-end md:inset-0 ${
+        open ? "pointer-events-auto" : "pointer-events-none"
+      }`}
+      aria-hidden={!open}
+    >
+      {/* Backdrop */}
+      <div
+        className={`absolute inset-0 bg-black/40 backdrop-blur-[2px] ${
+          open ? "animate-overlay-in" : "animate-overlay-out"
+        }`}
+        onClick={handleBack}
+      />
+      {detailPanelContent}
     </div>
   );
 };

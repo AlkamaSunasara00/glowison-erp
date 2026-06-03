@@ -1,10 +1,9 @@
 import Leads from "@/components/leads/leads";
 
-
 const Home = () => {
-    return (
-        <Leads />
-    )
-}
+  return (
+    <Leads />
+  );
+};
 
 export default Home;
