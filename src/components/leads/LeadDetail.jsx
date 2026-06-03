@@ -94,7 +94,7 @@ const LeadDetail = ({ open, onClose, lead, isPage = false }) => {
       onClick={(e) => e.stopPropagation()}
     >
         {/* ── HEADER ─────────────────────────────────────────── */}
-        <div className={isPage ? "flex items-center justify-between px-7 py-4 bg-white border border-slate-200/60 rounded-xl shadow-sm" : "flex items-center justify-between px-7 py-4 border-b border-gray-100 bg-white"}>
+        <div className={isPage ? "flex items-center justify-between py-2" : "flex items-center justify-between px-7 py-4 border-b border-gray-100 bg-white"}>
         {/* Left: identity with back navigation arrow */}
         <div className="flex items-center gap-4">
           <button
@@ -106,7 +106,7 @@ const LeadDetail = ({ open, onClose, lead, isPage = false }) => {
             <Icons name="ArrowLeft" size={20} />
           </button>
           <div>
-            <h2 className="text-base font-bold text-gray-900 leading-tight">
+            <h2 className="page-header">
               {data.name || data.doctor}
             </h2>
             <p className="text-xs text-gray-400 mt-0.5">{data.clinic}</p>
@@ -146,7 +146,7 @@ const LeadDetail = ({ open, onClose, lead, isPage = false }) => {
         </div>
 
         {/* ── STAGE PROGRESS ─────────────────────────────────── */}
-        <div className={isPage ? "px-7 py-5 bg-white border border-slate-200/60 rounded-xl shadow-sm" : "px-7 py-4 bg-gray-50/60 border-b border-gray-100"}>
+        <div className={isPage ? "px-4 py-3 bg-white border border-slate-200/60 rounded-xl shadow-sm" : "px-7 py-4 bg-gray-50/60 border-b border-gray-100"}>
           <div className="flex items-center">
             {stages.map((stage, i) => {
               const isCompleted = i < currentStageIndex;

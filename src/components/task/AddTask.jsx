@@ -124,7 +124,7 @@ const AddTask = ({ open, onClose, isPage = false }) => {
       onClick={(e) => e.stopPropagation()}
     >
       <form onSubmit={handleSubmit} className={isPage ? "flex flex-col gap-4 w-full" : "flex h-full min-h-0 flex-col"}>
-        <div className={isPage ? "flex items-center justify-between px-6 py-4 bg-white border border-slate-200/60 rounded-xl shadow-sm" : "flex items-center justify-between px-6 py-4 border-b border-gray-100 bg-white shrink-0"}>
+        <div className={isPage ? "flex items-center justify-between py-2" : "flex items-center justify-between px-6 py-4 border-b border-gray-100 bg-white shrink-0"}>
           {/* Left: Back button + Title */}
           <div className="flex items-center gap-3">
             <button
@@ -134,7 +134,7 @@ const AddTask = ({ open, onClose, isPage = false }) => {
             >
               <Icons name="ArrowLeft" size={20} />
             </button>
-            <h2 className="text-base font-semibold text-gray-900">Add task</h2>
+            <h2 className="page-header">Add task</h2>
           </div>
 
           {/* Right: Actions */}
@@ -160,7 +160,7 @@ const AddTask = ({ open, onClose, isPage = false }) => {
         </div>
 
           {/* ── MIDDLE CONTENT ─────────────────────────────────────────── */}
-          <div className={isPage ? "grid grid-cols-1 lg:grid-cols-[1fr_288px] gap-4" : "flex-1 overflow-hidden flex min-h-0"}>
+          <div className={isPage ? "grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-4" : "flex-1 overflow-hidden flex min-h-0"}>
             {/* Left: Form Fields */}
             <div className={isPage ? "bg-white border border-slate-200/60 rounded-xl p-6 shadow-sm" : "flex-1 overflow-y-auto custom-scrollbar px-6 py-5 border-r border-gray-100"}>
               <div className="space-y-5">
