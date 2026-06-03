@@ -74,7 +74,7 @@ const Sidebar = ({ setMobileOpen, isMobileOpen }) => {
             style={{ background: `linear-gradient(135deg, #4C2896 0%, #8038A1 60%, #9b45b2 100%)` }}
         >
             {/* Logo & Close Button Header */}
-            <div className="mb-4 pb-6 pr-4 flex-shrink-0 border-b border-white/10 flex items-center justify-between gap-4">
+            <div className="mb-4 pb-5 pr-4 flex-shrink-0 border-b border-white/10 flex items-center justify-between gap-4">
                 <div className={`transition-all duration-300 ${isMobileOpen ? "opacity-100 w-auto" : "opacity-0 w-0 lg:opacity-100 lg:w-auto overflow-hidden"}`}>
                     <Image
                         src="/image/white-logo.png"
@@ -82,7 +82,7 @@ const Sidebar = ({ setMobileOpen, isMobileOpen }) => {
                         width={150}
                         height={50}
                         priority
-                        className="h-auto w-auto max-h-12 object-contain"
+                        className="h-auto w-auto max-h-fit object-contain"
                     />
                 </div>
 
