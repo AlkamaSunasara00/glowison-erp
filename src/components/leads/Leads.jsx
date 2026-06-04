@@ -299,8 +299,8 @@ export const Leads = () => {
           </div>
         </div>
 
-        <div className="w-full overflow-x-auto no-scrollbar">
-          <div className="flex min-w-full w-max rounded-xl border border-white/70 bg-white/80 p-1 shadow-sm">
+        <div className="w-full overflow-hidden rounded-xl border border-white/70 bg-white/80 p-1 shadow-sm">
+          <div className="flex w-full overflow-x-auto no-scrollbar">
             {stageOptions.map((stage) => {
               const isActive = activeStage === stage.key;
 

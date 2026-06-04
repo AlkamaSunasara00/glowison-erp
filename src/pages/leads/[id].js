@@ -1,6 +1,6 @@
 import { useRouter } from "next/router";
 import LeadDetail from "@/components/leads/LeadDetail";
-import { leadsData } from "@/components/leads/Leads";
+import { leadsData } from "@/components/leads/leads";
 
 const LeadDetailPage = () => {
   const router = useRouter();

@@ -264,7 +264,7 @@ export const TravelClaims = () => {
       </div>
 
       {/* ── CLAIMS TABLE BLOCK ──────────────────────────────── */}
-      <div className="bg-white rounded-xl shadow-sm border border-slate-200/60 flex flex-col overflow-hidden">
+      <div className="w-full bg-white rounded-xl shadow-sm border border-slate-200/60 flex flex-col overflow-hidden">
         {/* Table Filter Actions Header */}
         <div className="flex flex-col gap-3 border-b border-gray-100 px-4 py-3.5 md:flex-row md:items-center md:justify-between">
           <div className="flex items-center gap-3">
