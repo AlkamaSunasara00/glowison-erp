@@ -488,7 +488,7 @@ export const Leads = () => {
             <div className="border-t border-gray-200 px-4 py-3 flex flex-col gap-3 md:flex-row md:items-center md:justify-between w-full shrink-0">
               <Button
                 variant="outline"
-                size="md"
+                size="sm"
                 leftIcon={(props) => <Icons name="ChevronLeft" {...props} />}
               >
                 Previous
@@ -500,7 +500,7 @@ export const Leads = () => {
 
               <Button
                 variant="outline"
-                size="md"
+                size="sm"
                 rightIcon={(props) => <Icons name="ChevronRight" {...props} />}
               >
                 Next

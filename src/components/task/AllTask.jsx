@@ -1006,7 +1006,7 @@ export const AllTask = () => {
                   >
                     <span>{tab.label}</span>
                     <span className={`ml-2 text-xs font-semibold ${isActive ? "bg-white/20" : "bg-gray-200"
-                      } px-2 py-0.5 rounded-full`}>
+                      } px-2 py-1 rounded-full`}>
                       {tab.count}
                     </span>
                   </button>

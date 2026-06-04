@@ -6,6 +6,7 @@ import { useRouter } from "next/router";
 
 export const TravelClaims = () => {
   const router = useRouter();
+  const rowsPerPage = 5;
 
   // Initial claims data based on the design mockup image
   const [claims, setClaims] = useState([
@@ -67,6 +68,7 @@ export const TravelClaims = () => {
   // Filter states
   const [search, setSearch] = useState("");
   const [activeTab, setActiveTab] = useState("all");
+  const [currentPage, setCurrentPage] = useState(1);
 
   // Dynamic metrics calculations
   const totalClaimsCount = claims.length;
@@ -168,6 +170,17 @@ export const TravelClaims = () => {
     return matchesSearch && matchesTab;
   });
 
+  const totalFilteredClaims = filteredClaims.length;
+  const totalPages = Math.max(1, Math.ceil(totalFilteredClaims / rowsPerPage));
+  const safeCurrentPage = Math.min(currentPage, totalPages);
+  const pageStartIndex = (safeCurrentPage - 1) * rowsPerPage;
+  const paginatedClaims = filteredClaims.slice(
+    pageStartIndex,
+    pageStartIndex + rowsPerPage
+  );
+  const pageRangeStart = totalFilteredClaims === 0 ? 0 : pageStartIndex + 1;
+  const pageRangeEnd = Math.min(pageStartIndex + rowsPerPage, totalFilteredClaims);
+
   return (
     <div className="flex min-h-screen w-full flex-col gap-4 animate-fade-in relative">
       {/* ── HEADER ─────────────────────────────────────────── */}
@@ -260,7 +273,10 @@ export const TravelClaims = () => {
               {["all", "pending", "approved"].map((tab) => (
                 <button
                   key={tab}
-                  onClick={() => setActiveTab(tab)}
+                  onClick={() => {
+                    setActiveTab(tab);
+                    setCurrentPage(1);
+                  }}
                   className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-all capitalize ${
                     activeTab === tab
                       ? "bg-primary text-white shadow-sm"
@@ -278,7 +294,10 @@ export const TravelClaims = () => {
               <Input
                 id="search-claims"
                 value={search}
-                onChange={(e) => setSearch(e.target.value)}
+                onChange={(e) => {
+                  setSearch(e.target.value);
+                  setCurrentPage(1);
+                }}
                 placeholder="Search employee or purpose..."
                 endIcon={
                   <Icons name="Search" size={15} className="text-gray-400" />
@@ -303,7 +322,7 @@ export const TravelClaims = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
-              {filteredClaims.map((claim) => (
+              {paginatedClaims.map((claim) => (
                 <tr
                   key={claim.id}
                   className="hover:bg-slate-50/50 transition-colors text-[13px] text-gray-700"
@@ -363,7 +382,7 @@ export const TravelClaims = () => {
                   </td>
                 </tr>
               ))}
-              {filteredClaims.length === 0 && (
+              {totalFilteredClaims === 0 && (
                 <tr>
                   <td colSpan="7" className="px-5 py-8 text-center text-gray-400">
                     No travel claims found matching the filters.
@@ -372,6 +391,34 @@ export const TravelClaims = () => {
               )}
             </tbody>
           </table>
+        </div>
+
+        <div className="border-t border-gray-200 px-4 py-3 flex flex-col gap-3 md:flex-row md:items-center md:justify-between w-full shrink-0">
+          <Button
+            variant="outline"
+            size="sm"
+            // disabled={safeCurrentPage === 1 || totalFilteredClaims === 0}
+            onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
+            leftIcon={(props) => <Icons name="ChevronLeft" {...props} />}
+          >
+            Previous
+          </Button>
+
+          <div className="text-[13px] text-gray-700 text-center">
+            {pageRangeStart} to {pageRangeEnd} of {totalFilteredClaims}
+          </div>
+
+          <Button
+            variant="outline"
+            size="sm"
+            // disabled={safeCurrentPage === totalPages || totalFilteredClaims === 0}
+            onClick={() =>
+              setCurrentPage((prev) => Math.min(prev + 1, totalPages))
+            }
+            rightIcon={(props) => <Icons name="ChevronRight" {...props} />}
+          >
+            Next
+          </Button>
         </div>
       </div>
 
