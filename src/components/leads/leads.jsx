@@ -263,20 +263,19 @@ export const Leads = () => {
 
   return (
     <div className="flex flex-col min-h-screen w-full relative gap-4">
-      <div className="flex flex-col gap-4 rounded-lg ">
-        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-          <div>
+      <div className="flex flex-col gap-4 rounded-lg">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+          <div className="space-y-1">
             <h1 className="page-header">Lead pipeline</h1>
-            <p className="mt-1 text-sm text-gray-500">
+            <p className="text-sm text-gray-500 max-w-md lg:max-w-xl">
               Track pipeline stages, lead value, and follow-up momentum in one
               place.
             </p>
           </div>
 
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+          <div className="flex flex-wrap items-center gap-2 shrink-0">
             <Button
               variant="ghost"
-              className="justify-start sm:justify-center"
               onClick={handleOpenKanban}
               rightIcon={(props) => <Icons name="ArrowUpRight" {...props} />}
             >
@@ -284,14 +283,12 @@ export const Leads = () => {
             </Button>
             <Button
               variant="outline"
-              className="justify-start sm:justify-center"
               leftIcon={(props) => <Icons name="Download" {...props} />}
             >
               Export
             </Button>
             <Button
               variant="solid"
-              className="justify-start sm:justify-center"
               onClick={handleOpenAddLead}
               leftIcon={(props) => (
                 <Icons name="Plus" color="white" {...props} />
@@ -303,7 +300,7 @@ export const Leads = () => {
         </div>
 
         <div className="w-full overflow-x-auto no-scrollbar">
-          <div className="flex w-full rounded-xl border border-white/70 bg-white/80 p-1 shadow-sm">
+          <div className="flex min-w-full w-max rounded-xl border border-white/70 bg-white/80 p-1 shadow-sm">
             {stageOptions.map((stage) => {
               const isActive = activeStage === stage.key;
 
@@ -340,7 +337,7 @@ export const Leads = () => {
           </div>
         </div>
 
-        <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
           {metricCards.map((metric) => (
             <div
               key={metric.title}
@@ -359,8 +356,8 @@ export const Leads = () => {
       </div>
 
       <div className="flex-1 bg-white rounded-lg shadow-sm border border-gray-100 flex flex-col overflow-hidden">
-        <div className="flex flex-col gap-3 border-b border-gray-100 px-4 py-4 md:px-4 lg:flex-row lg:items-center lg:justify-between">
-          <div className="w-full lg:max-w-sm">
+        <div className="flex flex-col gap-3 border-b border-gray-100 px-4 py-4 md:flex-row md:items-center md:justify-between">
+          <div className="w-full md:max-w-[220px] lg:max-w-sm">
             <Input
               id="search-leads"
               value={search}
@@ -372,7 +369,7 @@ export const Leads = () => {
             />
           </div>
 
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3 lg:w-auto lg:min-w-[560px]">
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-3 w-full md:w-auto md:min-w-[450px] lg:min-w-[560px]">
             <Input
               type="select"
               value={sourceFilter}
@@ -485,7 +482,7 @@ export const Leads = () => {
               </table>
             </div>
 
-            <div className="border-t border-gray-200 px-4 py-3 flex flex-col gap-3 md:flex-row md:items-center md:justify-between w-full shrink-0">
+            <div className="border-t border-gray-200 px-4 py-3 flex items-center justify-between gap-4 w-full shrink-0">
               <Button
                 variant="outline"
                 size="sm"

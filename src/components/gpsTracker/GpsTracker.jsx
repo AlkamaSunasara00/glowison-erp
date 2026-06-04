@@ -75,25 +75,23 @@ export const GpsTracker = () => {
     <div className="flex min-h-screen w-full flex-col gap-4">
 
       {/* ── HEADER ─────────────────────────────────────────── */}
-      <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between py-2">
-        <div>
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between py-2">
+        <div className="space-y-1">
           <h1 className="page-header">GPS tracker</h1>
-          <p className="mt-1 text-sm text-gray-500">
+          <p className="text-sm text-gray-500 max-w-md lg:max-w-xl">
             Monitor real-time locations and daily activity logs of field employees.
           </p>
         </div>
 
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+        <div className="flex flex-wrap items-center gap-2 shrink-0">
           <Button
             variant="outline"
-            className="justify-start sm:justify-center"
             leftIcon={(props) => <Icons name="Download" {...props} />}
           >
             Export
           </Button>
           <Button
             variant="solid"
-            className="justify-start sm:justify-center"
             leftIcon={(props) => <Icons name="Plus" color="white" {...props} />}
             onClick={() => router.push("/task/add-task")}
           >
@@ -103,11 +101,11 @@ export const GpsTracker = () => {
       </div>
 
       {/* ── TOP STATS ROW ────────────────────────────────────── */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
         {employeeStatuses.map((emp, i) => (
           <div
             key={i}
-            className="bg-white border border-slate-200/60 rounded-xl p-4 shadow-sm flex items-center justify-between transition-all hover:shadow-md hover:border-slate-300"
+            className="bg-white border border-slate-200/60 rounded-xl p-3 shadow-sm flex items-center justify-between transition-all hover:shadow-md hover:border-slate-300"
           >
             <div className="flex items-start gap-3">
               <div
@@ -139,7 +137,7 @@ export const GpsTracker = () => {
       {/* ── MAIN CONTENT GRID ─────────────────────────────────── */}
       <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-4">
         {/* Left Column: Live Map */}
-        <div className="bg-white border border-slate-200/60 rounded-xl p-6 shadow-sm flex flex-col gap-4">
+        <div className="bg-white border border-slate-200/60 rounded-xl p-4 sm:p-5 shadow-sm flex flex-col gap-4">
           <h2 className="text-md font-semibold text-gray-900">
             Live map — all field employees
           </h2>
@@ -234,7 +232,7 @@ export const GpsTracker = () => {
         </div>
 
         {/* Right Column: Today's Field Log */}
-        <div className="bg-white h-fit border border-slate-200/60 rounded-xl p-6 shadow-sm flex flex-col gap-4">
+        <div className="bg-white h-fit border border-slate-200/60 rounded-xl p-4 sm:p-5 shadow-sm flex flex-col gap-4">
           <h2 className="text-sm font-bold text-gray-900">
             Today's field log
           </h2>

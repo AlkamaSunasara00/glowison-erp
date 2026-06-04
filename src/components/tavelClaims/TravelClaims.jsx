@@ -183,16 +183,15 @@ export const TravelClaims = () => {
 
   return (
     <div className="flex min-h-screen w-full flex-col gap-4 animate-fade-in relative">
-      {/* ── HEADER ─────────────────────────────────────────── */}
-      <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between py-2">
-        <div>
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between py-2">
+        <div className="space-y-1">
           <h1 className="page-header">Travel claims</h1>
-          <p className="mt-1 text-sm text-gray-500">
+          <p className="text-sm text-gray-500 max-w-md lg:max-w-xl">
             Submit, review, and manage mileage and travel reimbursement claims for field agents.
           </p>
         </div>
 
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+        <div className="flex flex-wrap items-center gap-2 shrink-0">
           <Button
             size="md"
             variant="outline"
@@ -200,21 +199,21 @@ export const TravelClaims = () => {
           >
             Export
           </Button>
-            <Button
-              variant="solid"
-              size="md"
-              leftIcon={(props) => <Icons name="Plus"{...props} />}
-              onClick={() => setIsNewClaimOpen(true)}
-            >
-              New claim
-            </Button>
+          <Button
+            variant="solid"
+            size="md"
+            leftIcon={(props) => <Icons name="Plus" {...props} />}
+            onClick={() => setIsNewClaimOpen(true)}
+          >
+            New claim
+          </Button>
         </div>
       </div>
 
       {/* ── STATS ROW ─────────────────────────────────────── */}
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
         {/* Metric 1 */}
-        <div className="bg-white border border-slate-200/60 rounded-xl p-4 shadow-sm flex flex-col gap-1">
+        <div className="bg-white border border-slate-200/60 rounded-xl p-3.5 shadow-sm flex flex-col gap-1">
           <p className="text-sm text-gray-400">
             Claims this month
           </p>
@@ -227,7 +226,7 @@ export const TravelClaims = () => {
         </div>
 
         {/* Metric 2 */}
-        <div className="bg-white border border-slate-200/60 rounded-xl p-4 shadow-sm flex flex-col gap-1">
+        <div className="bg-white border border-slate-200/60 rounded-xl p-3.5 shadow-sm flex flex-col gap-1">
           <p className="text-sm text-gray-400">
             Pending approval
           </p>
@@ -240,7 +239,7 @@ export const TravelClaims = () => {
         </div>
 
         {/* Metric 3 */}
-        <div className="bg-white border border-slate-200/60 rounded-xl p-4 shadow-sm flex flex-col gap-1">
+        <div className="bg-white border border-slate-200/60 rounded-xl p-3.5 shadow-sm flex flex-col gap-1">
           <p className="text-sm text-gray-400">
             Approved
           </p>
@@ -253,7 +252,7 @@ export const TravelClaims = () => {
         </div>
 
         {/* Metric 4 */}
-        <div className="bg-white border border-slate-200/60 rounded-xl p-4 shadow-sm flex flex-col gap-1">
+        <div className="bg-white border border-slate-200/60 rounded-xl p-3.5 shadow-sm flex flex-col gap-1">
           <p className="text-sm text-gray-400">
             Avg. per trip
           </p>
@@ -267,7 +266,7 @@ export const TravelClaims = () => {
       {/* ── CLAIMS TABLE BLOCK ──────────────────────────────── */}
       <div className="bg-white rounded-xl shadow-sm border border-slate-200/60 flex flex-col overflow-hidden">
         {/* Table Filter Actions Header */}
-        <div className="flex flex-col gap-3 border-b border-gray-100 px-5 py-4 md:flex-row md:items-center md:justify-between">
+        <div className="flex flex-col gap-3 border-b border-gray-100 px-4 py-3.5 md:flex-row md:items-center md:justify-between">
           <div className="flex items-center gap-3">
             <div className="flex bg-gray-100 p-1.5 rounded-lg">
               {["all", "pending", "approved"].map((tab) => (
@@ -290,7 +289,7 @@ export const TravelClaims = () => {
           </div>
 
           <div className="flex flex-col gap-2.5 sm:flex-row sm:items-center">
-            <div className="w-full sm:w-100">
+            <div className="w-full sm:w-72">
               <Input
                 id="search-claims"
                 value={search}
@@ -308,17 +307,17 @@ export const TravelClaims = () => {
         </div>
 
         {/* Table Render */}
-        <div className="overflow-x-auto custom-scrollbar">
+        <div className="w-full overflow-x-auto custom-scrollbar">
           <table className="w-full text-left border-collapse min-w-[850px]">
             <thead className="bg-primary text-white text-[12px] font-semibold sticky top-0 z-10">
               <tr>
-                <th className="px-5 py-3">Employee</th>
-                <th className="px-5 py-3">Purpose</th>
-                <th className="px-5 py-3">Date</th>
-                <th className="px-5 py-3 text-center">KM</th>
-                <th className="px-5 py-3 text-right">Amount</th>
-                <th className="px-5 py-3">Status</th>
-                <th className="px-5 py-3 text-right">Actions</th>
+                <th className="px-4 py-2.5">Employee</th>
+                <th className="px-4 py-2.5">Purpose</th>
+                <th className="px-4 py-2.5">Date</th>
+                <th className="px-4 py-2.5 text-center">KM</th>
+                <th className="px-4 py-2.5 text-right">Amount</th>
+                <th className="px-4 py-2.5">Status</th>
+                <th className="px-4 py-2.5 text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
@@ -327,7 +326,7 @@ export const TravelClaims = () => {
                   key={claim.id}
                   className="hover:bg-slate-50/50 transition-colors text-[13px] text-gray-700"
                 >
-                  <td className="px-5 py-3.5">
+                  <td className="px-4 py-3">
                     <div className="flex items-center gap-2.5">
                       <div
                         className={`w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0 ${claim.theme.bg}`}
@@ -339,17 +338,17 @@ export const TravelClaims = () => {
                       </span>
                     </div>
                   </td>
-                  <td className="px-5 py-3.5 max-w-[280px] truncate" title={claim.purpose}>
+                  <td className="px-4 py-3 max-w-[280px] truncate" title={claim.purpose}>
                     {claim.purpose}
                   </td>
-                  <td className="px-5 py-3.5 text-gray-500">{claim.date}</td>
-                  <td className="px-5 py-3.5 text-right font-medium text-gray-900">
+                  <td className="px-4 py-3 text-gray-500">{claim.date}</td>
+                  <td className="px-4 py-3 text-right font-medium text-gray-900">
                     {claim.km} km
                   </td>
-                  <td className="px-5 py-3.5 text-right font-medium text-gray-900">
+                  <td className="px-4 py-3 text-right font-medium text-gray-900">
                     {claim.amount}
                   </td>
-                  <td className="px-5 py-3.5">
+                  <td className="px-4 py-3">
                     <span
                       className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full border ${
                         claim.status === "Approved"
@@ -360,7 +359,7 @@ export const TravelClaims = () => {
                       {claim.status}
                     </span>
                   </td>
-                  <td className="px-5 py-3.5 text-right">
+                  <td className="px-4 py-3 text-right">
                     <div className="flex items-center justify-end gap-2">
                       {claim.status === "Pending" ? (
                         <Button
@@ -393,7 +392,7 @@ export const TravelClaims = () => {
           </table>
         </div>
 
-        <div className="border-t border-gray-200 px-4 py-3 flex flex-col gap-3 md:flex-row md:items-center md:justify-between w-full shrink-0">
+        <div className="border-t border-gray-200 px-4 py-3 flex items-center justify-between gap-4 w-full shrink-0">
           <Button
             variant="outline"
             size="sm"

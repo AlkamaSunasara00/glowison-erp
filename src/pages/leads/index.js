@@ -1,4 +1,4 @@
-import Leads from "@/components/leads/leads";
+import Leads from "@/components/leads/Leads";
 
 const Home = () => {
   return (

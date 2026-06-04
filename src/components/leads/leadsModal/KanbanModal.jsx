@@ -591,29 +591,33 @@ const KanbanModal = ({ open, onClose, onAddLead }) => {
             </Button>
           </div>
 
-          <div className="mt-3 grid gap-2 lg:grid-cols-[minmax(0,1fr)_220px_auto]">
-            <Input
-              id="kanban-search"
-              value={search}
-              onChange={(event) => setSearch(event.target.value)}
-              label="Search by doctor or clinic"
-              endIcon={
-                <Icons name="Search" size={16} className="text-gray-400" />
-              }
-              className="rounded-lg border-gray-200 bg-gray-50 shadow-none"
-            />
+          <div className="mt-3 grid grid-cols-2 gap-2.5 lg:grid-cols-[minmax(0,1fr)_220px_280px]">
+            <div className="col-span-1 lg:col-span-1">
+              <Input
+                id="kanban-search"
+                value={search}
+                onChange={(event) => setSearch(event.target.value)}
+                label="Search by doctor or clinic"
+                endIcon={
+                  <Icons name="Search" size={16} className="text-gray-400" />
+                }
+                className="rounded-lg border-gray-200 bg-gray-50 shadow-none"
+              />
+            </div>
 
-            <Input
-              type="select"
-              id="kanban-assignee"
-              value={assigneeFilter}
-              onChange={(event) => setAssigneeFilter(event.target.value)}
-              label="All reps"
-              options={ASSIGNEE_OPTIONS}
-              className="rounded-lg border-gray-200 bg-gray-50 shadow-none"
-            />
+            <div className="col-span-1 lg:col-span-1">
+              <Input
+                type="select"
+                id="kanban-assignee"
+                value={assigneeFilter}
+                onChange={(event) => setAssigneeFilter(event.target.value)}
+                label="All reps"
+                options={ASSIGNEE_OPTIONS}
+                className="rounded-lg border-gray-200 bg-gray-50 shadow-none"
+              />
+            </div>
 
-            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:flex lg:justify-end">
+            <div className="grid grid-cols-2 gap-2 col-span-2 lg:col-span-1 lg:flex lg:justify-end">
               <Button
                 variant="outline"
                 className="justify-center rounded-lg"

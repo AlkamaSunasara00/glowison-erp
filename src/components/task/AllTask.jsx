@@ -835,9 +835,12 @@ export const AllTask = () => {
   const [statusFilter, setStatusFilter] = useState("all");
   const [typeFilter, setTypeFilter] = useState("all");
   const [selectedTaskId, setSelectedTaskId] = useState("intro-call");
+  const [isDetailOpen, setIsDetailOpen] = useState(false);
+  const [isDetailMounted, setIsDetailMounted] = useState(false);
   const [isAddTaskOpen, setIsAddTaskOpen] = useState(false);
   const [isAddTaskMounted, setIsAddTaskMounted] = useState(false);
   const addTaskCloseTimerRef = useRef(null);
+  const detailCloseTimerRef = useRef(null);
 
   const clearCloseTimer = (timerRef) => {
     if (timerRef.current) {
@@ -849,8 +852,25 @@ export const AllTask = () => {
   useEffect(() => {
     return () => {
       clearCloseTimer(addTaskCloseTimerRef);
+      clearCloseTimer(detailCloseTimerRef);
     };
   }, []);
+
+  const handleOpenDetail = (taskId) => {
+    setSelectedTaskId(taskId);
+    clearCloseTimer(detailCloseTimerRef);
+    setIsDetailMounted(true);
+    setIsDetailOpen(true);
+  };
+
+  const handleCloseDetail = () => {
+    setIsDetailOpen(false);
+    clearCloseTimer(detailCloseTimerRef);
+    detailCloseTimerRef.current = setTimeout(() => {
+      setIsDetailMounted(false);
+      detailCloseTimerRef.current = null;
+    }, 300);
+  };
 
   const handleOpenAddTask = () => {
     router.push("/task/add-task");
@@ -912,26 +932,24 @@ export const AllTask = () => {
   return (
     <div className="flex min-h-screen w-full flex-col gap-4">
       <div className="flex flex-col gap-4">
-        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-          <div>
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+          <div className="space-y-1">
             <h1 className="page-header">All tasks</h1>
-            <p className="mt-1 text-sm text-gray-500">
+            <p className="text-sm text-gray-500 max-w-md lg:max-w-xl">
               Track every pending, scheduled, and completed follow-up in one
               place.
             </p>
           </div>
 
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+          <div className="flex flex-wrap items-center gap-2 shrink-0">
             <Button
               variant="outline"
-              className="justify-start sm:justify-center"
               leftIcon={(props) => <Icons name="Download" {...props} />}
             >
               Export
             </Button>
             <Button
               variant="solid"
-              className="justify-start sm:justify-center"
               leftIcon={(props) => <Icons name="Plus" color="white" {...props} />}
               onClick={handleOpenAddTask}
             >
@@ -940,7 +958,7 @@ export const AllTask = () => {
           </div>
         </div>
 
-        <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
           {pageStats.map((stat) => (
             <StatCard key={stat.title} stat={stat} />
           ))}
@@ -1037,7 +1055,9 @@ export const AllTask = () => {
                   {filteredTasks.map((task) => (
                     <button
                       key={task.id}
-                      onClick={() => setSelectedTaskId(task.id)}
+                      onClick={() => {
+                        handleOpenDetail(task.id);
+                      }}
                       className={`w-full rounded-lg border transition-all p-3 text-left ${selectedTask?.id === task.id
                           ? "border-primary bg-primary/5 shadow-sm"
                           : "border-gray-100 bg-white hover:border-gray-200 hover:shadow-sm"
@@ -1134,6 +1154,43 @@ export const AllTask = () => {
           open={isAddTaskOpen}
           onClose={handleCloseAddTask}
         />
+      )}
+
+      {/* Mobile/Tablet Task Detail Slide-over Drawer */}
+      {isDetailMounted && (
+        <div className={`fixed inset-0 z-[1000] flex justify-end xl:hidden ${isDetailOpen ? "pointer-events-auto" : "pointer-events-none"}`}>
+          {/* Backdrop */}
+          <div
+            className={`absolute inset-0 bg-black/40 backdrop-blur-[2px] ${isDetailOpen ? "animate-overlay-in" : "animate-overlay-out"}`}
+            onClick={handleCloseDetail}
+          />
+          {/* Drawer Content */}
+          <div className={`relative flex h-full w-[280px] sm:w-[360px] md:w-[420px] max-w-full flex-col bg-white shadow-2xl ${isDetailOpen ? "animate-slide-in-right" : "animate-slide-out-right"} p-4 overflow-y-auto`}
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="mb-4 flex items-center justify-between pb-3 border-b border-gray-100">
+              <h3 className="text-sm font-bold text-gray-800 tracking-wide uppercase">
+                Task Details
+              </h3>
+              <button
+                onClick={handleCloseDetail}
+                className="p-1.5 rounded-sm hover:bg-gray-100 transition-colors"
+                title="Close details"
+              >
+                <Icons name="X" size={18} className="text-gray-500" />
+              </button>
+            </div>
+            {selectedTask ? (
+              <TaskDetailCard task={selectedTask} />
+            ) : (
+              <div className="rounded-lg border border-gray-100 bg-white p-4 shadow-sm">
+                <p className="text-xs text-gray-500">
+                  Select a task to view its details.
+                </p>
+              </div>
+            )}
+          </div>
+        </div>
       )}
     </div>
   );

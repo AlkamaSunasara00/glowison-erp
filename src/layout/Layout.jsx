@@ -51,7 +51,7 @@ const Layout = ({ children }) => {
 
             {/* Main Content - Dynamic Width */}
             <main className={`
-                flex-1 h-full overflow-y-auto bg-secondary-light p-3 
+                flex-1 min-w-0 h-full overflow-y-auto bg-secondary-light p-3 
                 transition-all duration-300 
                 pt-20 lg:pt-3
             `}>
