@@ -320,14 +320,13 @@ const LeadDetail = ({ open, onClose, lead, isPage = false }) => {
                     { icon: "MessageCircle", label: "WhatsApp",  variant: "secondary" },
                     { icon: "Phone",         label: "Log call",  variant: "secondary" },
                     { icon: "Plus",          label: "Add task",  variant: "secondary" },
-                    { icon: "FileText",      label: "Quotation", variant: "secondary", arrow: true },
+                    { icon: "FileText",      label: "Quotation", variant: "secondary"},
                   ].map(({ icon: iconName, label, variant, arrow }) => (
                     <Button
                       key={label}
                       variant={variant === "secondary" ? "outline" : variant}
                       size="md"
                       leftIcon={(props) => <LeadActionIcon name={iconName} {...props} />}
-                      rightIcon={arrow ? ((props) => <LeadActionIcon name="ArrowUpRight" {...props} />) : undefined}
                       className="w-full justify-start rounded-lg px-3! py-2! text-xs font-medium"
                     >
                       {label}
