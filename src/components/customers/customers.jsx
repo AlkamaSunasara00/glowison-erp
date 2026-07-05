@@ -1,5 +1,6 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useRouter } from "next/router";
+import api from "@/lib/api";
 import Button from "@/common/Button";
 import EmptyState from "@/common/EmptyState";
 import Icons from "@/common/Icons";
@@ -7,13 +8,9 @@ import Input from "@/common/Input";
 import StatusBadge from "@/common/StatusBadge";
 import AddCustomer from "./customersModal/AddCustomer";
 import DeleteConfirmModal from "@/common/DeleteConfirmModal";
+import toast from "react-hot-toast";
 
-export const customersData = [
-  { id: "1", name: "Rahul Sharma", phone: "9876543210", email: "rahul@example.com", type: "Retail", address: { line1: "123 Main St", line2: "", city: "Mumbai", state: "MH", pincode: "400001" }, gstin: "", notes: "Regular buyer", created: "2023-10-01", totalValue: "Rs. 1,200" },
-  { id: "2", name: "Glow Signages", phone: "9988776655", email: "contact@glow.com", type: "Dealer", address: { line1: "Shop 4, Market", line2: "", city: "Delhi", state: "DL", pincode: "110001" }, gstin: "22AAAAA0000A1Z5", notes: "Bulk orders for LED", created: "2023-10-05", totalValue: "Rs. 45,000" },
-  { id: "3", name: "Priya Patel", phone: "9123456780", email: "priya@example.com", type: "Retail", address: { line1: "45 MG Road", line2: "", city: "Ahmedabad", state: "GJ", pincode: "380001" }, gstin: "", notes: "", created: "2023-10-10", totalValue: "Rs. 3,500" },
-  { id: "4", name: "Raja Art", phone: "9988776611", email: "info@rajaart.com", type: "Dealer", address: { line1: "12/A, Industrial Area", line2: "", city: "Surat", state: "GJ", pincode: "395003" }, gstin: "24BBBBB0000B1Z5", notes: "Prefers MDF", created: "2023-10-15", totalValue: "Rs. 1,20,000" },
-];
+
 
 const customerTypeOptions = [
   { value: "all", label: "All Types" },
@@ -27,8 +24,31 @@ export const Customers = () => {
   const [typeFilter, setTypeFilter] = useState("all");
   const [locationFilter, setLocationFilter] = useState("");
   const [isAddCustomerOpen, setIsAddCustomerOpen] = useState(false);
-  const [customers, setCustomers] = useState(customersData);
+  const [customers, setCustomers] = useState([]);
   const [deleteItem, setDeleteItem] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  const fetchCustomers = async () => {
+    try {
+      setLoading(true);
+      const res = await api.get('/customers?limit=100');
+      setCustomers(res.data.data.map(c => ({
+        ...c,
+        type: c.type.toLowerCase() === 'retail' ? 'Retail' : 'Dealer',
+        created: new Date(c.createdAt).toLocaleDateString(),
+        address: typeof c.address === 'string' ? JSON.parse(c.address) : (c.address || { city: '', state: '' }),
+        totalValue: c.totalOrderValue || "Rs. 0"
+      })));
+    } catch (error) {
+      toast.error('Failed to load customers');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchCustomers();
+  }, []);
 
   // Filters
   const hasActiveFilters = typeFilter !== "all" || locationFilter.trim().length > 0;
@@ -196,14 +216,20 @@ export const Customers = () => {
         )}
       </div>
 
-      {isAddCustomerOpen && <AddCustomer open={isAddCustomerOpen} onClose={() => setIsAddCustomerOpen(false)} />}
+      {isAddCustomerOpen && <AddCustomer open={isAddCustomerOpen} onClose={() => { setIsAddCustomerOpen(false); fetchCustomers(); }} />}
       {deleteItem && (
         <DeleteConfirmModal
           open={!!deleteItem}
           onClose={() => setDeleteItem(null)}
           entityName={deleteItem.name}
-          onConfirm={() => {
-            setCustomers(customers.filter(c => c.id !== deleteItem.id));
+          onConfirm={async () => {
+            try {
+              await api.delete(`/customers/${deleteItem.id}`);
+              toast.success("Customer deleted");
+              setCustomers(customers.filter(c => c.id !== deleteItem.id));
+            } catch (err) {
+              toast.error("Failed to delete customer");
+            }
             setDeleteItem(null);
           }}
         />

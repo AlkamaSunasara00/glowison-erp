@@ -23,7 +23,7 @@ const mockQuotations = [
   { id: "QT-501", date: "Oct 10, 2023", amount: "Rs. 4,500", status: "Accepted" },
 ];
 
-const CustomerDetail = ({ open, onClose, customer, isPage = false }) => {
+const CustomerDetail = ({ open, onClose, customer, isPage = false, onCustomerUpdated }) => {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState("Orders");
   const [isEditOpen, setIsEditOpen] = useState(false);
@@ -253,7 +253,17 @@ const CustomerDetail = ({ open, onClose, customer, isPage = false }) => {
     return (
       <>
         {detailPanelContent}
-        {isEditOpen && <EditCustomer open={isEditOpen} onClose={() => setIsEditOpen(false)} initialData={data} />}
+        {isEditOpen && (
+          <EditCustomer
+            open={isEditOpen}
+            onClose={() => setIsEditOpen(false)}
+            initialData={data}
+            onSuccess={() => {
+              if (onCustomerUpdated) onCustomerUpdated();
+              setIsEditOpen(false);
+            }}
+          />
+        )}
       </>
     );
   }

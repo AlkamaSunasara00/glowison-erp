@@ -1,20 +1,37 @@
 import { useRouter } from "next/router";
 import OrderDetail from "@/components/orders/OrderDetail";
-import { ordersData } from "@/components/orders/orders";
+import { useEffect, useState } from "react";
+import api from "@/lib/api";
 
 const OrderDetailPage = () => {
   const router = useRouter();
   const { id } = router.query;
 
-  if (!id) {
+  const [order, setOrder] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (id) {
+      api.get(`/orders/${id}`)
+        .then(res => {
+          setOrder(res.data.data);
+          setLoading(false);
+        })
+        .catch(err => {
+          console.error("Failed to load order", err);
+          setOrder(null);
+          setLoading(false);
+        });
+    }
+  }, [id]);
+
+  if (!id || loading) {
     return (
       <div className="flex h-full w-full items-center justify-center bg-white rounded-xl border border-gray-100">
         <p className="text-sm text-gray-500">Loading order details...</p>
       </div>
     );
   }
-
-  const order = ordersData.find((o) => String(o.id) === String(id));
 
   if (!order) {
     return (

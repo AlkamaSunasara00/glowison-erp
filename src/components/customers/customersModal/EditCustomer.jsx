@@ -1,4 +1,6 @@
 import React, { useEffect, useState } from "react";
+import api from "@/lib/api";
+import toast from "react-hot-toast";
 import Button from "@/common/Button";
 import Icons from "@/common/Icons";
 import Input from "@/common/Input";
@@ -8,7 +10,7 @@ const customerTypeOptions = [
   { label: "Dealer", value: "Dealer" },
 ];
 
-const EditCustomer = ({ open, onClose, initialData }) => {
+const EditCustomer = ({ open, onClose, initialData, onSuccess }) => {
   const [formData, setFormData] = useState({
     name: "",
     phone: "",
@@ -22,6 +24,7 @@ const EditCustomer = ({ open, onClose, initialData }) => {
     pincode: "",
     notes: "",
   });
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
     if (initialData) {
@@ -31,11 +34,11 @@ const EditCustomer = ({ open, onClose, initialData }) => {
         email: initialData.email || "",
         type: initialData.type || "Retail",
         gstin: initialData.gstin || "",
-        addressLine1: initialData.address?.line1 || "",
-        addressLine2: initialData.address?.line2 || "",
-        city: initialData.address?.city || "",
-        state: initialData.address?.state || "",
-        pincode: initialData.address?.pincode || "",
+        addressLine1: initialData.address?.line1 || initialData.addressLine1 || "",
+        addressLine2: initialData.address?.line2 || initialData.addressLine2 || "",
+        city: initialData.address?.city || initialData.city || "",
+        state: initialData.address?.state || initialData.state || "",
+        pincode: initialData.address?.pincode || initialData.pincode || "",
         notes: initialData.notes || "",
       });
     }
@@ -55,9 +58,33 @@ const EditCustomer = ({ open, onClose, initialData }) => {
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleSubmit = (event) => {
+  const handleSubmit = async (event) => {
     event.preventDefault();
-    onClose();
+    try {
+      setIsSubmitting(true);
+      const payload = {
+        name: formData.name,
+        type: formData.type.toUpperCase(),
+        gstin: formData.gstin || undefined,
+        phone: formData.phone,
+        email: formData.email || undefined,
+        addressLine1: formData.addressLine1 || undefined,
+        addressLine2: formData.addressLine2 || undefined,
+        city: formData.city || undefined,
+        state: formData.state || undefined,
+        pincode: formData.pincode || undefined,
+        notes: formData.notes || undefined,
+      };
+
+      await api.put(`/customers/${initialData.id}`, payload);
+      toast.success("Customer updated successfully");
+      if (onSuccess) onSuccess();
+      onClose();
+    } catch (error) {
+      toast.error(error.response?.data?.message || "Failed to update customer");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -155,8 +182,8 @@ const EditCustomer = ({ open, onClose, initialData }) => {
           </div>
 
           <div className="shrink-0 border-t border-gray-200 bg-gray-50/50 px-6 py-4 flex justify-end gap-3">
-            <Button variant="outline" type="button" onClick={onClose}>Cancel</Button>
-            <Button variant="solid" type="submit">Save changes</Button>
+            <Button variant="outline" type="button" onClick={onClose} disabled={isSubmitting}>Cancel</Button>
+            <Button variant="solid" type="submit" isLoading={isSubmitting} disabled={isSubmitting}>Save changes</Button>
           </div>
         </form>
       </div>

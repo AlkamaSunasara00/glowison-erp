@@ -1,4 +1,6 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import api from "@/lib/api";
+import toast from "react-hot-toast";
 import Button from "@/common/Button";
 import EmptyState from "@/common/EmptyState";
 import Icons from "@/common/Icons";
@@ -8,12 +10,7 @@ import AddPurchase from "./purchaseModal/AddPurchase";
 import EditPurchase from "./purchaseModal/EditPurchase";
 import DeleteConfirmModal from "@/common/DeleteConfirmModal";
 
-export const purchaseData = [
-  { id: "PO-001", vendor: "Delhi Timber Traders", date: "2023-10-02", items: "MDF Sheet 6mm, Glue", total: 12500, paymentStatus: "paid", deliveryStatus: "delivered" },
-  { id: "PO-002", vendor: "Surat Acrylics", date: "2023-10-10", items: "Clear Acrylic 2mm", total: 8000, paymentStatus: "pending", deliveryStatus: "pending" },
-  { id: "PO-003", vendor: "Mumbai Electricals", date: "2023-10-15", items: "LED Strip - Warm White, Wires", total: 4500, paymentStatus: "paid", deliveryStatus: "pending" },
-  { id: "PO-004", vendor: "Local Hardware", date: "2023-10-20", items: "Hooks, Screws", total: 850, paymentStatus: "pending", deliveryStatus: "delivered" },
-];
+
 
 const paymentOptions = [
   { value: "all", label: "All Payments" },
@@ -37,7 +34,34 @@ export const Purchase = () => {
   const [editItem, setEditItem] = useState(null);
   const [deleteItem, setDeleteItem] = useState(null);
   
-  const [purchases, setPurchases] = useState(purchaseData);
+  const [purchases, setPurchases] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  const fetchPurchases = async () => {
+    try {
+      setLoading(true);
+      const res = await api.get('/purchases?limit=200');
+      setPurchases(res.data.data.map(p => ({
+        id: p.poNumber,
+        originalId: p.id,
+        vendor: p.vendorName,
+        date: new Date(p.orderDate).toLocaleDateString('en-CA'),
+        items: p.items.map(i => i.itemName).join(', '),
+        itemsData: p.items,
+        total: p.totalAmount,
+        paymentStatus: p.paymentStatus.toLowerCase().replace('_', ' '),
+        deliveryStatus: p.deliveryStatus.toLowerCase()
+      })));
+    } catch (error) {
+      toast.error('Failed to load purchases');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchPurchases();
+  }, []);
 
   // Filters
   const hasActiveFilters = paymentFilter !== "all" || deliveryFilter !== "all";
@@ -207,15 +231,21 @@ export const Purchase = () => {
         )}
       </div>
 
-      {isAddOpen && <AddPurchase open={isAddOpen} onClose={() => setIsAddOpen(false)} />}
-      {editItem && <EditPurchase open={!!editItem} onClose={() => setEditItem(null)} initialData={editItem} />}
+      {isAddOpen && <AddPurchase open={isAddOpen} onClose={() => { setIsAddOpen(false); fetchPurchases(); }} />}
+      {editItem && <EditPurchase open={!!editItem} onClose={() => { setEditItem(null); fetchPurchases(); }} initialData={editItem} />}
       {deleteItem && (
         <DeleteConfirmModal
           open={!!deleteItem}
           onClose={() => setDeleteItem(null)}
           entityName={deleteItem.id}
-          onConfirm={() => {
-            setPurchases(purchases.filter(p => p.id !== deleteItem.id));
+          onConfirm={async () => {
+            try {
+              await api.delete(`/purchases/${deleteItem.originalId}`);
+              toast.success("Purchase deleted");
+              setPurchases(purchases.filter(p => p.originalId !== deleteItem.originalId));
+            } catch (err) {
+              toast.error("Failed to delete purchase");
+            }
             setDeleteItem(null);
           }}
         />

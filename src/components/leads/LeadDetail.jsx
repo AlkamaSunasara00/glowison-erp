@@ -5,7 +5,7 @@ import { useRouter } from "next/router";
 import { useState } from "react";
 import EditLead from "./leadsModal/EditLead";
 
-const stages = ["New", "In Progress", "Negotiation", "Won"];
+const stages = ["NEW", "CONTACTED", "NEGOTIATION", "CLOSED_WON"];
 
 const LeadActionIcon = ({ name, color = "currentColor", ...props }) => (
   <Icons name={name} color={color} {...props} />
@@ -28,9 +28,9 @@ const LeadDetail = ({ open, onClose, lead, isPage = false, onLeadUpdated }) => {
     "Name": data.name || "—",
     "Phone": data.phone || "—",
     "Email": data.email || "—",
-    "Product Interest": data.productInterest || "—",
-    "Source": data.source || "—",
-    "Stage": data.stage || "New",
+    "Product Interest": data.interest === 'OTHER' ? data.interestOther : data.interest || "—",
+    "Source": data.source === 'OTHER' ? data.sourceOther : data.source || "—",
+    "Stage": data.status || "NEW",
     "Notes": data.notes || "—",
   };
 
@@ -41,10 +41,10 @@ const LeadDetail = ({ open, onClose, lead, isPage = false, onLeadUpdated }) => {
   ];
 
   const stageIndex = stages.findIndex(
-    (s) => s.toLowerCase() === (data.stage || "new").toLowerCase()
+    (s) => s === data.status || s === data.stage
   );
   
-  const isLost = data.stage === 'lost';
+  const isLost = data.status === 'CLOSED_LOST' || data.stage === 'lost';
   const currentStageIndex = isLost ? -1 : (stageIndex >= 0 ? stageIndex : 0);
 
   const detailPanelContent = (
@@ -72,12 +72,12 @@ const LeadDetail = ({ open, onClose, lead, isPage = false, onLeadUpdated }) => {
             <p className="text-xs text-gray-400 mt-0.5">{data.phone}</p>
           </div>
           <span className="ml-1 text-xs font-semibold px-2.5 py-1 rounded-full bg-amber-50 text-amber-700 border border-amber-200 capitalize">
-            {data.stage || "New"}
+            {(data.status || data.stage || "NEW").replace('_', ' ')}
           </span>
         </div>
 
           <div className="flex items-center gap-2">
-            {data.stage === 'won' && (
+            {data.status === 'CLOSED_WON' && (
               <Button
                 variant="solid"
                 size="md"
@@ -110,13 +110,16 @@ const LeadDetail = ({ open, onClose, lead, isPage = false, onLeadUpdated }) => {
                         {isCompleted ? <Icons name="Check" size={13} /> : i + 1}
                       </div>
                       <span
-                        className={`text-[11px] font-semibold whitespace-nowrap tracking-wide ${
-                          isActive    ? "text-primary" :
-                          isCompleted ? "text-gray-600" : "text-gray-300"
-                        }`}
-                      >
-                        {stage}
-                      </span>
+                      className={`text-[10px] font-semibold tracking-wider mt-1.5 
+                        ${
+                          isActive || isCompleted
+                            ? "text-gray-900"
+                            : "text-gray-400"
+                        }
+                      `}
+                    >
+                      {stage.replace('_', ' ')}
+                    </span>
                     </div>
                     {i < stages.length - 1 && (
                       <div className="flex-1 mx-2 mb-5">
@@ -243,7 +246,17 @@ const LeadDetail = ({ open, onClose, lead, isPage = false, onLeadUpdated }) => {
     return (
       <>
         {detailPanelContent}
-        {isEditOpen && <EditLead open={isEditOpen} onClose={() => setIsEditOpen(false)} initialData={data} />}
+        {isEditOpen && (
+          <EditLead
+            open={isEditOpen}
+            onClose={() => setIsEditOpen(false)}
+            initialData={data}
+            onSuccess={() => {
+              if (onLeadUpdated) onLeadUpdated();
+              setIsEditOpen(false);
+            }}
+          />
+        )}
       </>
     );
   }

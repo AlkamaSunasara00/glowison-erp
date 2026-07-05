@@ -1,20 +1,37 @@
 import { useRouter } from "next/router";
 import CustomerDetail from "@/components/customers/CustomerDetail";
-import { customersData } from "@/components/customers/customers";
+import { useEffect, useState } from "react";
+import api from "@/lib/api";
 
 const CustomerDetailPage = () => {
   const router = useRouter();
   const { id } = router.query;
+  
+  const [customer, setCustomer] = useState(null);
+  const [loading, setLoading] = useState(true);
 
-  if (!id) {
+  useEffect(() => {
+    if (id) {
+      api.get(`/customers/${id}`)
+        .then(res => {
+          setCustomer(res.data.data);
+          setLoading(false);
+        })
+        .catch(err => {
+          console.error("Failed to load customer", err);
+          setCustomer(null);
+          setLoading(false);
+        });
+    }
+  }, [id]);
+
+  if (!id || loading) {
     return (
       <div className="flex h-full w-full items-center justify-center bg-white rounded-xl border border-gray-100">
         <p className="text-sm text-gray-500">Loading customer details...</p>
       </div>
     );
   }
-
-  const customer = customersData.find((c) => String(c.id) === String(id));
 
   if (!customer) {
     return (

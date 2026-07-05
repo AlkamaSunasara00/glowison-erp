@@ -1,9 +1,10 @@
 import React, { useEffect, useState } from "react";
+import api from "@/lib/api";
+import toast from "react-hot-toast";
 import Button from "@/common/Button";
 import Icons from "@/common/Icons";
 import Input from "@/common/Input";
 import CustomerPicker from "@/common/CustomerPicker";
-import { leadsData } from "@/components/leads/leads";
 
 const statusOptions = [
   { label: "Draft", value: "Draft" },
@@ -26,6 +27,15 @@ const AddQuotation = ({ open, onClose }) => {
   });
   const [entityId, setEntityId] = useState("");
   const [lineItems, setLineItems] = useState([{ id: Date.now(), name: "", qty: 1, rate: 0, unit: "inch", taxPercent: "" }]);
+  const [leads, setLeads] = useState([]);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  useEffect(() => {
+    // Fetch leads for the picker
+    api.get('/leads?limit=200').then(res => {
+      setLeads(res.data.data || []);
+    }).catch(console.error);
+  }, []);
 
   useEffect(() => {
     if (!open) return undefined;
@@ -36,9 +46,33 @@ const AddQuotation = ({ open, onClose }) => {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [open, onClose]);
 
-  const handleSubmit = (event) => {
+  const handleSubmit = async (event) => {
     event.preventDefault();
-    onClose();
+    if (!entityId) {
+      toast.error(`Please select a ${formData.type}`);
+      return;
+    }
+
+    try {
+      setIsSubmitting(true);
+      const payload = {
+        type: formData.type.toUpperCase(),
+        entityId: entityId,
+        productName: lineItems[0]?.name || "Quotation",
+        items: lineItems,
+        estimatedPrice: calculateTotal(),
+        status: formData.status.toUpperCase()
+      };
+
+      await api.post('/quotations', payload);
+      toast.success('Quotation created successfully');
+      onClose();
+    } catch (error) {
+      toast.error('Failed to create quotation');
+      console.error(error);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleAddLineItem = () => {
@@ -107,7 +141,7 @@ const AddQuotation = ({ open, onClose }) => {
                   ) : (
                     <>
                       <label className="label">Select Lead <span className="required">*</span></label>
-                      <Input type="select" options={[{label: "Select a lead...", value: ""}, ...leadsData.map(l => ({label: `${l.name} - ${l.phone}`, value: l.id}))]} value={entityId} onChange={(e) => setEntityId(e.target.value)} required />
+                      <Input type="select" options={[{label: "Select a lead...", value: ""}, ...leads.map(l => ({label: `${l.name} - ${l.phone}`, value: l.id}))]} value={entityId} onChange={(e) => setEntityId(e.target.value)} required />
                     </>
                   )}
                 </div>
@@ -189,8 +223,8 @@ const AddQuotation = ({ open, onClose }) => {
           </div>
 
           <div className="shrink-0 border-t border-gray-200 bg-gray-50/50 px-6 py-4 flex justify-end gap-3">
-            <Button variant="outline" type="button" onClick={onClose}>Cancel</Button>
-            <Button variant="solid" type="submit">Create Quotation</Button>
+            <Button variant="outline" type="button" onClick={onClose} disabled={isSubmitting}>Cancel</Button>
+            <Button variant="solid" type="submit" isLoading={isSubmitting} disabled={isSubmitting}>Create Quotation</Button>
           </div>
         </form>
       </div>

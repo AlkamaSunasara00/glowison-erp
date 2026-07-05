@@ -1,12 +1,36 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { useRouter } from "next/router";
+import api from "@/lib/api";
 import Button from "@/common/Button";
 import Icons from "@/common/Icons";
 import StatusBadge from "@/common/StatusBadge";
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts';
+import toast from "react-hot-toast";
 
 export const Dashboard = () => {
   const router = useRouter();
+  const [metrics, setMetrics] = useState({ totalRevenue: 0, activeOrders: 0, pendingInvoices: 0, newLeads: 0 });
+  const [salesData, setSalesData] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchDashboardData = async () => {
+      try {
+        const [metricsRes, chartRes] = await Promise.all([
+          api.get('/dashboard/metrics'),
+          api.get('/dashboard/revenue-chart')
+        ]);
+        setMetrics(metricsRes.data.data);
+        setSalesData(chartRes.data.data);
+      } catch (error) {
+        console.error("Failed to load dashboard data", error);
+        toast.error("Failed to load dashboard data");
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchDashboardData();
+  }, []);
 
   const quickActions = [
     { label: "New Order", icon: "ShoppingCart", path: "/orders", color: "bg-blue-50 text-blue-600" },
@@ -23,14 +47,6 @@ export const Dashboard = () => {
     { id: 5, title: "Expense Logged", desc: "Rs. 2,500 paid to Meta Ads", time: "2 days ago", type: "expense" },
   ];
 
-  const salesData = [
-    { name: 'Jan', revenue: 40000 },
-    { name: 'Feb', revenue: 30000 },
-    { name: 'Mar', revenue: 50000 },
-    { name: 'Apr', revenue: 45000 },
-    { name: 'May', revenue: 60000 },
-    { name: 'Jun', revenue: 55000 },
-  ];
 
   const orderStatusData = [
     { name: 'Pending', value: 15 },
@@ -69,9 +85,8 @@ export const Dashboard = () => {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="bg-white p-5 rounded-xl border border-gray-100 shadow-sm flex items-center justify-between group hover:border-primary/20 transition-colors cursor-pointer" onClick={() => router.push("/reports")}>
            <div className="flex flex-col gap-1">
-             <span className="text-sm font-medium text-gray-500">Total Revenue (Month)</span>
-             <span className="text-2xl font-bold text-gray-900">Rs. 4.5L</span>
-             <span className="text-[10px] font-semibold text-emerald-600 flex items-center gap-1 mt-1"><Icons name="TrendingUp" size={10} /> +12% from last month</span>
+             <span className="text-sm font-medium text-gray-500">Total Revenue</span>
+             <span className="text-2xl font-bold text-gray-900">₹{metrics.totalRevenue.toLocaleString()}</span>
            </div>
            <div className="w-12 h-12 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center group-hover:bg-emerald-100 transition-colors">
               <Icons name="IndianRupee" size={24} />
@@ -81,32 +96,29 @@ export const Dashboard = () => {
         <div className="bg-white p-5 rounded-xl border border-gray-100 shadow-sm flex items-center justify-between group hover:border-primary/20 transition-colors cursor-pointer" onClick={() => router.push("/invoice")}>
            <div className="flex flex-col gap-1">
              <span className="text-sm font-medium text-gray-500">Outstanding Invoices</span>
-             <span className="text-2xl font-bold text-amber-600">Rs. 54K</span>
-             <span className="text-[10px] font-medium text-gray-500 mt-1">From 3 invoices</span>
+             <span className="text-2xl font-bold text-amber-600">{metrics.pendingInvoices}</span>
            </div>
            <div className="w-12 h-12 rounded-full bg-amber-50 text-amber-600 flex items-center justify-center group-hover:bg-amber-100 transition-colors">
               <Icons name="Clock" size={24} />
            </div>
         </div>
 
-        <div className="bg-white p-5 rounded-xl border border-gray-100 shadow-sm flex items-center justify-between group hover:border-primary/20 transition-colors cursor-pointer" onClick={() => router.push("/expense")}>
+        <div className="bg-white p-5 rounded-xl border border-gray-100 shadow-sm flex items-center justify-between group hover:border-primary/20 transition-colors cursor-pointer" onClick={() => router.push("/orders")}>
            <div className="flex flex-col gap-1">
-             <span className="text-sm font-medium text-gray-500">Total Expenses (Month)</span>
-             <span className="text-2xl font-bold text-gray-900">Rs. 1.1L</span>
-             <span className="text-[10px] font-medium text-gray-500 mt-1">4 pending payments</span>
+             <span className="text-sm font-medium text-gray-500">Active Orders</span>
+             <span className="text-2xl font-bold text-gray-900">{metrics.activeOrders}</span>
            </div>
-           <div className="w-12 h-12 rounded-full bg-rose-50 text-rose-600 flex items-center justify-center group-hover:bg-rose-100 transition-colors">
-              <Icons name="CreditCard" size={24} />
+           <div className="w-12 h-12 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center group-hover:bg-blue-100 transition-colors">
+              <Icons name="ShoppingCart" size={24} />
            </div>
         </div>
 
         <div className="bg-white p-5 rounded-xl border border-gray-100 shadow-sm flex items-center justify-between group hover:border-primary/20 transition-colors cursor-pointer" onClick={() => router.push("/leads")}>
            <div className="flex flex-col gap-1">
-             <span className="text-sm font-medium text-gray-500">Active Leads</span>
-             <span className="text-2xl font-bold text-gray-900">24</span>
-             <span className="text-[10px] font-medium text-gray-500 mt-1">8 new this week</span>
+             <span className="text-sm font-medium text-gray-500">New Leads</span>
+             <span className="text-2xl font-bold text-gray-900">{metrics.newLeads}</span>
            </div>
-           <div className="w-12 h-12 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center group-hover:bg-blue-100 transition-colors">
+           <div className="w-12 h-12 rounded-full bg-indigo-50 text-indigo-600 flex items-center justify-center group-hover:bg-indigo-100 transition-colors">
               <Icons name="Users" size={24} />
            </div>
         </div>

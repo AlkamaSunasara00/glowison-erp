@@ -1,5 +1,6 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useRouter } from "next/router";
+import api from "@/lib/api";
 import Button from "@/common/Button";
 import EmptyState from "@/common/EmptyState";
 import Icons from "@/common/Icons";
@@ -7,14 +8,9 @@ import Input from "@/common/Input";
 import StatusBadge from "@/common/StatusBadge";
 import AddOrder from "./ordersModal/AddOrder";
 import DeleteConfirmModal from "@/common/DeleteConfirmModal";
+import toast from "react-hot-toast";
 
-export const ordersData = [
-  { id: "ORD-001", type: "Retail", source: "", customer: "Rahul Sharma", phone: "9876543210", items: 3, itemsList: [{name: "MDF Sheet", qty: 2, price: 500}, {name: "Glue", qty: 1, price: 200}], total: "Rs. 1,200", status: "pending", paymentStatus: "unpaid", date: "2023-10-15" },
-  { id: "ORD-002", type: "Online", source: "Amazon", customer: "Sneha Gupta", phone: "9876543212", items: 1, itemsList: [{name: "Wall Clock", qty: 1, price: 450}], total: "Rs. 450", status: "processing", paymentStatus: "paid", date: "2023-10-16" },
-  { id: "ORD-003", type: "Dealer", source: "", customer: "Glow Signages", phone: "9988776655", items: 50, itemsList: [{name: "Glow Sign Board", qty: 50, price: 900}], total: "Rs. 45,000", status: "shipped/ready", paymentStatus: "partially paid", date: "2023-10-18" },
-  { id: "ORD-004", type: "Online", source: "Website", customer: "Amit Kumar", phone: "9123456780", items: 2, itemsList: [{name: "Custom Name Plate", qty: 1, price: 500}, {name: "Desk Organizer", qty: 1, price: 300}], total: "Rs. 800", status: "delivered", paymentStatus: "paid", date: "2023-10-20" },
-  { id: "ORD-005", type: "Retail", source: "", customer: "Priya Patel", phone: "9123456780", items: 1, itemsList: [{name: "Door Sign", qty: 1, price: 150}], total: "Rs. 150", status: "cancelled", paymentStatus: "unpaid", date: "2023-10-22" },
-];
+
 
 const typeOptions = [
   { value: "all", label: "All Types" },
@@ -47,8 +43,38 @@ export const Orders = () => {
   const [paymentFilter, setPaymentFilter] = useState("all");
   const [monthFilter, setMonthFilter] = useState("");
   const [isAddOrderOpen, setIsAddOrderOpen] = useState(false);
-  const [orders, setOrders] = useState(ordersData);
+  const [orders, setOrders] = useState([]);
   const [deleteItem, setDeleteItem] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  const fetchOrders = async () => {
+    try {
+      setLoading(true);
+      const res = await api.get('/orders?limit=100');
+      setOrders(res.data.data.map(o => ({
+        id: o.orderNumber,
+        originalId: o.id,
+        type: o.customer?.type === 'RETAIL' ? 'Retail' : o.customer?.type === 'DEALER' ? 'Dealer' : 'Online',
+        source: 'Website',
+        customer: o.customer?.name || 'Unknown',
+        phone: o.customer?.phone || '',
+        items: o.items.length,
+        itemsList: o.items,
+        total: `Rs. ${o.totalAmount}`,
+        status: o.status.toLowerCase(),
+        paymentStatus: o.paymentStatus.toLowerCase().replace('_', ' '),
+        date: new Date(o.createdAt).toLocaleDateString('en-CA')
+      })));
+    } catch (error) {
+      toast.error('Failed to load orders');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchOrders();
+  }, []);
 
   // Filters
   const hasActiveFilters = typeFilter !== "all" || statusFilter !== "all" || paymentFilter !== "all";
@@ -242,14 +268,20 @@ export const Orders = () => {
         )}
       </div>
 
-      {isAddOrderOpen && <AddOrder open={isAddOrderOpen} onClose={() => setIsAddOrderOpen(false)} />}
+      {isAddOrderOpen && <AddOrder open={isAddOrderOpen} onClose={() => { setIsAddOrderOpen(false); fetchOrders(); }} />}
       {deleteItem && (
         <DeleteConfirmModal
           open={!!deleteItem}
           onClose={() => setDeleteItem(null)}
           entityName={deleteItem.id}
-          onConfirm={() => {
-            setOrders(orders.filter(o => o.id !== deleteItem.id));
+          onConfirm={async () => {
+            try {
+              await api.delete(`/orders/${deleteItem.originalId}`);
+              toast.success("Order deleted");
+              setOrders(orders.filter(o => o.originalId !== deleteItem.originalId));
+            } catch (err) {
+              toast.error("Failed to delete order");
+            }
             setDeleteItem(null);
           }}
         />

@@ -1,4 +1,6 @@
 import React, { useEffect, useState } from "react";
+import api from "@/lib/api";
+import toast from "react-hot-toast";
 import Button from "@/common/Button";
 import Icons from "@/common/Icons";
 import Input from "@/common/Input";
@@ -19,14 +21,35 @@ const AdjustStock = ({ open, onClose, item }) => {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [open, onClose]);
 
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
   const handleChange = (event) => {
     const { name, value } = event.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleSubmit = (event) => {
+  const handleSubmit = async (event) => {
     event.preventDefault();
-    onClose();
+    try {
+      setIsSubmitting(true);
+      const qty = Number(formData.qty);
+      const newStock = formData.action === "add" ? item.stock + qty : item.stock - qty;
+      
+      if (newStock < 0) {
+        toast.error("Stock cannot be negative");
+        setIsSubmitting(false);
+        return;
+      }
+
+      await api.put(`/inventory/${item.id}`, { quantity: newStock });
+      toast.success('Stock adjusted successfully');
+      onClose();
+    } catch (error) {
+      toast.error('Failed to adjust stock');
+      console.error(error);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   if (!item) return null;
@@ -93,8 +116,8 @@ const AdjustStock = ({ open, onClose, item }) => {
           </div>
 
           <div className="shrink-0 border-t border-gray-200 bg-gray-50/50 px-6 py-4 flex justify-end gap-3">
-            <Button variant="outline" type="button" onClick={onClose}>Cancel</Button>
-            <Button variant="solid" type="submit" className={formData.action === 'add' ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-rose-600 hover:bg-rose-700'}>
+            <Button variant="outline" type="button" onClick={onClose} disabled={isSubmitting}>Cancel</Button>
+            <Button variant="solid" type="submit" isLoading={isSubmitting} disabled={isSubmitting} className={formData.action === 'add' ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-rose-600 hover:bg-rose-700'}>
               {formData.action === 'add' ? 'Add' : 'Remove'}
             </Button>
           </div>

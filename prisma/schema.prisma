@@ -1,0 +1,348 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+// ================= ENUMS =================
+enum Role {
+  ADMIN
+}
+
+// Leads Enums
+enum LeadSource {
+  INDIAMART
+  JUSTDIAL
+  WEBSITE
+  GOOGLE_ADS
+  FACEBOOK_INSTAGRAM
+  REFERENCE
+  COLD_CALL
+  OTHER
+}
+
+enum ProductInterest {
+  CARD_DESIGN
+  FLEX_DESIGN
+  BANNER
+  STICKER
+  SIGNAGE_BOARD
+  OTHER
+}
+
+enum LeadStage {
+  NEW
+  CONTACTED
+  NEGOTIATION
+  CLOSED_WON
+  CLOSED_LOST
+}
+
+// Customers Enums
+enum CustomerType {
+  RETAIL
+  WHOLESALE
+  ENTERPRISE
+}
+
+// Orders Enums
+enum OrderType {
+  RETAIL_DEALER
+  ONLINE
+}
+
+enum OrderSource {
+  WEBSITE
+  MEESHO
+  AMAZON
+  INSTAGRAM
+  OTHER
+}
+
+enum OrderStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  CANCELLED
+}
+
+enum PaymentStatus {
+  UNPAID
+  PARTIAL
+  PAID
+}
+
+// Inventory Enums
+enum InventoryType {
+  RAW_MATERIAL
+  FINISHED_GOOD
+}
+
+enum InventoryCategory {
+  FLEX
+  VINYL
+  ACRYLIC
+  BOARD
+  LED
+  INK
+  OTHERS
+}
+
+// Purchases & Expenses Enums
+enum PurchasePaymentStatus {
+  PAID
+  PENDING
+}
+
+enum PurchaseDeliveryStatus {
+  DELIVERED
+  PENDING
+}
+
+enum ExpenseCategory {
+  OFFICE_SUPPLIES
+  TRAVEL
+  UTILITIES
+  SALARY
+  MARKETING
+  MAINTENANCE
+  OTHER
+}
+
+enum ExpenseStatus {
+  PAID
+  PENDING
+}
+
+// Invoices & Quotations Enums
+enum InvoiceStatus {
+  DRAFT
+  SENT
+  PAID
+  OVERDUE
+  CANCELLED
+}
+
+enum QuotationStatus {
+  DRAFT
+  SENT
+  ACCEPTED
+  REJECTED
+}
+
+enum QuotationType {
+  CUSTOMER
+  LEAD
+}
+
+// Price List Enums
+enum PriceListCategory {
+  CARD_DESIGN
+  FLEX_DESIGN
+  BANNER
+  STICKER
+  SIGNAGE_BOARD
+  OTHER
+}
+
+enum PriceListSize {
+  STANDARD
+  EIGHT_BY_FOUR
+  SIX_BY_FOUR
+  THREE_BY_TWO
+  CUSTOM
+}
+
+enum PriceUnit {
+  PER_PIECE
+  PER_SQ_FT
+  PER_SET
+  CUSTOM
+}
+
+// ================= MODELS =================
+
+model User {
+  id           String   @id @default(uuid())
+  name         String
+  email        String   @unique
+  passwordHash String
+  role         Role     @default(ADMIN)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model Lead {
+  id            String           @id @default(uuid())
+  name          String
+  phone         String
+  email         String?
+  company       String?
+  source        LeadSource?
+  interest      ProductInterest?
+  interestOther String?
+  sourceOther   String?
+  status        LeadStage        @default(NEW)
+  notes         String?
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+
+  @@index([status])
+}
+
+model Customer {
+  id         String       @id @default(uuid())
+  name       String
+  phone      String
+  email      String?
+  company    String?
+  type       CustomerType @default(RETAIL)
+  address    String?
+  notes      String?
+  orders     Order[]
+  invoices   Invoice[]
+  createdAt  DateTime     @default(now())
+  updatedAt  DateTime     @updatedAt
+}
+
+model Order {
+  id                String        @id @default(uuid())
+  type              OrderType
+  customer          Customer?     @relation(fields: [customerId], references: [id])
+  customerId        String?
+  onlineSource      OrderSource?  // Used if type is ONLINE
+  onlineSourceOther String?
+  buyerName         String?       // Used if type is ONLINE
+  buyerContact      String?       // Used if type is ONLINE
+  items             OrderItem[]
+  total             Decimal       @db.Decimal(10, 2)
+  status            OrderStatus   @default(PENDING)
+  paymentStatus     PaymentStatus @default(UNPAID)
+  note              String?
+  invoices          Invoice[]
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+
+  @@index([status])
+  @@index([paymentStatus])
+  @@index([customerId])
+  @@index([createdAt])
+}
+
+model OrderItem {
+  id           String   @id @default(uuid())
+  order        Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  orderId      String
+  product      String
+  qty          Int
+  unitPrice    Decimal  @db.Decimal(10, 2)
+  size         String?
+  pricePerInch Decimal? @db.Decimal(10, 2)
+}
+
+model InventoryItem {
+  id               String            @id @default(uuid())
+  name             String
+  type             InventoryType     @default(RAW_MATERIAL)
+  category         InventoryCategory
+  categoryOther    String?
+  size             String?
+  color            String?
+  sku              String?
+  unit             String
+  stockQty         Int               @default(0)
+  reorderThreshold Int               @default(10)
+  images           String[]          // Cloudinary URLs
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+
+  @@index([category])
+}
+
+model Purchase {
+  id             String                 @id @default(uuid())
+  supplierName   String
+  material       String
+  amount         Decimal                @db.Decimal(10, 2)
+  quantity       Int
+  paymentStatus  PurchasePaymentStatus  @default(PENDING)
+  deliveryStatus PurchaseDeliveryStatus @default(PENDING)
+  purchaseDate   DateTime
+  note           String?
+  createdAt      DateTime               @default(now())
+  updatedAt      DateTime               @updatedAt
+
+  @@index([purchaseDate])
+}
+
+model Expense {
+  id            String          @id @default(uuid())
+  category      ExpenseCategory
+  categoryOther String?
+  amount        Decimal         @db.Decimal(10, 2)
+  status        ExpenseStatus   @default(PAID)
+  spentOn       DateTime
+  note          String?
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+
+  @@index([spentOn])
+}
+
+model Invoice {
+  id         String        @id @default(uuid())
+  customer   Customer      @relation(fields: [customerId], references: [id])
+  customerId String
+  order      Order?        @relation(fields: [orderId], references: [id])
+  orderId    String?
+  items      Json          // Storing snapshot of line items
+  total      Decimal       @db.Decimal(10, 2)
+  template   String        @default("default")
+  status     InvoiceStatus @default(DRAFT)
+  pdfUrl     String?       // Cloudinary URL if uploaded
+  createdAt  DateTime      @default(now())
+  updatedAt  DateTime      @updatedAt
+
+  @@index([customerId])
+  @@index([status])
+}
+
+model Quotation {
+  id             String          @id @default(uuid())
+  type           QuotationType   @default(CUSTOMER)
+  entityId       String?         // Relates to either Customer ID or Lead ID
+  entityName     String?         // Used if customer/lead is not saved in DB
+  productName    String
+  items          Json            // Storing line items with specific quotation prices/units
+  estimatedPrice Decimal         @db.Decimal(10, 2)
+  estimatedTime  String?
+  status         QuotationStatus @default(DRAFT)
+  images         String[]        // Cloudinary URLs
+  pdfUrl         String?         // Cloudinary URL
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+
+  @@index([status])
+}
+
+model PriceListItem {
+  id         String            @id @default(uuid())
+  category   PriceListCategory
+  otherLabel String?           // Used if category is OTHER
+  name       String
+  size       PriceListSize
+  sizeOther  String?           // Used if size is CUSTOM
+  price      Decimal           @db.Decimal(10, 2)
+  priceUnit  PriceUnit
+  unitOther  String?           // Used if priceUnit is CUSTOM
+  note       String?
+  imageUrl   String?           // Cloudinary URL
+  createdAt  DateTime          @default(now())
+  updatedAt  DateTime          @updatedAt
+
+  @@index([category])
+}

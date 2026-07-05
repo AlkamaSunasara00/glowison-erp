@@ -1,4 +1,6 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import api from "@/lib/api";
+import toast from "react-hot-toast";
 import Button from "@/common/Button";
 import EmptyState from "@/common/EmptyState";
 import Icons from "@/common/Icons";
@@ -8,13 +10,7 @@ import AddExpense from "./expenseModal/AddExpense";
 import EditExpense from "./expenseModal/EditExpense";
 import DeleteConfirmModal from "@/common/DeleteConfirmModal";
 
-export const expenseData = [
-  { id: "EXP-001", date: "2023-10-01", category: "Rent", amount: 15000, paidTo: "Landlord", notes: "October Rent", status: "Paid" },
-  { id: "EXP-002", date: "2023-10-05", category: "Marketing", amount: 2500, paidTo: "Meta Ads", notes: "Instagram Boosting", status: "Paid" },
-  { id: "EXP-003", date: "2023-10-10", category: "Salary", amount: 12000, paidTo: "Raju (Helper)", notes: "Sept Salary", status: "Paid" },
-  { id: "EXP-004", date: "2023-10-15", category: "Utilities", amount: 3200, paidTo: "Torrent Power", notes: "Electricity Bill", status: "Pending" },
-  { id: "EXP-005", date: "2023-10-20", category: "Misc", amount: 450, paidTo: "Local Store", notes: "Tea/Coffee", status: "Paid" },
-];
+
 
 const categoryOptions = [
   { value: "all", label: "All Categories" },
@@ -40,7 +36,32 @@ export const Expense = () => {
   const [editItem, setEditItem] = useState(null);
   const [deleteItem, setDeleteItem] = useState(null);
   
-  const [expenses, setExpenses] = useState(expenseData);
+  const [expenses, setExpenses] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  const fetchExpenses = async () => {
+    try {
+      setLoading(true);
+      const res = await api.get('/expenses?limit=200');
+      setExpenses(res.data.data.map(e => ({
+        id: e.id,
+        date: new Date(e.spentOn).toLocaleDateString('en-CA'),
+        category: e.category.toLowerCase().replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase()), // OFFICE_SUPPLIES -> Office Supplies
+        amount: e.amount,
+        paidTo: e.note || "N/A", // The schema didn't have a paidTo field, so using note if any, else N/A
+        notes: e.note || "",
+        status: e.status === "PAID" ? "Paid" : "Pending"
+      })));
+    } catch (error) {
+      toast.error('Failed to load expenses');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchExpenses();
+  }, []);
 
   // Filters
   const hasActiveFilters = categoryFilter !== "all" || statusFilter !== "all";
@@ -200,15 +221,21 @@ export const Expense = () => {
         )}
       </div>
 
-      {isAddOpen && <AddExpense open={isAddOpen} onClose={() => setIsAddOpen(false)} />}
-      {editItem && <EditExpense open={!!editItem} onClose={() => setEditItem(null)} initialData={editItem} />}
+      {isAddOpen && <AddExpense open={isAddOpen} onClose={() => { setIsAddOpen(false); fetchExpenses(); }} />}
+      {editItem && <EditExpense open={!!editItem} onClose={() => { setEditItem(null); fetchExpenses(); }} initialData={editItem} />}
       {deleteItem && (
         <DeleteConfirmModal
           open={!!deleteItem}
           onClose={() => setDeleteItem(null)}
           entityName={deleteItem.id}
-          onConfirm={() => {
-            setExpenses(expenses.filter(e => e.id !== deleteItem.id));
+          onConfirm={async () => {
+            try {
+              await api.delete(`/expenses/${deleteItem.id}`);
+              toast.success("Expense deleted");
+              setExpenses(expenses.filter(e => e.id !== deleteItem.id));
+            } catch (err) {
+              toast.error("Failed to delete expense");
+            }
             setDeleteItem(null);
           }}
         />

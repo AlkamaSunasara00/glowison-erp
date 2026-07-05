@@ -1,9 +1,10 @@
 import React, { useEffect, useState } from "react";
+import api from "@/lib/api";
+import toast from "react-hot-toast";
 import Button from "@/common/Button";
 import Icons from "@/common/Icons";
 import Input from "@/common/Input";
 import CustomerPicker from "@/common/CustomerPicker";
-import { ordersData } from "@/components/orders/orders";
 
 const statusOptions = [
   { label: "Draft", value: "Draft" },
@@ -23,16 +24,18 @@ const AddInvoice = ({ open, onClose }) => {
   const [selectedOrders, setSelectedOrders] = useState([]);
   const [lineItems, setLineItems] = useState([{ id: Date.now(), name: "", qty: 1, rate: 0, taxPercent: "" }]);
 
-  const getCustomerName = (id) => {
-    if (id === "1") return "Rahul Sharma";
-    if (id === "2") return "Glow Signages";
-    if (id === "3") return "Priya Patel";
-    return "";
-  };
-  // Mock fetching orders when customer changes
-  const availableOrders = customerId 
-    ? ordersData.filter(o => o.status !== "cancelled" && o.customer === getCustomerName(customerId)) 
-    : [];
+  const [availableOrders, setAvailableOrders] = useState([]);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  useEffect(() => {
+    if (customerId) {
+      api.get(`/orders?customerId=${customerId}`).then(res => {
+        setAvailableOrders(res.data.data || []);
+      }).catch(console.error);
+    } else {
+      setAvailableOrders([]);
+    }
+  }, [customerId]);
 
   useEffect(() => {
     if (!open) return undefined;
@@ -43,9 +46,33 @@ const AddInvoice = ({ open, onClose }) => {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [open, onClose]);
 
-  const handleSubmit = (event) => {
+  const handleSubmit = async (event) => {
     event.preventDefault();
-    onClose();
+    if (!customerId) {
+      toast.error("Please select a customer");
+      return;
+    }
+
+    try {
+      setIsSubmitting(true);
+      const payload = {
+        customerId,
+        orderId: selectedOrders[0] || null, // Assuming one order for simplicity
+        items: lineItems,
+        total: calculateTotal(),
+        status: formData.status.toUpperCase(),
+        template: "default"
+      };
+      
+      await api.post('/invoices', payload);
+      toast.success('Invoice created successfully');
+      onClose();
+    } catch (error) {
+      toast.error('Failed to create invoice');
+      console.error(error);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleAddLineItem = () => {
@@ -123,21 +150,18 @@ const AddInvoice = ({ open, onClose }) => {
                               setSelectedOrders(prev => {
                                 const newOrders = checked ? [...prev, order.id] : prev.filter(id => id !== order.id);
                                 
-                                // Auto-fetch items (mock)
                                 if (checked) {
-                                  const orderItems = order.itemsList 
-                                    ? order.itemsList.map(it => ({ id: Date.now() + Math.random(), orderId: order.id, name: it.name, qty: it.qty, rate: it.price, taxPercent: "" }))
-                                    : [{ id: Date.now() + Math.random(), orderId: order.id, name: `Items from ${order.id}`, qty: order.items || 1, rate: parseInt(String(order.total || '').replace(/[^0-9]/g, '')) || 0, taxPercent: "" }];
+                                  const orderItems = order.items && order.items.length > 0
+                                    ? order.items.map(it => ({ id: Date.now() + Math.random(), orderId: order.id, name: it.product, qty: it.qty, rate: Number(it.unitPrice), taxPercent: "" }))
+                                    : [{ id: Date.now() + Math.random(), orderId: order.id, name: `Order ${order.id}`, qty: 1, rate: Number(order.total) || 0, taxPercent: "" }];
                                   
                                   setLineItems(currentItems => {
-                                    // if only 1 empty default item exists, replace it
                                     if (currentItems.length === 1 && currentItems[0].name === "" && currentItems[0].rate === 0) {
                                       return [...orderItems];
                                     }
                                     return [...currentItems, ...orderItems];
                                   });
                                 } else {
-                                  // Remove items from this order
                                   setLineItems(currentItems => currentItems.filter(item => item.orderId !== order.id));
                                 }
 
@@ -146,7 +170,7 @@ const AddInvoice = ({ open, onClose }) => {
                             }}
                             className="rounded border-gray-300 text-primary focus:ring-primary"
                           />
-                          {order.id} - {order.total}
+                          {order.id} - Rs. {order.total}
                         </label>
                       ))
                     )}
@@ -231,8 +255,8 @@ const AddInvoice = ({ open, onClose }) => {
           </div>
 
           <div className="shrink-0 border-t border-gray-200 bg-gray-50/50 px-6 py-4 flex justify-end gap-3">
-            <Button variant="outline" type="button" onClick={onClose}>Cancel</Button>
-            <Button variant="solid" type="submit">Create Invoice</Button>
+            <Button variant="outline" type="button" onClick={onClose} disabled={isSubmitting}>Cancel</Button>
+            <Button variant="solid" type="submit" isLoading={isSubmitting} disabled={isSubmitting}>Create Invoice</Button>
           </div>
         </form>
       </div>

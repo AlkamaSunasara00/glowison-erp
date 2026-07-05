@@ -3,62 +3,58 @@ import Button from "@/common/Button";
 import Icons from "@/common/Icons";
 import Input from "@/common/Input";
 
+import api from "@/lib/api";
+import toast from "react-hot-toast";
+
 const COLUMNS = [
   {
-    key: "new",
+    key: "NEW",
     label: "New",
     color: "bg-sky-400",
     light: "bg-sky-50/100",
     border: "border-sky-100",
-    pipeline: "Rs. 0 pipeline",
   },
   {
-    key: "contacted",
+    key: "CONTACTED",
     label: "Contacted",
     color: "bg-indigo-400",
     light: "bg-indigo-50/100",
     border: "border-indigo-100",
-    pipeline: "Rs. 3.2L pipeline",
   },
   {
-    key: "demo",
-    label: "Demo",
+    key: "QUALIFIED",
+    label: "Qualified",
     color: "bg-amber-400",
     light: "bg-amber-50/100",
     border: "border-amber-100",
-    pipeline: "Rs. 6.1L pipeline",
   },
   {
-    key: "negotiation",
-    label: "Negotiation",
+    key: "PROPOSAL_SENT",
+    label: "Proposal Sent",
     color: "bg-violet-400",
     light: "bg-violet-50/100",
     border: "border-violet-100",
-    pipeline: "Rs. 5.8L pipeline",
   },
   {
-    key: "won",
+    key: "NEGOTIATION",
+    label: "Negotiation",
+    color: "bg-fuchsia-400",
+    light: "bg-fuchsia-50/100",
+    border: "border-fuchsia-100",
+  },
+  {
+    key: "CLOSED_WON",
     label: "Won",
     color: "bg-emerald-400",
     light: "bg-emerald-50/100",
     border: "border-emerald-100",
-    pipeline: "Rs. 8.4L won",
   },
   {
-    key: "lost",
+    key: "CLOSED_LOST",
     label: "Lost",
     color: "bg-rose-400",
     light: "bg-rose-50/100",
     border: "border-rose-100",
-    pipeline: "Rs. 1.1L lost",
-  },
-  {
-    key: "not-interested",
-    label: "Not interested",
-    color: "bg-slate-400",
-    light: "bg-slate-50/100",
-    border: "border-slate-100",
-    pipeline: "",
   },
 ];
 
@@ -92,152 +88,7 @@ const getTagStyles = (tag) => {
   return "bg-slate-100 text-slate-700 border border-slate-200/60";
 };
 
-const INITIAL_LEADS = [
-  {
-    id: 1,
-    col: "new",
-    doctor: "Dr. Neel Joshi",
-    clinic: "NJ Aesthetics, Surat",
-    tag: "WhatsApp",
-    tagCls: "bg-blue-50 text-blue-700",
-    initials: "SM",
-    cost: "Rs. 0",
-    days: "2d",
-  },
-  {
-    id: 2,
-    col: "new",
-    doctor: "Dr. Foram Desai",
-    clinic: "Skin Lab, Gandhinagar",
-    tag: null,
-    tagCls: "",
-    initials: "AP",
-    cost: "Rs. 200",
-    days: "3d",
-  },
-  {
-    id: 3,
-    col: "contacted",
-    doctor: "Dr. Ritu Patel",
-    clinic: "Patel Skin Centre, Gandhinagar",
-    tag: "Meeting Jun 4",
-    tagCls: "bg-teal-50 text-teal-700",
-    initials: "SM",
-    cost: "Rs. 1,100",
-    days: "6d",
-  },
-  {
-    id: 4,
-    col: "contacted",
-    doctor: "Dr. Hiren Shah",
-    clinic: "Shah Derm, Rajkot",
-    tag: null,
-    tagCls: "",
-    initials: "RS",
-    cost: "Rs. 850",
-    days: "4d",
-  },
-  {
-    id: 5,
-    col: "contacted",
-    doctor: "Dr. Anita Desai",
-    clinic: "Glow Skin Clinic, Baroda",
-    tag: "Intro overdue",
-    tagCls: "bg-red-50 text-red-600",
-    initials: "RS",
-    cost: "Rs. 0",
-    days: "1d",
-  },
-  {
-    id: 6,
-    col: "demo",
-    doctor: "Dr. Priya Sharma",
-    clinic: "Sharma Skin Clinic, Ahmedabad",
-    tag: "HydraFacial",
-    tagCls: "bg-amber-50 text-amber-700",
-    initials: "AP",
-    cost: "Rs. 2,925",
-    days: "9d",
-    tag2: "Joint",
-  },
-  {
-    id: 7,
-    col: "demo",
-    doctor: "Dr. Payal Modi",
-    clinic: "Modi Wellness, Anand",
-    tag: "HIFU",
-    tagCls: "bg-orange-50 text-orange-700",
-    initials: "RS",
-    cost: "Rs. 1,600",
-    days: "7d",
-  },
-  {
-    id: 8,
-    col: "negotiation",
-    doctor: "Dr. Karan Mehta",
-    clinic: "Mehta Dermatology, Surat",
-    tag: "Follow-up call",
-    tagCls: "bg-violet-50 text-violet-700",
-    initials: "SM",
-    cost: "Rs. 6,800",
-    days: "14d",
-  },
-  {
-    id: 9,
-    col: "negotiation",
-    doctor: "Dr. Sonal Trivedi",
-    clinic: "Trivedi Clinics, Vadodara",
-    tag: null,
-    tagCls: "",
-    initials: "AP",
-    cost: "Rs. 4,200",
-    days: "11d",
-  },
-  {
-    id: 10,
-    col: "won",
-    doctor: "Dr. Vikas Joshi",
-    clinic: "Joshi Aesthetics, Rajkot",
-    tag: "Quotation sent",
-    tagCls: "bg-emerald-50 text-emerald-700",
-    initials: "AP",
-    cost: "Rs. 9,500",
-    days: "23d",
-  },
-  {
-    id: 11,
-    col: "won",
-    doctor: "Dr. Mona Kapoor",
-    clinic: "Kapoor Skin Studio, Ahmedabad",
-    tag: "Payment pending",
-    tagCls: "bg-amber-50 text-amber-700",
-    initials: "SM",
-    cost: "Rs. 7,200",
-    days: "18d",
-  },
-  {
-    id: 12,
-    col: "lost",
-    doctor: "Dr. Raj Agarwal",
-    clinic: "Agarwal Clinic, Surat",
-    tag: "Budget issue",
-    tagCls: "bg-red-50 text-red-600",
-    initials: "RS",
-    cost: "Rs. 3,100",
-    days: "30d",
-  },
-  {
-    id: 13,
-    col: "not-interested",
-    doctor: "Dr. Bharat Lal",
-    clinic: "BL Clinic, Mehsana",
-    tag: "Re-engage later",
-    tagCls: "bg-gray-100 text-gray-500",
-    initials: "RS",
-    cost: "Rs. 800",
-    days: "45d",
-  },
-];
+
 
 const LeadCard = ({ lead, column, onDragStart, onDragEnd, isDragging, onMoveLead }) => (
   <article
@@ -385,11 +236,35 @@ const KanbanColumn = ({
 );
 
 const KanbanModal = ({ open, onClose, onAddLead }) => {
-  const [leads, setLeads] = useState(INITIAL_LEADS);
+  const [leads, setLeads] = useState([]);
   const [draggingLead, setDraggingLead] = useState(null);
   const [overCol, setOverCol] = useState(null);
   const [assigneeFilter, setAssigneeFilter] = useState("");
   const [search, setSearch] = useState("");
+
+  useEffect(() => {
+    if (open) {
+      fetchLeads();
+    }
+  }, [open]);
+
+  const fetchLeads = async () => {
+    try {
+      const res = await api.get("/leads?limit=200");
+      setLeads(res.data.data.map(l => ({
+        id: l.id,
+        col: l.status,
+        doctor: l.name,
+        clinic: l.clinicName || 'Unknown Clinic',
+        tag: l.source,
+        initials: "AP", // Default or extract from assigned
+        cost: l.budget ? `Rs. ${l.budget}` : "—",
+        days: "1d"
+      })));
+    } catch (err) {
+      toast.error("Failed to fetch leads");
+    }
+  };
   const [activeTab, setActiveTab] = useState(COLUMNS[0].key);
   const boardScrollRef = useRef(null);
   const autoScrollFrameRef = useRef(null);
@@ -503,22 +378,42 @@ const KanbanModal = ({ open, onClose, onAddLead }) => {
       return;
     }
 
+    const leadId = draggingLead.id;
+    const oldCol = draggingLead.col;
+
+    // Optimistic update
     setLeads((prev) =>
       prev.map((item) =>
-        item.id === draggingLead.id ? { ...item, col: colKey } : item
+        item.id === leadId ? { ...item, col: colKey } : item
       )
     );
     setDraggingLead(null);
     setOverCol(null);
     autoScrollVelocityRef.current = 0;
+
+    api.put(`/leads/${leadId}`, { status: colKey }).catch(err => {
+      toast.error("Failed to update status");
+      // Revert
+      setLeads((prev) => prev.map(item => item.id === leadId ? { ...item, col: oldCol } : item));
+    });
   };
 
   const handleMoveLead = (leadId, targetColKey) => {
+    const lead = leads.find(l => l.id === leadId);
+    if (!lead || lead.col === targetColKey) return;
+    
+    const oldCol = lead.col;
     setLeads((prev) =>
       prev.map((item) =>
         item.id === leadId ? { ...item, col: targetColKey } : item
       )
     );
+    
+    api.put(`/leads/${leadId}`, { status: targetColKey }).catch(err => {
+      toast.error("Failed to update status");
+      // Revert
+      setLeads((prev) => prev.map(item => item.id === leadId ? { ...item, col: oldCol } : item));
+    });
   };
 
   const visibleLeads = leads.filter((lead) => {

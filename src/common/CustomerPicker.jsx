@@ -1,12 +1,7 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import Select from "react-select";
 import Icons from "@/common/Icons";
-
-const mockCustomers = [
-  { value: "1", label: "Rahul Sharma (Retail) - 9876543210", data: { id: "1", name: "Rahul Sharma", phone: "9876543210", type: "Retail", address: { line1: "123 Main St", city: "Mumbai", state: "MH" } } },
-  { value: "2", label: "Glow Signages (Dealer) - 9988776655", data: { id: "2", name: "Glow Signages", phone: "9988776655", type: "Dealer", address: { line1: "Shop 4, Market", city: "Delhi", state: "DL" }, gstin: "22AAAAA0000A1Z5" } },
-  { value: "3", label: "Priya Patel (Retail) - 9123456780", data: { id: "3", name: "Priya Patel", phone: "9123456780", type: "Retail", address: { line1: "45 MG Road", city: "Ahmedabad", state: "GJ" } } },
-];
+import api from "@/lib/api";
 
 const customStyles = {
   control: (base, state) => ({
@@ -63,7 +58,29 @@ const customStyles = {
 };
 
 const CustomerPicker = ({ value, onChange, error, label, required }) => {
-  const selectedOption = mockCustomers.find((c) => c.value === value) || null;
+  const [customers, setCustomers] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchCustomers = async () => {
+      try {
+        const res = await api.get('/customers?limit=200');
+        const formatted = res.data.data.map(c => ({
+          value: c.id,
+          label: `${c.name} (${c.type === 'RETAIL' ? 'Retail' : 'Dealer'}) - ${c.phone}`,
+          data: c
+        }));
+        setCustomers(formatted);
+      } catch (error) {
+        console.error("Failed to fetch customers for picker", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchCustomers();
+  }, []);
+
+  const selectedOption = customers.find((c) => c.value === value) || null;
 
   const handleChange = (selected) => {
     // Pass both value and the full data object to the parent
@@ -80,7 +97,8 @@ const CustomerPicker = ({ value, onChange, error, label, required }) => {
       <Select
         value={selectedOption}
         onChange={handleChange}
-        options={mockCustomers}
+        options={customers}
+        isLoading={loading}
         styles={customStyles}
         placeholder="Search and select customer..."
         isClearable

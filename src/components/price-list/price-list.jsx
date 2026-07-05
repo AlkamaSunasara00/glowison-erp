@@ -1,4 +1,6 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import api from "@/lib/api";
+import toast from "react-hot-toast";
 import Button from "@/common/Button";
 import EmptyState from "@/common/EmptyState";
 import Icons from "@/common/Icons";
@@ -9,13 +11,6 @@ import EditPriceItem from "./priceListModal/EditPriceItem";
 import DeleteConfirmModal from "@/common/DeleteConfirmModal";
 import { useRouter } from "next/router";
 
-export const priceListData = [
-  { id: "PL-001", name: "Wedding Card Design - Premium", category: "Card Design", size: "Standard", price: 500, unit: "Per Piece", notes: "Includes 2 revisions", image: "" },
-  { id: "PL-002", name: "Shop Board Signage", category: "Signage Board", size: "Custom", price: 250, unit: "Per Sq Ft", notes: "With LED backlight", image: "" },
-  { id: "PL-003", name: "Birthday Banner", category: "Banner", size: "6x4 ft", price: 15, unit: "Per Sq Ft", notes: "Star flex material", image: "" },
-  { id: "PL-004", name: "Die Cut Sticker", category: "Sticker", size: "2x2 inch", price: 5, unit: "Per Piece", notes: "Minimum 100 pcs", image: "" },
-  { id: "PL-005", name: "Normal Flex Design", category: "Flex Design", size: "Any", price: 12, unit: "Per Sq Ft", notes: "Normal quality", image: "" },
-];
 
 
 const categoryOptions = [
@@ -39,7 +34,33 @@ const PriceList = () => {
   const [editItem, setEditItem] = useState(null);
   const [deleteItem, setDeleteItem] = useState(null);
   
-  const [items, setItems] = useState(priceListData);
+  const [items, setItems] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  const fetchPriceList = async () => {
+    try {
+      setLoading(true);
+      const res = await api.get('/price-list?limit=200');
+      setItems(res.data.data.map(i => ({
+        id: i.id,
+        name: i.name,
+        category: i.category,
+        size: i.size || 'Standard',
+        price: i.price,
+        unit: i.unit,
+        notes: i.notes || '',
+        image: i.imageUrl || ''
+      })));
+    } catch (error) {
+      toast.error('Failed to load price list');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchPriceList();
+  }, []);
 
   // Filters
   const hasActiveFilters = categoryFilter !== "all";
@@ -198,15 +219,21 @@ const PriceList = () => {
         )}
       </div>
 
-      {isAddOpen && <AddPriceItem open={isAddOpen} onClose={() => setIsAddOpen(false)} />}
-      {editItem && <EditPriceItem open={!!editItem} onClose={() => setEditItem(null)} initialData={editItem} />}
+      {isAddOpen && <AddPriceItem open={isAddOpen} onClose={() => { setIsAddOpen(false); fetchPriceList(); }} />}
+      {editItem && <EditPriceItem open={!!editItem} onClose={() => { setEditItem(null); fetchPriceList(); }} initialData={editItem} />}
       {deleteItem && (
         <DeleteConfirmModal
           open={!!deleteItem}
           onClose={() => setDeleteItem(null)}
           entityName={deleteItem.name}
-          onConfirm={() => {
-            setItems(items.filter(i => i.id !== deleteItem.id));
+          onConfirm={async () => {
+            try {
+              await api.delete(`/price-list/${deleteItem.id}`);
+              toast.success("Item deleted");
+              setItems(items.filter(i => i.id !== deleteItem.id));
+            } catch (err) {
+              toast.error("Failed to delete item");
+            }
             setDeleteItem(null);
           }}
         />

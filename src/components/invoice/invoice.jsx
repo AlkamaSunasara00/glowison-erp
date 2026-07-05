@@ -1,5 +1,7 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useRouter } from "next/router";
+import api from "@/lib/api";
+import toast from "react-hot-toast";
 import Button from "@/common/Button";
 import EmptyState from "@/common/EmptyState";
 import Icons from "@/common/Icons";
@@ -8,12 +10,6 @@ import StatusBadge from "@/common/StatusBadge";
 import AddInvoice from "./invoiceModal/AddInvoice";
 import DeleteConfirmModal from "@/common/DeleteConfirmModal";
 
-export const invoiceData = [
-  { id: "INV-2023-001", orderId: "ORD-001", customer: "Rahul Sharma", date: "2023-10-15", dueDate: "2023-10-25", amount: 1416, tax: 216, status: "Paid" },
-  { id: "INV-2023-002", orderId: "ORD-003", customer: "Glow Signages", date: "2023-10-18", dueDate: "2023-11-02", amount: 53100, tax: 8100, status: "Overdue" },
-  { id: "INV-2023-003", orderId: "ORD-004", customer: "Amit Kumar", date: "2023-10-20", dueDate: "2023-10-20", amount: 944, tax: 144, status: "Sent" },
-  { id: "INV-2023-004", orderId: null, customer: "New Retail Client", date: "2023-10-22", dueDate: "2023-10-22", amount: 500, tax: 76, status: "Draft" },
-];
 
 const statusOptions = [
   { value: "all", label: "All Statuses" },
@@ -28,7 +24,34 @@ export const Invoice = () => {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [isAddOpen, setIsAddOpen] = useState(false);
-  const [invoices, setInvoices] = useState(invoiceData);
+  const [invoices, setInvoices] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  const fetchInvoices = async () => {
+    try {
+      setLoading(true);
+      const res = await api.get('/invoices?limit=200');
+      setInvoices(res.data.data.map(i => ({
+        id: i.id,
+        orderId: i.orderId || null,
+        customer: i.customer?.name || "Unknown",
+        date: new Date(i.createdAt).toLocaleDateString('en-CA'),
+        dueDate: new Date(i.createdAt).toLocaleDateString('en-CA'), // TODO: add dueDate logic if needed
+        amount: Number(i.total),
+        tax: 0,
+        status: i.status.charAt(0).toUpperCase() + i.status.slice(1).toLowerCase()
+      })));
+    } catch (error) {
+      toast.error('Failed to load invoices');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchInvoices();
+  }, []);
+
   const [deleteItem, setDeleteItem] = useState(null);
 
   // Filters
@@ -177,14 +200,20 @@ export const Invoice = () => {
         )}
       </div>
 
-      {isAddOpen && <AddInvoice open={isAddOpen} onClose={() => setIsAddOpen(false)} />}
+      {isAddOpen && <AddInvoice open={isAddOpen} onClose={() => { setIsAddOpen(false); fetchInvoices(); }} />}
       {deleteItem && (
         <DeleteConfirmModal
           open={!!deleteItem}
           onClose={() => setDeleteItem(null)}
           entityName={deleteItem.id}
-          onConfirm={() => {
-            setInvoices(invoices.filter(i => i.id !== deleteItem.id));
+          onConfirm={async () => {
+            try {
+              await api.delete(`/invoices/${deleteItem.id}`);
+              toast.success("Invoice deleted");
+              setInvoices(invoices.filter(i => i.id !== deleteItem.id));
+            } catch (err) {
+              toast.error("Failed to delete invoice");
+            }
             setDeleteItem(null);
           }}
         />

@@ -1,22 +1,37 @@
 import { useRouter } from "next/router";
 import LeadDetail from "@/components/leads/LeadDetail";
-import { leadsData } from "@/components/leads/leads";
+import { useEffect, useState } from "react";
+import api from "@/lib/api";
 
 const LeadDetailPage = () => {
   const router = useRouter();
   const { id } = router.query;
+  
+  const [lead, setLead] = useState(null);
+  const [loading, setLoading] = useState(true);
 
-  // Wait until id is resolved from URL query
-  if (!id) {
+  useEffect(() => {
+    if (id) {
+      api.get(`/leads/${id}`)
+        .then(res => {
+          setLead(res.data.data);
+          setLoading(false);
+        })
+        .catch(err => {
+          console.error("Failed to load lead", err);
+          setLead(null);
+          setLoading(false);
+        });
+    }
+  }, [id]);
+
+  if (!id || loading) {
     return (
       <div className="flex h-full w-full items-center justify-center bg-white rounded-xl border border-gray-100">
         <p className="text-sm text-gray-500">Loading lead details...</p>
       </div>
     );
   }
-
-  // Find dynamic lead item using ID from mock database
-  const lead = leadsData.find((l) => String(l.id) === String(id));
 
   if (!lead) {
     return (

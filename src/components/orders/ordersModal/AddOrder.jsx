@@ -1,4 +1,6 @@
 import React, { useEffect, useState } from "react";
+import api from "@/lib/api";
+import toast from "react-hot-toast";
 import Button from "@/common/Button";
 import Icons from "@/common/Icons";
 import Input from "@/common/Input";
@@ -35,9 +37,36 @@ const AddOrder = ({ open, onClose }) => {
 
 
 
-  const handleSubmit = (event) => {
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const handleSubmit = async (event) => {
     event.preventDefault();
-    onClose();
+    try {
+      setIsSubmitting(true);
+      
+      const payload = {
+        customerId: orderType === "Retail/Dealer" ? customerId : undefined,
+        notes: notes,
+        items: lineItems.map(item => ({
+          name: item.name,
+          quantity: Number(item.qty),
+          unitPrice: Number(item.price),
+          taxRate: item.taxPercent ? Number(item.taxPercent) : 0,
+          unitType: item.unit,
+          size: item.size || null,
+          color: item.color || null
+        }))
+      };
+
+      await api.post('/orders', payload);
+      toast.success('Order created successfully');
+      onClose();
+    } catch (error) {
+      toast.error('Failed to create order');
+      console.error(error);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleAddLineItem = () => {
@@ -218,8 +247,8 @@ const AddOrder = ({ open, onClose }) => {
           </div>
 
           <div className="shrink-0 border-t border-gray-200 bg-gray-50/50 px-6 py-4 flex justify-end gap-3">
-            <Button variant="outline" type="button" onClick={onClose}>Cancel</Button>
-            <Button variant="solid" type="submit">Create Order</Button>
+            <Button variant="outline" type="button" onClick={onClose} disabled={isSubmitting}>Cancel</Button>
+            <Button variant="solid" type="submit" isLoading={isSubmitting} disabled={isSubmitting}>Create Order</Button>
           </div>
         </form>
       </div>

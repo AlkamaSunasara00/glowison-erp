@@ -1,5 +1,6 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useRouter } from "next/router";
+import api from "@/lib/api";
 import Button from "@/common/Button";
 import EmptyState from "@/common/EmptyState";
 import Icons from "@/common/Icons";
@@ -8,22 +9,17 @@ import StatusBadge from "@/common/StatusBadge";
 import AddLead from "./leadsModal/AddLead";
 import DeleteConfirmModal from "@/common/DeleteConfirmModal";
 import LeadDetail from "./LeadDetail";
+import toast from "react-hot-toast";
 
 export const STAGES = [
-  { key: "new", label: "New", color: "bg-sky-50 border-sky-200 text-sky-800" },
-  { key: "in progress", label: "In Progress", color: "bg-indigo-50 border-indigo-200 text-indigo-800" },
-  { key: "negotiation", label: "Negotiation", color: "bg-violet-50 border-violet-200 text-violet-800" },
-  { key: "won", label: "Won", color: "bg-emerald-50 border-emerald-200 text-emerald-800" },
-  { key: "lost", label: "Lost", color: "bg-rose-50 border-rose-200 text-rose-800" },
+  { key: "NEW", label: "New", color: "bg-sky-50 border-sky-200 text-sky-800" },
+  { key: "CONTACTED", label: "Contacted", color: "bg-indigo-50 border-indigo-200 text-indigo-800" },
+  { key: "NEGOTIATION", label: "Negotiation", color: "bg-violet-50 border-violet-200 text-violet-800" },
+  { key: "CLOSED_WON", label: "Won", color: "bg-emerald-50 border-emerald-200 text-emerald-800" },
+  { key: "CLOSED_LOST", label: "Lost", color: "bg-rose-50 border-rose-200 text-rose-800" },
 ];
 
-export const leadsData = [
-  { id: "1", name: "Rahul Sharma", phone: "9876543210", email: "rahul@example.com", source: "Website", productInterest: "MDF Sheet", stage: "new", notes: "Needs a callback", created: "2023-10-01" },
-  { id: "2", name: "Priya Patel", phone: "9123456789", email: "priya@example.com", source: "Instagram", productInterest: "Acrylic Sheet", stage: "in progress", notes: "Wants custom size", created: "2023-10-02" },
-  { id: "3", name: "Glow Signages", phone: "9988776655", email: "contact@glow.com", source: "Referral", productInterest: "LED Strip Lights", stage: "negotiation", notes: "Bulk order discussion", created: "2023-10-05" },
-  { id: "4", name: "Amit Kumar", phone: "9876543211", email: "amit@example.com", source: "Walk-in", productInterest: "Hooks", stage: "won", notes: "Order placed", created: "2023-10-10" },
-  { id: "5", name: "Sneha Gupta", phone: "9876543212", email: "sneha@example.com", source: "Amazon", productInterest: "Boards", stage: "lost", notes: "Price too high", created: "2023-10-12" },
-];
+
 
 const sourceOptions = [
   { value: "all", label: "All sources" },
@@ -43,10 +39,31 @@ export const Leads = () => {
   const [statusFilter, setStatusFilter] = useState("all");
   const [viewMode, setViewMode] = useState("kanban"); // kanban or table
   const [isAddLeadOpen, setIsAddLeadOpen] = useState(false);
-  const [leads, setLeads] = useState(leadsData);
+  const [leads, setLeads] = useState([]);
   const [draggedLead, setDraggedLead] = useState(null);
+  const [loading, setLoading] = useState(true);
   
   const [deleteItem, setDeleteItem] = useState(null);
+
+  const fetchLeads = async () => {
+    try {
+      setLoading(true);
+      const res = await api.get('/leads?limit=100'); // simple all fetch for kanban
+      setLeads(res.data.data.map(l => ({
+        ...l, 
+        stage: l.status,
+        created: new Date(l.createdAt).toLocaleDateString()
+      })));
+    } catch (error) {
+      toast.error('Failed to load leads');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchLeads();
+  }, []);
 
   // Filters
   const hasActiveFilters = sourceFilter !== "all" || statusFilter !== "all";
@@ -60,11 +77,11 @@ export const Leads = () => {
 
   // KPIs
   const totalLeads = leads.length;
-  const newLeads = leads.filter(l => l.stage === "new").length;
-  const wonLeads = leads.filter(l => l.stage === "won").length;
+  const newLeads = leads.filter(l => l.stage === "NEW").length;
+  const wonLeads = leads.filter(l => l.stage === "CLOSED_WON").length;
   const conversionRate = totalLeads === 0 ? 0 : Math.round((wonLeads / totalLeads) * 100);
-  const lostLeads = leads.filter(l => l.stage === "lost").length;
-  const openLeads = leads.filter(l => l.stage === "in progress").length;
+  const lostLeads = leads.filter(l => l.stage === "CLOSED_LOST").length;
+  const openLeads = leads.filter(l => !["CLOSED_WON", "CLOSED_LOST"].includes(l.stage)).length;
 
   const handleRowClick = (lead) => {
     router.push(`/leads/${lead.id}`);
@@ -79,14 +96,24 @@ export const Leads = () => {
     e.preventDefault();
   };
 
-  const handleDrop = (e, targetStage) => {
+  const handleDrop = async (e, targetStage) => {
     e.preventDefault();
     if (!draggedLead) return;
     
     if (draggedLead.stage !== targetStage) {
+      // Optimistic update
       setLeads(prev => prev.map(l => 
         l.id === draggedLead.id ? { ...l, stage: targetStage } : l
       ));
+      try {
+        await api.put(`/leads/${draggedLead.id}`, {
+          status: targetStage
+        });
+        toast.success("Stage updated");
+      } catch (error) {
+        toast.error("Failed to update stage");
+        fetchLeads(); // revert
+      }
     }
     setDraggedLead(null);
   };
@@ -221,7 +248,7 @@ export const Leads = () => {
                         </div>
                         <div className="mt-2 flex justify-between items-center">
                           <span className="text-[10px] bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded">
-                            {lead.source}
+                            {lead.source === 'OTHER' ? lead.sourceOther : lead.source}
                           </span>
                           <span className="text-[10px] text-gray-400">{lead.created}</span>
                         </div>
@@ -259,8 +286,8 @@ export const Leads = () => {
                         <div>{lead.phone}</div>
                         <div className="text-xs">{lead.email}</div>
                       </td>
-                      <td className="px-4 py-3 text-gray-700">{lead.source}</td>
-                      <td className="px-4 py-3 text-gray-700">{lead.productInterest}</td>
+                      <td className="px-4 py-3 text-gray-700">{lead.source === 'OTHER' ? lead.sourceOther : lead.source}</td>
+                      <td className="px-4 py-3 text-gray-700">{lead.interest === 'OTHER' ? lead.interestOther : lead.interest}</td>
                       <td className="px-4 py-3">
                         <StatusBadge status={lead.stage} label={STAGES.find(s => s.key === lead.stage)?.label} />
                       </td>
@@ -279,14 +306,20 @@ export const Leads = () => {
         )}
       </div>
 
-      {isAddLeadOpen && <AddLead open={isAddLeadOpen} onClose={() => setIsAddLeadOpen(false)} />}
+      {isAddLeadOpen && <AddLead open={isAddLeadOpen} onClose={() => setIsAddLeadOpen(false)} onSuccess={fetchLeads} />}
       {deleteItem && (
         <DeleteConfirmModal
           open={!!deleteItem}
           onClose={() => setDeleteItem(null)}
           entityName={deleteItem.name}
-          onConfirm={() => {
-            setLeads(leads.filter(l => l.id !== deleteItem.id));
+          onConfirm={async () => {
+            try {
+              await api.delete(`/leads/${deleteItem.id}`);
+              toast.success("Lead deleted");
+              setLeads(leads.filter(l => l.id !== deleteItem.id));
+            } catch (err) {
+              toast.error("Failed to delete lead");
+            }
             setDeleteItem(null);
           }}
         />

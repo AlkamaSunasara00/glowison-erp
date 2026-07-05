@@ -1,5 +1,7 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useRouter } from "next/router";
+import api from "@/lib/api";
+import toast from "react-hot-toast";
 import Button from "@/common/Button";
 import EmptyState from "@/common/EmptyState";
 import Icons from "@/common/Icons";
@@ -8,12 +10,7 @@ import StatusBadge from "@/common/StatusBadge";
 import AddQuotation from "./quotationModal/AddQuotation";
 import DeleteConfirmModal from "@/common/DeleteConfirmModal";
 
-export const quotationData = [
-  { id: "QT-2023-001", type: "Lead", entityName: "Dr. Priya Sharma", date: "2023-10-15", validUntil: "2023-10-25", amount: 150000, status: "Sent" },
-  { id: "QT-2023-002", type: "Customer", entityName: "Rahul Sharma", date: "2023-10-18", validUntil: "2023-11-02", amount: 1200, status: "Accepted" },
-  { id: "QT-2023-003", type: "Customer", entityName: "Glow Signages", date: "2023-10-20", validUntil: "2023-11-20", amount: 45000, status: "Draft" },
-  { id: "QT-2023-004", type: "Lead", entityName: "Ahmedabad Clinic", date: "2023-10-22", validUntil: "2023-10-29", amount: 85000, status: "Rejected" },
-];
+
 
 const statusOptions = [
   { value: "all", label: "All Statuses" },
@@ -28,7 +25,33 @@ export const Quotation = () => {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [isAddOpen, setIsAddOpen] = useState(false);
-  const [quotations, setQuotations] = useState(quotationData);
+  const [quotations, setQuotations] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  const fetchQuotations = async () => {
+    try {
+      setLoading(true);
+      const res = await api.get('/quotations?limit=200');
+      setQuotations(res.data.data.map(q => ({
+        id: q.id,
+        type: q.type.charAt(0).toUpperCase() + q.type.slice(1).toLowerCase(),
+        entityName: q.entityName || (q.type === 'CUSTOMER' && q.customerId ? `Customer ${q.customerId}` : 'Unknown'),
+        date: new Date(q.createdAt).toLocaleDateString('en-CA'),
+        amount: Number(q.estimatedPrice),
+        status: q.status.charAt(0).toUpperCase() + q.status.slice(1).toLowerCase(),
+        productName: q.productName
+      })));
+    } catch (error) {
+      toast.error('Failed to load quotations');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchQuotations();
+  }, []);
+
   const [deleteItem, setDeleteItem] = useState(null);
 
   // Filters
@@ -171,14 +194,20 @@ export const Quotation = () => {
         )}
       </div>
 
-      {isAddOpen && <AddQuotation open={isAddOpen} onClose={() => setIsAddOpen(false)} />}
+      {isAddOpen && <AddQuotation open={isAddOpen} onClose={() => { setIsAddOpen(false); fetchQuotations(); }} />}
       {deleteItem && (
         <DeleteConfirmModal
           open={!!deleteItem}
           onClose={() => setDeleteItem(null)}
           entityName={deleteItem.id}
-          onConfirm={() => {
-            setQuotations(quotations.filter(q => q.id !== deleteItem.id));
+          onConfirm={async () => {
+            try {
+              await api.delete(`/quotations/${deleteItem.id}`);
+              toast.success("Quotation deleted");
+              setQuotations(quotations.filter(q => q.id !== deleteItem.id));
+            } catch (err) {
+              toast.error("Failed to delete quotation");
+            }
             setDeleteItem(null);
           }}
         />

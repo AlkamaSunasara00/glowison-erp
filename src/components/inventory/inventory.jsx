@@ -1,4 +1,6 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import api from "@/lib/api";
+import toast from "react-hot-toast";
 import Button from "@/common/Button";
 import EmptyState from "@/common/EmptyState";
 import Icons from "@/common/Icons";
@@ -9,12 +11,7 @@ import EditInventory from "./inventoryModal/EditInventory";
 import AdjustStock from "./inventoryModal/AdjustStock";
 import DeleteConfirmModal from "@/common/DeleteConfirmModal";
 
-export const inventoryData = [
-  { id: "INV-001", sku: "MDF-6MM", name: "MDF Sheet 6mm", type: "Raw Material", category: "Boards", stock: 150, minStock: 50, price: 120 },
-  { id: "INV-002", sku: "ACR-2MM-CLR", name: "Clear Acrylic 2mm", type: "Raw Material", category: "Sheets", stock: 20, minStock: 30, price: 450 },
-  { id: "INV-003", sku: "WC-001", name: "Custom Wall Clock", type: "Finished Good", category: "Decor", stock: 5, minStock: 10, price: 1200 },
-  { id: "INV-004", sku: "LED-W", name: "LED Strip - Warm White", type: "Raw Material", category: "Lighting", stock: 500, minStock: 100, price: 45 },
-];
+
 
 const typeOptions = [
   { value: "all", label: "All Types" },
@@ -40,7 +37,33 @@ export const Inventory = () => {
   const [adjustItem, setAdjustItem] = useState(null);
   const [deleteItem, setDeleteItem] = useState(null);
   
-  const [items, setItems] = useState(inventoryData);
+  const [items, setItems] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  const fetchInventory = async () => {
+    try {
+      setLoading(true);
+      const res = await api.get('/inventory?limit=200');
+      setItems(res.data.data.map(i => ({
+        id: i.id,
+        sku: i.sku,
+        name: i.name,
+        type: i.type === 'RAW_MATERIAL' ? 'Raw Material' : 'Finished Good',
+        category: i.category || 'Uncategorized',
+        stock: i.quantity,
+        minStock: i.minStockLevel || 0,
+        price: i.unitPrice
+      })));
+    } catch (error) {
+      toast.error('Failed to load inventory');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchInventory();
+  }, []);
 
   // Filters
   const hasActiveFilters = typeFilter !== "all" || categoryFilter !== "all";
@@ -200,16 +223,22 @@ export const Inventory = () => {
         )}
       </div>
 
-      {isAddOpen && <AddInventory open={isAddOpen} onClose={() => setIsAddOpen(false)} />}
-      {editItem && <EditInventory open={!!editItem} onClose={() => setEditItem(null)} initialData={editItem} />}
-      {adjustItem && <AdjustStock open={!!adjustItem} onClose={() => setAdjustItem(null)} item={adjustItem} />}
+      {isAddOpen && <AddInventory open={isAddOpen} onClose={() => { setIsAddOpen(false); fetchInventory(); }} />}
+      {editItem && <EditInventory open={!!editItem} onClose={() => { setEditItem(null); fetchInventory(); }} initialData={editItem} />}
+      {adjustItem && <AdjustStock open={!!adjustItem} onClose={() => { setAdjustItem(null); fetchInventory(); }} item={adjustItem} />}
       {deleteItem && (
         <DeleteConfirmModal
           open={!!deleteItem}
           onClose={() => setDeleteItem(null)}
           entityName={deleteItem.name}
-          onConfirm={() => {
-            setItems(items.filter(i => i.id !== deleteItem.id));
+          onConfirm={async () => {
+            try {
+              await api.delete(`/inventory/${deleteItem.id}`);
+              toast.success("Item deleted");
+              setItems(items.filter(i => i.id !== deleteItem.id));
+            } catch (err) {
+              toast.error("Failed to delete item");
+            }
             setDeleteItem(null);
           }}
         />

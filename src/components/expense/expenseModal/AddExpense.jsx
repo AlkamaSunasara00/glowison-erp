@@ -1,4 +1,6 @@
 import React, { useEffect, useState } from "react";
+import api from "@/lib/api";
+import toast from "react-hot-toast";
 import Button from "@/common/Button";
 import Icons from "@/common/Icons";
 import Input from "@/common/Input";
@@ -35,14 +37,34 @@ const AddExpense = ({ open, onClose }) => {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [open, onClose]);
 
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
   const handleChange = (event) => {
     const { name, value } = event.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleSubmit = (event) => {
+  const handleSubmit = async (event) => {
     event.preventDefault();
-    onClose();
+    try {
+      setIsSubmitting(true);
+      const payload = {
+        category: formData.category.toUpperCase().replace(' ', '_'),
+        amount: Number(formData.amount),
+        spentOn: formData.date,
+        note: formData.paidTo ? `${formData.paidTo} - ${formData.notes}` : formData.notes,
+        status: formData.status.toUpperCase()
+      };
+
+      await api.post('/expenses', payload);
+      toast.success('Expense logged successfully');
+      onClose();
+    } catch (error) {
+      toast.error('Failed to log expense');
+      console.error(error);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -120,8 +142,8 @@ const AddExpense = ({ open, onClose }) => {
           </div>
 
           <div className="shrink-0 border-t border-gray-200 bg-gray-50/50 px-6 py-4 flex justify-end gap-3">
-            <Button variant="outline" type="button" onClick={onClose}>Cancel</Button>
-            <Button variant="solid" type="submit">Save Expense</Button>
+            <Button variant="outline" type="button" onClick={onClose} disabled={isSubmitting}>Cancel</Button>
+            <Button variant="solid" type="submit" isLoading={isSubmitting} disabled={isSubmitting}>Save Expense</Button>
           </div>
         </form>
       </div>

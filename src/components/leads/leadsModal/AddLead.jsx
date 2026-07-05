@@ -1,49 +1,51 @@
 import React, { useEffect, useState } from "react";
+import api from "@/lib/api";
+import toast from "react-hot-toast";
 import Button from "@/common/Button";
 import Icons from "@/common/Icons";
 import Input from "@/common/Input";
 
 const leadSourceOptions = [
-  { label: "Website", value: "Website" },
-  { label: "Instagram", value: "Instagram" },
-  { label: "Referral", value: "Referral" },
-  { label: "Walk-in", value: "Walk-in" },
-  { label: "Amazon", value: "Amazon" },
-  { label: "Meesho", value: "Meesho" },
-  { label: "Other", value: "Other" },
+  { label: "IndiaMart", value: "INDIAMART" },
+  { label: "JustDial", value: "JUSTDIAL" },
+  { label: "Website", value: "WEBSITE" },
+  { label: "Google Ads", value: "GOOGLE_ADS" },
+  { label: "Facebook/Instagram", value: "FACEBOOK_INSTAGRAM" },
+  { label: "Reference", value: "REFERENCE" },
+  { label: "Cold Call", value: "COLD_CALL" },
+  { label: "Other", value: "OTHER" },
 ];
 
 const productInterestOptions = [
-  { label: "MDF Sheet", value: "MDF Sheet" },
-  { label: "Acrylic Sheet", value: "Acrylic Sheet" },
-  { label: "LED Strip Lights", value: "LED Strip Lights" },
-  { label: "Wire", value: "Wire" },
-  { label: "Hooks", value: "Hooks" },
-  { label: "Boards", value: "Boards" },
-  { label: "Other", value: "Other" },
+  { label: "Card Design", value: "CARD_DESIGN" },
+  { label: "Flex Design", value: "FLEX_DESIGN" },
+  { label: "Banner", value: "BANNER" },
+  { label: "Sticker", value: "STICKER" },
+  { label: "Signage Board", value: "SIGNAGE_BOARD" },
+  { label: "Other", value: "OTHER" },
 ];
 
 const stageOptions = [
-  { label: "New", value: "new" },
-  { label: "In Progress", value: "in progress" },
-  { label: "Negotiation", value: "negotiation" },
-  { label: "Won", value: "won" },
-  { label: "Lost", value: "lost" },
+  { label: "New", value: "NEW" },
+  { label: "Contacted", value: "CONTACTED" },
+  { label: "Negotiation", value: "NEGOTIATION" },
+  { label: "Closed Won", value: "CLOSED_WON" },
+  { label: "Closed Lost", value: "CLOSED_LOST" },
 ];
 
 const initialFormData = {
   name: "",
   phone: "",
   email: "",
-  source: "Website",
+  source: "WEBSITE",
   otherSource: "",
-  productInterest: "MDF Sheet",
+  productInterest: "FLEX_DESIGN",
   otherProductInterest: "",
-  stage: "new",
+  stage: "NEW",
   notes: "",
 };
 
-const AddLead = ({ open, onClose }) => {
+const AddLead = ({ open, onClose, onSuccess }) => {
   const [formData, setFormData] = useState(initialFormData);
 
   useEffect(() => {
@@ -59,6 +61,8 @@ const AddLead = ({ open, onClose }) => {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [open, onClose]);
 
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
   const handleChange = (event) => {
     const { name, value } = event.target;
     setFormData((prev) => ({
@@ -67,9 +71,34 @@ const AddLead = ({ open, onClose }) => {
     }));
   };
 
-  const handleSubmit = (event) => {
+  const handleSubmit = async (event) => {
     event.preventDefault();
-    onClose();
+    try {
+      setIsSubmitting(true);
+      
+      const payload = {
+        name: formData.name,
+        phone: formData.phone || undefined,
+        email: formData.email || undefined,
+        source: formData.source,
+        sourceOther: formData.source === "OTHER" ? formData.otherSource : undefined,
+        interest: formData.productInterest,
+        interestOther: formData.productInterest === "OTHER" ? formData.otherProductInterest : undefined,
+        status: formData.stage,
+        notes: formData.notes
+      };
+
+      await api.post('/leads', payload);
+      toast.success('Lead added successfully');
+      setFormData(initialFormData);
+      if (onSuccess) onSuccess();
+      onClose();
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Failed to add lead');
+      console.error(error);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -169,7 +198,7 @@ const AddLead = ({ open, onClose }) => {
                 />
               </div>
               
-              {formData.source === "Other" && (
+              {formData.source === "OTHER" && (
                 <div className="space-y-1.5 animate-fade-in">
                   <label className="label">
                     Specify Other Source
@@ -196,7 +225,7 @@ const AddLead = ({ open, onClose }) => {
                 />
               </div>
 
-              {formData.productInterest === "Other" && (
+              {formData.productInterest === "OTHER" && (
                 <div className="space-y-1.5 animate-fade-in">
                   <label className="label">
                     Specify Product Interest
@@ -241,10 +270,10 @@ const AddLead = ({ open, onClose }) => {
           </div>
 
           <div className="shrink-0 border-t border-gray-200 bg-gray-50/50 px-6 py-4 flex items-center justify-end gap-3">
-            <Button variant="outline" type="button" onClick={onClose}>
+            <Button variant="outline" type="button" onClick={onClose} disabled={isSubmitting}>
               Cancel
             </Button>
-            <Button variant="solid" type="submit">
+            <Button variant="solid" type="submit" isLoading={isSubmitting} disabled={isSubmitting}>
               Save lead
             </Button>
           </div>
