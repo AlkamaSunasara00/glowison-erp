@@ -3,7 +3,6 @@ import Button from "@/common/Button";
 import Icons from "@/common/Icons";
 import Input from "@/common/Input";
 import CustomerPicker from "@/common/CustomerPicker";
-import { leadsData } from "@/components/leads/leads";
 
 const statusOptions = [
   { label: "Draft", value: "Draft" },

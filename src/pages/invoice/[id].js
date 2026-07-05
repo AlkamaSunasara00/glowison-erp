@@ -1,20 +1,37 @@
 import { useRouter } from "next/router";
 import InvoiceDetail from "@/components/invoice/InvoiceDetail";
-import { invoiceData } from "@/components/invoice/invoice";
+import { useEffect, useState } from "react";
+import api from "@/lib/api";
 
 const InvoiceDetailPage = () => {
   const router = useRouter();
   const { id } = router.query;
+  
+  const [invoice, setInvoice] = useState(null);
+  const [loading, setLoading] = useState(true);
 
-  if (!id) {
+  useEffect(() => {
+    if (id) {
+      api.get(`/invoices/${id}`)
+        .then(res => {
+          setInvoice(res.data.data);
+          setLoading(false);
+        })
+        .catch(err => {
+          console.error("Failed to load invoice", err);
+          setInvoice(null);
+          setLoading(false);
+        });
+    }
+  }, [id]);
+
+  if (!id || loading) {
     return (
       <div className="flex h-full w-full items-center justify-center bg-white rounded-xl border border-gray-100">
         <p className="text-sm text-gray-500">Loading invoice details...</p>
       </div>
     );
   }
-
-  const invoice = invoiceData.find((i) => String(i.id) === String(id));
 
   if (!invoice) {
     return (

@@ -1,22 +1,37 @@
 import { useRouter } from "next/router";
 import PriceListDetail from "@/components/price-list/PriceListDetail";
-import { priceListData } from "@/components/price-list/price-list";
+import { useEffect, useState } from "react";
+import api from "@/lib/api";
 
 const PriceListDetailPage = () => {
   const router = useRouter();
   const { id } = router.query;
+  
+  const [item, setItem] = useState(null);
+  const [loading, setLoading] = useState(true);
 
-  // Wait until id is resolved from URL query
-  if (!id) {
+  useEffect(() => {
+    if (id) {
+      api.get(`/products/${id}`)
+        .then(res => {
+          setItem(res.data.data);
+          setLoading(false);
+        })
+        .catch(err => {
+          console.error("Failed to load item", err);
+          setItem(null);
+          setLoading(false);
+        });
+    }
+  }, [id]);
+
+  if (!id || loading) {
     return (
       <div className="flex h-full w-full items-center justify-center bg-white rounded-xl border border-gray-100">
         <p className="text-sm text-gray-500">Loading item details...</p>
       </div>
     );
   }
-
-  // Find dynamic item using ID from mock database
-  const item = priceListData.find((p) => String(p.id) === String(id));
 
   if (!item) {
     return (

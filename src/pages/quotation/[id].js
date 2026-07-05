@@ -1,20 +1,37 @@
 import { useRouter } from "next/router";
 import QuotationDetail from "@/components/quotation/QuotationDetail";
-import { quotationData } from "@/components/quotation/quotation";
+import { useEffect, useState } from "react";
+import api from "@/lib/api";
 
 const QuotationDetailPage = () => {
   const router = useRouter();
   const { id } = router.query;
+  
+  const [quotation, setQuotation] = useState(null);
+  const [loading, setLoading] = useState(true);
 
-  if (!id) {
+  useEffect(() => {
+    if (id) {
+      api.get(`/quotations/${id}`)
+        .then(res => {
+          setQuotation(res.data.data);
+          setLoading(false);
+        })
+        .catch(err => {
+          console.error("Failed to load quotation", err);
+          setQuotation(null);
+          setLoading(false);
+        });
+    }
+  }, [id]);
+
+  if (!id || loading) {
     return (
       <div className="flex h-full w-full items-center justify-center bg-white rounded-xl border border-gray-100">
         <p className="text-sm text-gray-500">Loading quotation details...</p>
       </div>
     );
   }
-
-  const quotation = quotationData.find((q) => String(q.id) === String(id));
 
   if (!quotation) {
     return (

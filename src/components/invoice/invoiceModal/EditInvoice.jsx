@@ -3,7 +3,6 @@ import Button from "@/common/Button";
 import Icons from "@/common/Icons";
 import Input from "@/common/Input";
 import CustomerPicker from "@/common/CustomerPicker";
-import { ordersData } from "@/components/orders/orders";
 
 const statusOptions = [
   { label: "Draft", value: "Draft" },
