@@ -143,8 +143,8 @@ export const Dashboard = () => {
                        <AreaChart data={salesData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                          <defs>
                            <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
-                             <stop offset="5%" stopColor="#8038A1" stopOpacity={0.3}/>
-                             <stop offset="95%" stopColor="#8038A1" stopOpacity={0}/>
+                             <stop offset="5%" stopColor="var(--color-primary)" stopOpacity={0.3}/>
+                             <stop offset="95%" stopColor="var(--color-primary)" stopOpacity={0}/>
                            </linearGradient>
                          </defs>
                          <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f3f4f6" />
@@ -154,7 +154,7 @@ export const Dashboard = () => {
                            contentStyle={{ borderRadius: '8px', border: '1px solid #e5e7eb', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)' }}
                            formatter={(value) => [`₹${value.toLocaleString()}`, 'Revenue']}
                          />
-                         <Area type="monotone" dataKey="revenue" stroke="#8038A1" strokeWidth={3} fillOpacity={1} fill="url(#colorRevenue)" />
+                         <Area type="monotone" dataKey="revenue" stroke="var(--color-primary)" strokeWidth={3} fillOpacity={1} fill="url(#colorRevenue)" />
                        </AreaChart>
                     </ResponsiveContainer>
                  </div>

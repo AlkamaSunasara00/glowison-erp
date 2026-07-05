@@ -19,6 +19,7 @@ import {
     ChevronRight,
     Clipboard,
     Palette,
+    Brush,
     X
 } from "lucide-react";
 import Image from "next/image";
@@ -37,6 +38,7 @@ const menuItems = [
     { name: "Invoice", icon: FileText, path: "/invoice" },
     { name: "Quotation", icon: Layers, path: "/quotation" },
     { name: "Reports", icon: BarChart, path: "/reports" },
+    { name: "Appearance", icon: Brush, path: "/appearance" },
 ];
 
 const Sidebar = ({ setMobileOpen, isMobileOpen }) => {
@@ -73,13 +75,13 @@ const Sidebar = ({ setMobileOpen, isMobileOpen }) => {
     return (
         <div
             className="lg:w-[250px] w-[280px] h-screen text-white bg-primary  flex flex-col py-4 pl-2 pr-0 overflow-hidden transition-colors duration-500"
-            style={{ background: `linear-gradient(135deg, #4C2896 0%, #8038A1 60%, #9b45b2 100%)` }}
+            style={{ background: `linear-gradient(135deg, var(--color-one) 0%, var(--color-primary) 60%, var(--color-one) 100%)` }}
         >
             {/* Logo & Close Button Header */}
             <div className="mb-4 pb-5 pr-4 flex-shrink-0 border-b border-white/10 flex items-center justify-between gap-4">
                 <div className={`transition-all duration-300 ${isMobileOpen ? "opacity-100 w-auto" : "opacity-0 w-0 lg:opacity-100 lg:w-auto overflow-hidden"}`}>
                     <Image
-                        src="/image/white-logo.png"
+                        src="/image/logo2.png"
                         alt="Logo"
                         width={150}
                         height={50}

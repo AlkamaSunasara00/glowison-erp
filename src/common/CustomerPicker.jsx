@@ -13,10 +13,10 @@ const customStyles = {
     ...base,
     minHeight: '36px',
     height: '36px',
-    borderColor: state.isFocused ? '#8038A1' : '#f3f4f6', // gray-100
-    boxShadow: state.isFocused ? '0 0 0 2px rgba(128, 56, 161, 0.1)' : '0 1px 2px 0 rgba(0, 0, 0, 0.05)',
+    borderColor: state.isFocused ? 'var(--color-primary)' : '#f3f4f6', // gray-100
+    boxShadow: state.isFocused ? '0 0 0 2px var(--color-secondary)' : '0 1px 2px 0 rgba(0, 0, 0, 0.05)',
     '&:hover': {
-      borderColor: state.isFocused ? '#8038A1' : '#e5e7eb',
+      borderColor: state.isFocused ? 'var(--color-primary)' : '#e5e7eb',
     },
     borderRadius: '2px', // rounded-sm
     fontSize: '0.875rem',
@@ -45,13 +45,13 @@ const customStyles = {
   }),
   option: (base, state) => ({
     ...base,
-    backgroundColor: state.isSelected ? '#8038A1' : state.isFocused ? '#f9fafb' : 'white',
+    backgroundColor: state.isSelected ? 'var(--color-primary)' : state.isFocused ? '#f9fafb' : 'white',
     color: state.isSelected ? 'white' : '#1f2937',
     fontSize: '0.875rem',
     padding: '8px 12px',
     cursor: 'pointer',
     '&:active': {
-      backgroundColor: state.isSelected ? '#8038A1' : '#f3f4f6',
+      backgroundColor: state.isSelected ? 'var(--color-primary)' : '#f3f4f6',
     },
   }),
   menu: (base) => ({

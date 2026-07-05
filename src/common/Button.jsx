@@ -31,21 +31,21 @@ const Button = ({
 
   /*
    * Color logic:
-   *  - Solid / primary CTA actions  → #4C2896 (deep indigo-blue)
-   *  - Background / secondary tints → #8038A1 (violet-purple)
+   *  - Solid / primary CTA actions  → #F5A623 (Golden Orange for contrast)
+   *  - Outline / Tinted → #1F3C88 (Deep Navy)
    */
   const variants = {
-    // Solid CTA — deep indigo #4C2896
+    // Solid CTA — using orange for contrast
     primary:
-      "text-[#4C2896] bg-white border border-[#4C2896]/20 hover:bg-[#4C2896] hover:text-white hover:border-[#4C2896]",
+      "text-primary bg-white border border-primary/20 hover:bg-primary hover:text-white hover:border-primary",
     solid:
-      "bg-[#4C2896] text-white border border-[#4C2896] hover:bg-[#3a1e70] hover:border-[#3a1e70]",
+      "bg-three text-white border border-three hover:opacity-90",
 
-    // Tinted / background — violet #8038A1
+    // Tinted / background — using secondary and primary
     third:
-      "bg-[#f0e6f7] text-[#8038A1] border border-[#8038A1]/20 hover:bg-[#8038A1]/20 hover:text-[#8038A1]",
+      "bg-secondary text-primary border border-primary/20 hover:bg-primary/10 hover:text-primary",
     ghost:
-      "border-transparent text-[#8038A1] hover:text-[#8038A1] hover:bg-[#f0e6f7]",
+      "border-transparent text-primary hover:text-primary hover:bg-secondary",
 
     // Neutral
     secondary:
@@ -59,7 +59,7 @@ const Button = ({
     danger:
       "bg-red-50 text-red-700 border border-red-200 hover:bg-red-600 hover:text-white",
     info:
-      "bg-[#f0e6f7] text-[#4C2896] border border-[#4C2896]/20 hover:bg-[#4C2896] hover:text-white",
+      "bg-secondary text-primary border border-primary/20 hover:bg-primary hover:text-white",
   };
 
   const iconSize =

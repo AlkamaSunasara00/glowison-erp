@@ -24,7 +24,7 @@ const Input = ({
   };
 
   /*
-   * Focus ring → violet #8038A1 (bg tint)
+   * Focus ring → violet #1F3C88 (bg tint)
    * Error ring → red (unchanged)
    */
   const baseInputClasses = `
@@ -33,7 +33,7 @@ const Input = ({
   ${
     error
       ? "focus:border-red-500 focus:ring-2 focus:ring-red-500/20"
-      : "focus:border-[#8038A1] focus:ring-2 focus:ring-[#8038A1]/10"
+      : "focus:border-primary focus:ring-2 focus:ring-primary/10"
   }
   bg-white rounded-sm shadow-sm truncate transition-all
   ${sizes[size]}
@@ -55,7 +55,7 @@ const Input = ({
   ${
     error
       ? "focus:border-red-500 focus:ring-2 focus:ring-red-500/20"
-      : "focus:border-[#8038A1] focus:ring-2 focus:ring-[#8038A1]/10"
+      : "focus:border-primary focus:ring-2 focus:ring-primary/10"
   }
   bg-white rounded-sm shadow-sm resize-none transition-all
   ${textareaSizes[size]}

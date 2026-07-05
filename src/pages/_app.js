@@ -1,6 +1,7 @@
 import "@/styles/globals.css";
 import Layout from "@/layout/Layout";
 import { useRouter } from "next/router";
+import { ThemeProvider } from "@/context/ThemeContext";
 
 export default function App({ Component, pageProps }) {
   const router = useRouter();
@@ -11,12 +12,14 @@ export default function App({ Component, pageProps }) {
   const isNoLayout = noLayoutRoutes.includes(router.pathname);
 
   return (
-    isNoLayout ? (
-      <Component {...pageProps} />
-    ) : (
-      <Layout>
+    <ThemeProvider>
+      {isNoLayout ? (
         <Component {...pageProps} />
-      </Layout>
-    )
+      ) : (
+        <Layout>
+          <Component {...pageProps} />
+        </Layout>
+      )}
+    </ThemeProvider>
   );
 }

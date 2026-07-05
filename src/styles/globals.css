@@ -2,18 +2,18 @@
 
 /* root  */
 :root {
-  --color-primary: #8038A1;
-  --color-secondary: #f0e6f7;
-  --color-secondary-light: #f8f2fc;
+  --color-primary: #1F3C88;
+  --color-secondary: #ffedd5;
+  --color-secondary-light: #fff7ed;
   --color-black: #000000;
   --color-white: #ffffff;
   --color-grey: #f4f4f4;
   --color-green: #00722e;
   --color-red: #ee4544;
 
-  --color-one: #4C2896;
-  --color-two: #8038A1;
-  --color-three: #4C2896;
+  --color-one: #162a60;
+  --color-two: #1F3C88;
+  --color-three: #F5A623;
 
   --font-1: "Poppins", sans-serif;
 }
@@ -273,8 +273,8 @@ svg {
 }
 
 @keyframes outerToRing {
-  0% { background-color: #4C2896; border: 0px solid #4C2896; }
-  100% { background-color: transparent; border: 4px solid #4C2896; }
+  0% { background-color: var(--color-primary); border: 0px solid var(--color-primary); }
+  100% { background-color: transparent; border: 4px solid var(--color-primary); }
 }
 
 @keyframes innerDotGrow {

@@ -558,8 +558,8 @@ const TaskDetailCard = ({ task }) => {
           </div>
         </div>
 
-        <div className="mt-3 rounded-lg border border-[#d9d2fb] bg-[#f3f0ff] p-3">
-          <div className="flex items-center gap-1.5 text-xs font-semibold text-[#4c2896]">
+        <div className="mt-3 rounded-lg border border-[#d9d2fb] bg-secondary p-3">
+          <div className="flex items-center gap-1.5 text-xs font-semibold text-primary">
             <Icons name="Sparkles" size={12} />
             <span>AI call summary</span>
           </div>
