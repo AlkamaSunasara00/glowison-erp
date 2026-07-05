@@ -31,20 +31,41 @@ const stageOptions = [
   { label: "Lost", value: "lost" },
 ];
 
-const initialFormData = {
-  name: "",
-  phone: "",
-  email: "",
-  source: "Website",
-  otherSource: "",
-  productInterest: "MDF Sheet",
-  otherProductInterest: "",
-  stage: "new",
-  notes: "",
-};
+const EditLead = ({ open, onClose, initialData }) => {
+  const [formData, setFormData] = useState({
+    name: "",
+    phone: "",
+    email: "",
+    source: "Website",
+    otherSource: "",
+    productInterest: "MDF Sheet",
+    otherProductInterest: "",
+    stage: "new",
+    notes: "",
+  });
 
-const AddLead = ({ open, onClose }) => {
-  const [formData, setFormData] = useState(initialFormData);
+  useEffect(() => {
+    if (initialData) {
+      let productInterest = initialData.productInterest || "MDF Sheet";
+      let otherProductInterest = "";
+      if (productInterest && !productInterestOptions.find(o => o.value === productInterest)) {
+        productInterest = "Other";
+        otherProductInterest = initialData.productInterest;
+      }
+
+      setFormData({
+        name: initialData.name || "",
+        phone: initialData.phone || "",
+        email: initialData.email || "",
+        source: initialData.source || "Website",
+        otherSource: initialData.otherSource || "",
+        productInterest: productInterest,
+        otherProductInterest: otherProductInterest,
+        stage: initialData.stage || "new",
+        notes: initialData.notes || "",
+      });
+    }
+  }, [initialData]);
 
   useEffect(() => {
     if (!open) return undefined;
@@ -97,10 +118,10 @@ const AddLead = ({ open, onClose }) => {
             <div className="flex items-center justify-between">
               <div>
                 <h2 className="text-base font-semibold text-gray-900">
-                  Add new lead
+                  Edit lead
                 </h2>
                 <p className="mt-1 text-sm text-gray-500">
-                  Capture a new prospect for the pipeline.
+                  Update details for this prospect.
                 </p>
               </div>
 
@@ -212,7 +233,7 @@ const AddLead = ({ open, onClose }) => {
 
               <div className="space-y-1.5">
                 <label className="label">
-                  Initial Stage <span className="required">*</span>
+                  Stage <span className="required">*</span>
                 </label>
                 <Input
                   name="stage"
@@ -245,7 +266,7 @@ const AddLead = ({ open, onClose }) => {
               Cancel
             </Button>
             <Button variant="solid" type="submit">
-              Save lead
+              Save changes
             </Button>
           </div>
         </form>
@@ -254,4 +275,4 @@ const AddLead = ({ open, onClose }) => {
   );
 };
 
-export default AddLead;
+export default EditLead;

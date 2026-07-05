@@ -1,0 +1,243 @@
+import React, { useEffect, useState } from "react";
+import Button from "@/common/Button";
+import Icons from "@/common/Icons";
+import Input from "@/common/Input";
+import CustomerPicker from "@/common/CustomerPicker";
+import { ordersData } from "@/components/orders/orders";
+
+const statusOptions = [
+  { label: "Draft", value: "Draft" },
+  { label: "Sent", value: "Sent" },
+  { label: "Paid", value: "Paid" },
+];
+
+const AddInvoice = ({ open, onClose }) => {
+  const [formData, setFormData] = useState({
+    orderId: "",
+    date: "",
+    dueDate: "",
+    status: "Draft",
+    notes: "",
+  });
+  const [customerId, setCustomerId] = useState("");
+  const [selectedOrders, setSelectedOrders] = useState([]);
+  const [lineItems, setLineItems] = useState([{ id: Date.now(), name: "", qty: 1, rate: 0, taxPercent: "" }]);
+
+  const getCustomerName = (id) => {
+    if (id === "1") return "Rahul Sharma";
+    if (id === "2") return "Glow Signages";
+    if (id === "3") return "Priya Patel";
+    return "";
+  };
+  // Mock fetching orders when customer changes
+  const availableOrders = customerId 
+    ? ordersData.filter(o => o.status !== "cancelled" && o.customer === getCustomerName(customerId)) 
+    : [];
+
+  useEffect(() => {
+    if (!open) return undefined;
+    const handleKeyDown = (event) => {
+      if (event.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [open, onClose]);
+
+  const handleSubmit = (event) => {
+    event.preventDefault();
+    onClose();
+  };
+
+  const handleAddLineItem = () => {
+    setLineItems(prev => [...prev, { id: Date.now(), name: "", qty: 1, rate: 0, taxPercent: "" }]);
+  };
+
+  const handleRemoveLineItem = (id) => {
+    setLineItems(prev => prev.filter(item => item.id !== id));
+  };
+
+  const handleLineItemChange = (id, field, value) => {
+    setLineItems(prev => prev.map(item => item.id === id ? { ...item, [field]: value } : item));
+  };
+
+  const calculateSubtotal = () => lineItems.reduce((sum, item) => sum + (Number(item.qty) * Number(item.rate)), 0);
+  const calculateTax = () => lineItems.reduce((sum, item) => sum + ((Number(item.qty) * Number(item.rate)) * (Number(item.taxPercent) / 100)), 0);
+  const calculateTotal = () => calculateSubtotal() + calculateTax();
+
+  return (
+    <div
+      className={`fixed inset-x-0 bottom-0 top-16 z-[1000] flex items-start justify-center p-4 md:inset-0 md:items-center md:p-6 ${
+        open ? "pointer-events-auto" : "pointer-events-none"
+      }`}
+      aria-hidden={!open}
+    >
+      <div
+        className={`absolute inset-0 bg-black/40 backdrop-blur-[2px] ${
+          open ? "animate-overlay-in" : "animate-overlay-out"
+        }`}
+        onClick={onClose}
+      />
+
+      <div
+        className={`relative flex h-full w-full max-w-4xl flex-col overflow-hidden rounded-md border border-gray-200 bg-white shadow-lg md:h-auto md:max-h-[90vh] ${
+          open ? "animate-modal-in" : "animate-modal-out"
+        }`}
+      >
+        <form onSubmit={handleSubmit} className="flex h-full min-h-0 flex-col">
+          <div className="shrink-0 border-b border-gray-200 px-6 py-4 flex items-center justify-between bg-gray-50/50">
+            <div>
+              <h2 className="text-base font-semibold text-gray-900">Create Invoice</h2>
+              <p className="mt-1 text-sm text-gray-500">Generate a new tax invoice.</p>
+            </div>
+            <button type="button" onClick={onClose}>
+              <Icons name="X" size={18} className="text-gray-500 hover:text-gray-700" />
+            </button>
+          </div>
+
+          <div className="min-h-0 flex-1 overflow-y-auto px-6 py-5 custom-scrollbar">
+            
+            <div className="mb-6 p-4 rounded-xl border border-gray-100 bg-gray-50/30">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-1.5 md:col-span-2">
+                  <CustomerPicker 
+                    label="Select Customer *"
+                    value={customerId}
+                    onChange={(val) => setCustomerId(val)}
+                    required
+                  />
+                </div>
+                
+                <div className="space-y-1.5">
+                  <label className="label">Link Orders (Optional)</label>
+                  <div className="flex flex-col gap-2 max-h-[120px] overflow-auto border border-gray-100 rounded p-2 bg-white">
+                    {availableOrders.length === 0 ? (
+                      <span className="text-xs text-gray-400 p-1">No pending orders for this customer</span>
+                    ) : (
+                      availableOrders.map(order => (
+                        <label key={order.id} className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer p-1 hover:bg-gray-50 rounded">
+                          <input 
+                            type="checkbox" 
+                            checked={selectedOrders.includes(order.id)}
+                            onChange={(e) => {
+                              const checked = e.target.checked;
+                              setSelectedOrders(prev => {
+                                const newOrders = checked ? [...prev, order.id] : prev.filter(id => id !== order.id);
+                                
+                                // Auto-fetch items (mock)
+                                if (checked) {
+                                  const orderItems = order.itemsList 
+                                    ? order.itemsList.map(it => ({ id: Date.now() + Math.random(), orderId: order.id, name: it.name, qty: it.qty, rate: it.price, taxPercent: "" }))
+                                    : [{ id: Date.now() + Math.random(), orderId: order.id, name: `Items from ${order.id}`, qty: order.items || 1, rate: parseInt(String(order.total || '').replace(/[^0-9]/g, '')) || 0, taxPercent: "" }];
+                                  
+                                  setLineItems(currentItems => {
+                                    // if only 1 empty default item exists, replace it
+                                    if (currentItems.length === 1 && currentItems[0].name === "" && currentItems[0].rate === 0) {
+                                      return [...orderItems];
+                                    }
+                                    return [...currentItems, ...orderItems];
+                                  });
+                                } else {
+                                  // Remove items from this order
+                                  setLineItems(currentItems => currentItems.filter(item => item.orderId !== order.id));
+                                }
+
+                                return newOrders;
+                              });
+                            }}
+                            className="rounded border-gray-300 text-primary focus:ring-primary"
+                          />
+                          {order.id} - {order.total}
+                        </label>
+                      ))
+                    )}
+                  </div>
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="label">Status <span className="required">*</span></label>
+                  <Input type="select" options={statusOptions} value={formData.status} onChange={(e) => setFormData({...formData, status: e.target.value})} required />
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="label">Invoice Date <span className="required">*</span></label>
+                  <Input type="date" value={formData.date} onChange={(e) => setFormData({...formData, date: e.target.value})} required />
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="label">Due Date <span className="required">*</span></label>
+                  <Input type="date" value={formData.dueDate} onChange={(e) => setFormData({...formData, dueDate: e.target.value})} required />
+                </div>
+              </div>
+            </div>
+
+            {/* Line Items */}
+            <div className="mb-6 p-4 rounded-xl border border-gray-100">
+               <div className="flex items-center justify-between mb-4">
+                 <h3 className="text-sm font-semibold text-gray-800">Invoice Items</h3>
+                 <Button type="button" variant="ghost" size="sm" onClick={handleAddLineItem} leftIcon={(props) => <Icons name="Plus" {...props} />} className="text-primary">Add Item</Button>
+               </div>
+               
+               <div className="space-y-3">
+                  {lineItems.map((item, index) => (
+                    <div key={item.id} className="flex flex-col md:flex-row gap-3 items-end bg-gray-50/50 p-3 rounded-lg border border-gray-100">
+                       <div className="flex-1 w-full space-y-1.5">
+                         {index === 0 && <label className="text-xs font-semibold text-gray-600">Product / Service</label>}
+                         <Input placeholder="Description" value={item.name} onChange={(e) => handleLineItemChange(item.id, 'name', e.target.value)} required />
+                       </div>
+                       <div className="w-full md:w-20 space-y-1.5">
+                         {index === 0 && <label className="text-xs font-semibold text-gray-600">Qty</label>}
+                         <Input type="number" min="1" value={item.qty} onChange={(e) => handleLineItemChange(item.id, 'qty', e.target.value)} required />
+                       </div>
+                       <div className="w-full md:w-28 space-y-1.5">
+                         {index === 0 && <label className="text-xs font-semibold text-gray-600">Rate (Rs.)</label>}
+                         <Input type="number" min="0" value={item.rate} onChange={(e) => handleLineItemChange(item.id, 'rate', e.target.value)} required />
+                       </div>
+                       <div className="w-full md:w-20 space-y-1.5">
+                         {index === 0 && <label className="text-xs font-semibold text-gray-600">Tax %</label>}
+                         <Input type="number" min="0" placeholder="e.g. 18" value={item.taxPercent} onChange={(e) => handleLineItemChange(item.id, 'taxPercent', e.target.value)} />
+                       </div>
+                       <div className="pb-1">
+                          <button type="button" onClick={() => handleRemoveLineItem(item.id)} className="p-1.5 text-gray-400 hover:text-red-500 rounded bg-white border border-gray-200 shadow-sm transition-colors" disabled={lineItems.length === 1}>
+                            <Icons name="Trash2" size={16} />
+                          </button>
+                       </div>
+                    </div>
+                  ))}
+               </div>
+
+               <div className="mt-4 flex justify-end">
+                  <div className="bg-gray-50 px-4 py-3 rounded-lg border border-gray-100 min-w-[250px] space-y-2">
+                     <div className="flex justify-between text-sm text-gray-600">
+                        <span>Subtotal:</span>
+                        <span>Rs. {calculateSubtotal().toLocaleString()}</span>
+                     </div>
+                     <div className="flex justify-between text-sm text-gray-600">
+                        <span>Total Tax:</span>
+                        <span>Rs. {calculateTax().toLocaleString()}</span>
+                     </div>
+                     <div className="flex justify-between text-base font-bold text-gray-900 border-t border-gray-200 pt-2">
+                        <span>Grand Total:</span>
+                        <span>Rs. {calculateTotal().toLocaleString()}</span>
+                     </div>
+                  </div>
+               </div>
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="label">Notes / Terms</label>
+              <Input type="textarea" name="notes" value={formData.notes} onChange={(e) => setFormData({...formData, notes: e.target.value})} className="min-h-[80px]" placeholder="Add any terms and conditions..." />
+            </div>
+
+          </div>
+
+          <div className="shrink-0 border-t border-gray-200 bg-gray-50/50 px-6 py-4 flex justify-end gap-3">
+            <Button variant="outline" type="button" onClick={onClose}>Cancel</Button>
+            <Button variant="solid" type="submit">Create Invoice</Button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+};
+
+export default AddInvoice;

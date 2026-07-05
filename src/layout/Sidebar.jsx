@@ -28,28 +28,15 @@ import { useRouter } from "next/router";
 const menuItems = [
     { name: "Dashboard", icon: LayoutDashboard, path: "/" },
     { name: "Leads", icon: Users, path: "/leads" },
-    // { name: "Enrollment", icon: FileText, path: "/enrollment" },
-    {
-        name: "Task",
-        icon: ListChecks,
-        children: [
-            { name: "All Task", path: "/task/all-task" },
-            { name: "GPS Tracker", path: "/task/gps-tracker" },
-            { name: "Travel Claims", path: "/task/travel-claims" },
-        ]
-    },
-    { name: "Attendance", icon: CalendarCheck, path: "/attendance" },
-    // { name: "Content", icon: Folder, path: "/content" },
-    // { name: "Task", icon: CheckSquare, path: "/task" },
-    // { name: "Invoices", icon: FileText, path: "/invoices" },
-    // { name: "Products", icon: Package, path: "/products" },
-    // { name: "Campaigns", icon: Layers, path: "/campaigns" },
-    // { name: "Template", icon: Layers, path: "/template" },
-    // { name: "WhatsApp Bots", icon: MessageCircle, path: "/whatsapp-bots" },
-    // { name: "Sales Targets", icon: BarChart, path: "/sales-targets" },
-    // { name: "WABA Info", icon: ImageIcon, path: "/waba-info" },
-    // { name: "Integration", icon: Settings, path: "/integration" },
-    // { name: "Appearance", icon: Palette, path: "/appearance" },
+    { name: "Customers", icon: User, path: "/customers" },
+    { name: "Orders", icon: ListChecks, path: "/orders" },
+    { name: "Inventory", icon: Package, path: "/inventory" },
+    { name: "Price List", icon: Palette, path: "/price-list" },
+    { name: "Purchase", icon: CheckSquare, path: "/purchase" },
+    { name: "Expense", icon: Clipboard, path: "/expense" },
+    { name: "Invoice", icon: FileText, path: "/invoice" },
+    { name: "Quotation", icon: Layers, path: "/quotation" },
+    { name: "Reports", icon: BarChart, path: "/reports" },
 ];
 
 const Sidebar = ({ setMobileOpen, isMobileOpen }) => {

@@ -1,264 +1,94 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useState } from "react";
+import { useRouter } from "next/router";
 import Button from "@/common/Button";
 import EmptyState from "@/common/EmptyState";
 import Icons from "@/common/Icons";
 import Input from "@/common/Input";
-import AddLead from "@/components/leads/leadsModal/AddLead";
+import StatusBadge from "@/common/StatusBadge";
+import AddLead from "./leadsModal/AddLead";
+import DeleteConfirmModal from "@/common/DeleteConfirmModal";
 import LeadDetail from "./LeadDetail";
-import KanbanModal from "./leadsModal/KanbanModal";
-import { useRouter } from "next/router";
 
-const stageOptions = [
-  { key: "all", label: "All", count: 47 },
-  { key: "new", label: "New", count: 12 },
-  { key: "contacted", label: "Contacted", count: 9 },
-  { key: "demo", label: "Demo", count: 7 },
-  { key: "negotiation", label: "Negotiation", count: 8 },
-  { key: "won", label: "Won", count: 6 },
-  { key: "lost", label: "Lost", count: 3 },
-  { key: "not-interested", label: "Not interested", count: 2 },
-];
-
-const metricCards = [
-  {
-    title: "Total pipeline value",
-    value: "Rs. 18.4L",
-    helper: "47 active leads",
-  },
-  {
-    title: "Avg. time to close",
-    value: "14 days",
-    helper: "last 30 days",
-  },
-  {
-    title: "Conversion rate",
-    value: "28%",
-    helper: "leads won",
-  },
-  {
-    title: "Total spend on leads",
-    value: "Rs. 2.1L",
-    helper: "travel + time cost",
-  },
+export const STAGES = [
+  { key: "new", label: "New", color: "bg-sky-50 border-sky-200 text-sky-800" },
+  { key: "in progress", label: "In Progress", color: "bg-indigo-50 border-indigo-200 text-indigo-800" },
+  { key: "negotiation", label: "Negotiation", color: "bg-violet-50 border-violet-200 text-violet-800" },
+  { key: "won", label: "Won", color: "bg-emerald-50 border-emerald-200 text-emerald-800" },
+  { key: "lost", label: "Lost", color: "bg-rose-50 border-rose-200 text-rose-800" },
 ];
 
 export const leadsData = [
-  {
-    id: 1,
-    doctor: "Dr. Priya Sharma",
-    clinic: "Sharma Skin Clinic, Ahmedabad",
-    source: "Field visit",
-    stage: "demo",
-    stageLabel: "Demo",
-    stageClass: "bg-amber-50 text-amber-700 border border-amber-100",
-    assignedTo: "Arjun Patel",
-    initials: "AP",
-    nextTask: "Demo - Jun 2",
-    nextTaskClass: "text-gray-800",
-    costSpent: "Rs. 4,200",
-    created: "May 18",
-  },
-  {
-    id: 2,
-    doctor: "Dr. Karan Mehta",
-    clinic: "Mehta Dermatology, Surat",
-    source: "WhatsApp",
-    stage: "negotiation",
-    stageLabel: "Negotiation",
-    stageClass: "bg-violet-50 text-violet-700 border border-violet-100",
-    assignedTo: "Sneha Mehta",
-    initials: "SM",
-    nextTask: "Follow-up call",
-    nextTaskClass: "text-gray-800",
-    costSpent: "Rs. 6,800",
-    created: "May 12",
-  },
-  {
-    id: 3,
-    doctor: "Dr. Anita Desai",
-    clinic: "Glow Skin Clinic, Baroda",
-    source: "Referral",
-    stage: "new",
-    stageLabel: "New",
-    stageClass: "bg-teal-50 text-teal-700 border border-teal-100",
-    assignedTo: "Rohit Shah",
-    initials: "RS",
-    nextTask: "Intro call overdue",
-    nextTaskClass: "text-red-500",
-    costSpent: "Rs. 0",
-    created: "May 20",
-  },
-  {
-    id: 4,
-    doctor: "Dr. Vikas Joshi",
-    clinic: "Joshi Aesthetics, Rajkot",
-    source: "Cold call",
-    stage: "won",
-    stageLabel: "Won",
-    stageClass: "bg-lime-50 text-lime-700 border border-lime-100",
-    assignedTo: "Arjun Patel",
-    initials: "AP",
-    nextTask: "Quotation sent",
-    nextTaskClass: "text-green-700",
-    costSpent: "Rs. 9,500",
-    created: "Apr 28",
-  },
-  {
-    id: 5,
-    doctor: "Dr. Ritu Patel",
-    clinic: "Patel Skin Centre, Gandhinagar",
-    source: "Website",
-    stage: "contacted",
-    stageLabel: "Contacted",
-    stageClass: "bg-sky-50 text-sky-700 border border-sky-100",
-    assignedTo: "Sneha Mehta",
-    initials: "SM",
-    nextTask: "Meeting - Jun 4",
-    nextTaskClass: "text-gray-800",
-    costSpent: "Rs. 1,100",
-    created: "May 15",
-  },
+  { id: "1", name: "Rahul Sharma", phone: "9876543210", email: "rahul@example.com", source: "Website", productInterest: "MDF Sheet", stage: "new", notes: "Needs a callback", created: "2023-10-01" },
+  { id: "2", name: "Priya Patel", phone: "9123456789", email: "priya@example.com", source: "Instagram", productInterest: "Acrylic Sheet", stage: "in progress", notes: "Wants custom size", created: "2023-10-02" },
+  { id: "3", name: "Glow Signages", phone: "9988776655", email: "contact@glow.com", source: "Referral", productInterest: "LED Strip Lights", stage: "negotiation", notes: "Bulk order discussion", created: "2023-10-05" },
+  { id: "4", name: "Amit Kumar", phone: "9876543211", email: "amit@example.com", source: "Walk-in", productInterest: "Hooks", stage: "won", notes: "Order placed", created: "2023-10-10" },
+  { id: "5", name: "Sneha Gupta", phone: "9876543212", email: "sneha@example.com", source: "Amazon", productInterest: "Boards", stage: "lost", notes: "Price too high", created: "2023-10-12" },
 ];
 
 const sourceOptions = [
   { value: "all", label: "All sources" },
-  { value: "field-visit", label: "Field visit" },
-  { value: "whatsapp", label: "WhatsApp" },
-  { value: "referral", label: "Referral" },
-  { value: "cold-call", label: "Cold call" },
-  { value: "website", label: "Website" },
+  { value: "Website", label: "Website" },
+  { value: "Instagram", label: "Instagram" },
+  { value: "Referral", label: "Referral" },
+  { value: "Walk-in", label: "Walk-in" },
+  { value: "Amazon", label: "Amazon" },
+  { value: "Meesho", label: "Meesho" },
+  { value: "Other", label: "Other" },
 ];
-
-const employeeOptions = [
-  { value: "all", label: "All employees" },
-  { value: "arjun-patel", label: "Arjun Patel" },
-  { value: "sneha-mehta", label: "Sneha Mehta" },
-  { value: "rohit-shah", label: "Rohit Shah" },
-];
-
-const timeOptions = [
-  { value: "all", label: "All time" },
-  { value: "this-month", label: "This month" },
-  { value: "last-30-days", label: "Last 30 days" },
-  { value: "last-7-days", label: "Last 7 days" },
-];
-
-const normalize = (value) => value.toLowerCase().replace(/\s+/g, "-");
 
 export const Leads = () => {
   const router = useRouter();
   const [search, setSearch] = useState("");
-  const [activeStage, setActiveStage] = useState("all");
   const [sourceFilter, setSourceFilter] = useState("all");
-  const [employeeFilter, setEmployeeFilter] = useState("all");
-  const [timeFilter, setTimeFilter] = useState("all");
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [viewMode, setViewMode] = useState("kanban"); // kanban or table
   const [isAddLeadOpen, setIsAddLeadOpen] = useState(false);
-  const [isAddLeadMounted, setIsAddLeadMounted] = useState(false);
-  const [selectedLead, setSelectedLead] = useState(null);
-  const [isLeadDetailOpen, setIsLeadDetailOpen] = useState(false);
-  const [isLeadDetailMounted, setIsLeadDetailMounted] = useState(false);
-  const [isKanbanOpen, setIsKanbanOpen] = useState(false);
-  const [isKanbanMounted, setIsKanbanMounted] = useState(false);
-  const addLeadCloseTimerRef = useRef(null);
-  const leadDetailCloseTimerRef = useRef(null);
-  const kanbanCloseTimerRef = useRef(null);
+  const [leads, setLeads] = useState(leadsData);
+  const [draggedLead, setDraggedLead] = useState(null);
+  
+  const [deleteItem, setDeleteItem] = useState(null);
 
-  const clearCloseTimer = (timerRef) => {
-    if (timerRef.current) {
-      clearTimeout(timerRef.current);
-      timerRef.current = null;
-    }
-  };
-
-  useEffect(() => {
-    return () => {
-      clearCloseTimer(addLeadCloseTimerRef);
-      clearCloseTimer(leadDetailCloseTimerRef);
-      clearCloseTimer(kanbanCloseTimerRef);
-    };
-  }, []);
-
-  const hasActiveFilters =
-    activeStage !== "all" ||
-    sourceFilter !== "all" ||
-    employeeFilter !== "all" ||
-    timeFilter !== "all";
-  const emptyStateQuery = search || (hasActiveFilters ? "active filters" : "");
-
-  const filteredLeads = leadsData.filter((lead) => {
+  // Filters
+  const hasActiveFilters = sourceFilter !== "all" || statusFilter !== "all";
+  const filteredLeads = leads.filter((lead) => {
     const query = search.trim().toLowerCase();
-    const matchesSearch =
-      query.length === 0 ||
-      lead.doctor.toLowerCase().includes(query) ||
-      lead.clinic.toLowerCase().includes(query) ||
-      lead.source.toLowerCase().includes(query) ||
-      lead.assignedTo.toLowerCase().includes(query);
-
-    const matchesStage = activeStage === "all" || lead.stage === activeStage;
-    const matchesSource =
-      sourceFilter === "all" || normalize(lead.source) === sourceFilter;
-    const matchesEmployee =
-      employeeFilter === "all" || normalize(lead.assignedTo) === employeeFilter;
-
-    const matchesTime =
-      timeFilter === "all" ||
-      (timeFilter === "this-month" && lead.created.startsWith("May")) ||
-      (timeFilter === "last-30-days" &&
-        ["May", "Jun"].some((month) => lead.created.startsWith(month))) ||
-      (timeFilter === "last-7-days" &&
-        ["May 18", "May 20"].includes(lead.created));
-
-    return (
-      matchesSearch &&
-      matchesStage &&
-      matchesSource &&
-      matchesEmployee &&
-      matchesTime
-    );
+    const matchesSearch = query.length === 0 || lead.name.toLowerCase().includes(query) || lead.phone.includes(query);
+    const matchesSource = sourceFilter === "all" || lead.source === sourceFilter;
+    const matchesStatus = statusFilter === "all" || lead.stage === statusFilter;
+    return matchesSearch && matchesSource && matchesStatus;
   });
+
+  // KPIs
+  const totalLeads = leads.length;
+  const newLeads = leads.filter(l => l.stage === "new").length;
+  const wonLeads = leads.filter(l => l.stage === "won").length;
+  const conversionRate = totalLeads === 0 ? 0 : Math.round((wonLeads / totalLeads) * 100);
+  const lostLeads = leads.filter(l => l.stage === "lost").length;
+  const openLeads = leads.filter(l => l.stage === "in progress").length;
 
   const handleRowClick = (lead) => {
     router.push(`/leads/${lead.id}`);
   };
 
-  const handleOpenAddLead = () => {
-    clearCloseTimer(addLeadCloseTimerRef);
-    setIsAddLeadMounted(true);
-    setIsAddLeadOpen(true);
+  const handleDragStart = (e, lead) => {
+    setDraggedLead(lead);
+    e.dataTransfer.setData("text/plain", lead.id);
   };
 
-  const handleCloseAddLead = () => {
-    setIsAddLeadOpen(false);
-    clearCloseTimer(addLeadCloseTimerRef);
-    addLeadCloseTimerRef.current = setTimeout(() => {
-      setIsAddLeadMounted(false);
-      addLeadCloseTimerRef.current = null;
-    }, 300);
+  const handleDragOver = (e) => {
+    e.preventDefault();
   };
 
-  const handleCloseLeadDetail = () => {
-    setIsLeadDetailOpen(false);
-    clearCloseTimer(leadDetailCloseTimerRef);
-    leadDetailCloseTimerRef.current = setTimeout(() => {
-      setIsLeadDetailMounted(false);
-      setSelectedLead(null);
-      leadDetailCloseTimerRef.current = null;
-    }, 300);
-  };
-
-  const handleOpenKanban = () => {
-    clearCloseTimer(kanbanCloseTimerRef);
-    setIsKanbanMounted(true);
-    setIsKanbanOpen(true);
-  };
-
-  const handleCloseKanban = () => {
-    setIsKanbanOpen(false);
-    clearCloseTimer(kanbanCloseTimerRef);
-    kanbanCloseTimerRef.current = setTimeout(() => {
-      setIsKanbanMounted(false);
-      kanbanCloseTimerRef.current = null;
-    }, 300);
+  const handleDrop = (e, targetStage) => {
+    e.preventDefault();
+    if (!draggedLead) return;
+    
+    if (draggedLead.stage !== targetStage) {
+      setLeads(prev => prev.map(l => 
+        l.id === draggedLead.id ? { ...l, stage: targetStage } : l
+      ));
+    }
+    setDraggedLead(null);
   };
 
   return (
@@ -266,30 +96,23 @@ export const Leads = () => {
       <div className="flex flex-col gap-4 rounded-lg">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div className="space-y-1">
-            <h1 className="page-header">Lead pipeline</h1>
+            <h1 className="page-header text-2xl font-bold text-gray-900">Leads</h1>
             <p className="text-sm text-gray-500 max-w-md lg:max-w-xl">
-              Track pipeline stages, lead value, and follow-up momentum in one
-              place.
+              Track pipeline stages, convert prospects into customers, and manage follow-ups.
             </p>
           </div>
 
           <div className="flex flex-wrap items-center gap-2 shrink-0">
             <Button
               variant="ghost"
-              onClick={handleOpenKanban}
-              rightIcon={(props) => <Icons name="ArrowUpRight" {...props} />}
+              onClick={() => setViewMode(viewMode === 'kanban' ? 'table' : 'kanban')}
+              leftIcon={(props) => <Icons name={viewMode === 'kanban' ? "List" : "LayoutGrid"} {...props} />}
             >
-              Kanban view
-            </Button>
-            <Button
-              variant="outline"
-              leftIcon={(props) => <Icons name="Download" {...props} />}
-            >
-              Export
+              {viewMode === 'kanban' ? 'List view' : 'Kanban view'}
             </Button>
             <Button
               variant="solid"
-              onClick={handleOpenAddLead}
+              onClick={() => setIsAddLeadOpen(true)}
               leftIcon={(props) => (
                 <Icons name="Plus" color="white" {...props} />
               )}
@@ -299,232 +122,172 @@ export const Leads = () => {
           </div>
         </div>
 
-        <div className="w-full overflow-hidden rounded-xl border border-white/70 bg-white/80 p-1 shadow-sm">
-          <div className="flex w-full overflow-x-auto no-scrollbar">
-            {stageOptions.map((stage) => {
-              const isActive = activeStage === stage.key;
-
-              return (
-                <button
-                  key={stage.key}
-                  type="button"
-                  onClick={() => setActiveStage(stage.key)}
-                  className={`relative flex-1 min-w-max rounded-xl px-3 py-2 transition-all duration-200 ${isActive
-                      ? "bg-secondary text-primary"
-                      : "text-gray-600 hover:bg-white hover:text-gray-900"
-                    }`}
-                >
-                  <div className="flex items-center justify-center gap-3 whitespace-nowrap">
-                    <p
-                      className={`whitespace-nowrap text-[13px] font-medium transition-colors ${isActive ? "text-primary" : "text-gray-500"
-                        }`}
-                    >
-                      {stage.label}
-                    </p>
-
-                    <span
-                      className={`inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[11px] font-semibold transition-colors ${isActive
-                          ? "bg-primary text-white"
-                          : "bg-gray-100 text-gray-600"
-                        }`}
-                    >
-                      {stage.count}
-                    </span>
-                  </div>
-                </button>
-              );
-            })}
+        {/* KPIs */}
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+          <div className="rounded-xl border border-gray-100 bg-white p-4 shadow-sm">
+            <p className="text-sm font-medium text-gray-500">Total Leads</p>
+            <p className="mt-1 text-2xl font-bold text-gray-900">{totalLeads}</p>
+          </div>
+          <div className="rounded-xl border border-gray-100 bg-white p-4 shadow-sm">
+            <p className="text-sm font-medium text-gray-500">New Leads</p>
+            <p className="mt-1 text-2xl font-bold text-sky-600">{newLeads}</p>
+          </div>
+          <div className="rounded-xl border border-gray-100 bg-white p-4 shadow-sm">
+            <p className="text-sm font-medium text-gray-500">Conversion Rate</p>
+            <p className="mt-1 text-2xl font-bold text-emerald-600">{conversionRate}%</p>
+          </div>
+          <div className="rounded-xl border border-gray-100 bg-white p-4 shadow-sm">
+            <p className="text-sm font-medium text-gray-500">In Progress</p>
+            <p className="mt-1 text-2xl font-bold text-indigo-600">{openLeads}</p>
+          </div>
+          <div className="rounded-xl border border-gray-100 bg-white p-4 shadow-sm">
+            <p className="text-sm font-medium text-gray-500">Leads Lost</p>
+            <p className="mt-1 text-2xl font-bold text-rose-600">{lostLeads}</p>
           </div>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-          {metricCards.map((metric) => (
-            <div
-              key={metric.title}
-              className="rounded-xl border border-white/70 bg-white p-4 shadow-sm"
-            >
-              <p className="text-sm font-medium text-gray-500">
-                {metric.title}
-              </p>
-              <p className="mt-1 text-xl font-bold text-gray-900">
-                {metric.value}
-              </p>
-              <p className="mt-1 text-sm text-gray-500">{metric.helper}</p>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      <div className="flex-1 bg-white rounded-lg shadow-sm border border-gray-100 flex flex-col overflow-hidden">
-        <div className="flex flex-col gap-3 border-b border-gray-100 px-4 py-4 md:flex-row md:items-center md:justify-between">
-          <div className="w-full md:max-w-[220px] lg:max-w-sm">
+        {/* Filters */}
+        <div className="bg-white p-3 rounded-lg border border-gray-100 shadow-sm flex flex-col md:flex-row gap-3">
+          <div className="w-full md:w-64">
             <Input
-              id="search-leads"
+              id="search"
               value={search}
-              onChange={(event) => setSearch(event.target.value)}
-              label="Search leads..."
-              endIcon={
-                <Icons name="Search" size={16} className="text-gray-400" />
-              }
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search by name or phone..."
+              startIcon={<Icons name="Search" size={16} className="text-gray-400" />}
             />
           </div>
-
-          <div className="grid grid-cols-1 gap-2 sm:grid-cols-3 w-full md:w-auto md:min-w-[450px] lg:min-w-[560px]">
+          <div className="w-full md:w-48">
             <Input
               type="select"
               value={sourceFilter}
-              onChange={(event) => setSourceFilter(event.target.value)}
+              onChange={(e) => setSourceFilter(e.target.value)}
               options={sourceOptions}
-              label="All sources"
             />
-            <Input
+          </div>
+          <div className="w-full md:w-48">
+             <Input
               type="select"
-              value={employeeFilter}
-              onChange={(event) => setEmployeeFilter(event.target.value)}
-              options={employeeOptions}
-              label="All employees"
-            />
-            <Input
-              type="select"
-              value={timeFilter}
-              onChange={(event) => setTimeFilter(event.target.value)}
-              options={timeOptions}
-              label="All time"
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+              options={[
+                { value: "all", label: "All Statuses" },
+                ...STAGES.map(s => ({ value: s.key, label: s.label }))
+              ]}
             />
           </div>
         </div>
 
+        {/* Content */}
         {filteredLeads.length === 0 ? (
           <EmptyState
-            search={emptyStateQuery}
+            search={search || (hasActiveFilters ? "active filters" : "")}
             entityName="Leads"
             entityIcon="Users"
             onClearSearch={() => {
               setSearch("");
-              setActiveStage("all");
               setSourceFilter("all");
-              setEmployeeFilter("all");
-              setTimeFilter("all");
+              setStatusFilter("all");
             }}
             addLabel="Add lead"
           />
+        ) : viewMode === 'kanban' ? (
+          <div className="flex gap-4 overflow-x-auto pb-4 h-[calc(100vh-320px)] min-h-[400px]">
+            {STAGES.map(stage => {
+              const stageLeads = filteredLeads.filter(l => l.stage === stage.key);
+              return (
+                <div 
+                  key={stage.key} 
+                  className={`flex-shrink-0 w-72 rounded-lg border flex flex-col ${stage.color} bg-opacity-20`}
+                  onDragOver={handleDragOver}
+                  onDrop={(e) => handleDrop(e, stage.key)}
+                >
+                  <div className="p-3 font-semibold text-sm border-b border-white/40 flex justify-between items-center">
+                    <span>{stage.label}</span>
+                    <span className="bg-white/50 px-2 py-0.5 rounded-full text-xs">{stageLeads.length}</span>
+                  </div>
+                  <div className="p-2 flex-1 overflow-y-auto flex flex-col gap-2">
+                    {stageLeads.map(lead => (
+                      <div
+                        key={lead.id}
+                        draggable
+                        onDragStart={(e) => handleDragStart(e, lead)}
+                        onClick={() => handleRowClick(lead)}
+                        className="bg-white p-3 rounded shadow-sm border border-gray-100 cursor-pointer hover:shadow-md transition-shadow"
+                      >
+                        <div className="font-semibold text-sm text-gray-800">{lead.name}</div>
+                        <div className="text-xs text-gray-500 mt-1 flex items-center gap-1">
+                          <Icons name="Phone" size={12} /> {lead.phone}
+                        </div>
+                        <div className="mt-2 flex justify-between items-center">
+                          <span className="text-[10px] bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded">
+                            {lead.source}
+                          </span>
+                          <span className="text-[10px] text-gray-400">{lead.created}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )
+            })}
+          </div>
         ) : (
-          <>
-            <div className="flex-1 overflow-auto custom-scrollbar">
-              <table className="w-full text-left border-collapse min-w-[980px]">
-                <thead className="sticky top-0 z-5 bg-primary text-white text-[12px] font-medium">
+          <div className="bg-white rounded-lg border border-gray-100 shadow-sm overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse min-w-[900px]">
+                <thead className="bg-gray-50 border-b border-gray-100 text-xs font-semibold text-gray-600">
                   <tr>
-                    <th className="px-4 py-3.5">Lead</th>
-                    <th className="px-4 py-3.5">Source</th>
-                    <th className="px-4 py-3.5">Stage</th>
-                    <th className="px-4 py-3.5">Assigned to</th>
-                    <th className="px-4 py-3.5">Next task</th>
-                    <th className="px-4 py-3.5">Cost spent</th>
-                    <th className="px-4 py-3.5">Created</th>
+                    <th className="px-4 py-3">Lead Name</th>
+                    <th className="px-4 py-3">Contact</th>
+                    <th className="px-4 py-3">Source</th>
+                    <th className="px-4 py-3">Product Interest</th>
+                    <th className="px-4 py-3">Stage</th>
+                    <th className="px-4 py-3">Created</th>
+                    <th className="px-4 py-3 text-center">Actions</th>
                   </tr>
                 </thead>
-
-                <tbody>
-                  {filteredLeads.map((lead) => (
-                    <tr
-                      key={lead.id}
+                <tbody className="text-sm">
+                  {filteredLeads.map(lead => (
+                    <tr 
+                      key={lead.id} 
                       onClick={() => handleRowClick(lead)}
-                      className="border-b border-gray-100 hover:bg-gray-50/60 transition-colors cursor-pointer"
+                      className="border-b border-gray-50 hover:bg-gray-50/50 cursor-pointer transition-colors"
                     >
-                      <td className="px-4 py-4">
-                        <div className="text-[13px] font-semibold text-gray-800">
-                          {lead.doctor}
-                        </div>
-                        <p className="mt-1 text-[13px] text-gray-500">
-                          {lead.clinic}
-                        </p>
+                      <td className="px-4 py-3 font-medium text-gray-900">{lead.name}</td>
+                      <td className="px-4 py-3 text-gray-500">
+                        <div>{lead.phone}</div>
+                        <div className="text-xs">{lead.email}</div>
                       </td>
-
-                      <td className="px-4 py-4 text-[13px] text-gray-700">
-                        {lead.source}
+                      <td className="px-4 py-3 text-gray-700">{lead.source}</td>
+                      <td className="px-4 py-3 text-gray-700">{lead.productInterest}</td>
+                      <td className="px-4 py-3">
+                        <StatusBadge status={lead.stage} label={STAGES.find(s => s.key === lead.stage)?.label} />
                       </td>
-
-                      <td className="px-4 py-4">
-                        <span
-                          className={`inline-flex rounded-full px-2 py-1 text-[13px] font-medium ${lead.stageClass}`}
-                        >
-                          {lead.stageLabel}
-                        </span>
-                      </td>
-
-                      <td className="px-4 py-4">
-                        <div className="flex items-center gap-2.5">
-                          <div className="flex h-7 w-7 items-center justify-center rounded-full bg-primary/10 text-xs font-semibold text-primary">
-                            {lead.initials}
-                          </div>
-                          <span className="text-[13px] font-medium text-gray-800">
-                            {lead.assignedTo}
-                          </span>
-                        </div>
-                      </td>
-
-                      <td
-                        className={`px-4 py-4 text-sm font-medium ${lead.nextTaskClass}`}
-                      >
-                        {lead.nextTask}
-                      </td>
-
-                      <td className="px-4 py-4 text-sm font-medium text-gray-800">
-                        {lead.costSpent}
-                      </td>
-
-                      <td className="px-4 py-4 text-sm text-gray-700">
-                        {lead.created}
+                      <td className="px-4 py-3 text-gray-500">{lead.created}</td>
+                      <td className="px-4 py-3 text-center" onClick={(e) => e.stopPropagation()}>
+                        <Button variant="ghost" size="sm" onClick={() => setDeleteItem(lead)} className="px-2!">
+                          <Icons name="Trash2" size={16} className="text-gray-400 hover:text-rose-500 transition-colors" />
+                        </Button>
                       </td>
                     </tr>
                   ))}
                 </tbody>
               </table>
             </div>
-
-            <div className="border-t border-gray-200 px-4 py-3 flex items-center justify-between gap-4 w-full shrink-0">
-              <Button
-                variant="outline"
-                size="sm"
-                leftIcon={(props) => <Icons name="ChevronLeft" {...props} />}
-              >
-                Previous
-              </Button>
-
-              <div className="text-[13px] text-gray-700 text-center">
-                1 to {filteredLeads.length} of {filteredLeads.length}
-              </div>
-
-              <Button
-                variant="outline"
-                size="sm"
-                rightIcon={(props) => <Icons name="ChevronRight" {...props} />}
-              >
-                Next
-              </Button>
-            </div>
-          </>
+          </div>
         )}
       </div>
 
-      {isAddLeadMounted && (
-        <AddLead open={isAddLeadOpen} onClose={handleCloseAddLead} />
-      )}
-
-      {isLeadDetailMounted && (
-        <LeadDetail
-          open={isLeadDetailOpen}
-          onClose={handleCloseLeadDetail}
-          lead={selectedLead}
-        />
-      )}
-      {isKanbanMounted && (
-        <KanbanModal
-          open={isKanbanOpen}
-          onClose={handleCloseKanban}
-          onAddLead={() => {
-            handleCloseKanban();
-            handleOpenAddLead();
+      {isAddLeadOpen && <AddLead open={isAddLeadOpen} onClose={() => setIsAddLeadOpen(false)} />}
+      {deleteItem && (
+        <DeleteConfirmModal
+          open={!!deleteItem}
+          onClose={() => setDeleteItem(null)}
+          entityName={deleteItem.name}
+          onConfirm={() => {
+            setLeads(leads.filter(l => l.id !== deleteItem.id));
+            setDeleteItem(null);
           }}
         />
       )}
