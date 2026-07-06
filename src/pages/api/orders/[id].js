@@ -5,9 +5,12 @@ const handler = async (req, res) => {
   const { id } = req.query;
 
   try {
+    const isGlw = typeof id === 'string' && id.toLowerCase().startsWith('glw-');
+    const whereClause = isGlw ? { orderNumber: parseInt(id.replace(/glw-/i, ''), 10) } : { id };
+
     if (req.method === 'GET') {
       const order = await prisma.order.findUnique({
-        where: { id },
+        where: whereClause,
         include: {
           customer: true,
           items: true,
@@ -20,22 +23,25 @@ const handler = async (req, res) => {
 
     if (req.method === 'PUT') {
       const { items, ...orderData } = req.body;
-      await prisma.orderItem.deleteMany({ where: { orderId: id } });
+      const existingOrder = await prisma.order.findUnique({ where: whereClause, select: { id: true } });
+      if (!existingOrder) return res.status(404).json({ success: false, message: 'Order not found' });
+      
+      const updateData = { ...orderData };
+      if (items !== undefined) {
+        await prisma.orderItem.deleteMany({ where: { orderId: existingOrder.id } });
+        updateData.items = { create: items };
+      }
+
       const order = await prisma.order.update({
-        where: { id },
-        data: {
-          ...orderData,
-          items: {
-            create: items
-          }
-        },
+        where: { id: existingOrder.id },
+        data: updateData,
         include: { items: true, customer: true }
       });
       return res.status(200).json({ success: true, message: 'Order updated successfully', data: order });
     }
 
     if (req.method === 'DELETE') {
-      await prisma.order.delete({ where: { id } });
+      await prisma.order.delete({ where: whereClause });
       return res.status(200).json({ success: true, message: 'Order deleted successfully' });
     }
 

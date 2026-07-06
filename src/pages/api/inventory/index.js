@@ -33,7 +33,29 @@ const handler = async (req, res) => {
     }
 
     if (req.method === 'POST') {
-      const item = await prisma.inventoryItem.create({ data: req.body });
+      const { openingStock, lastPurchasePrice, ...rest } = req.body;
+      
+      const item = await prisma.inventoryItem.create({ 
+        data: {
+          ...rest,
+          openingStock: openingStock || 0,
+          stockQty: openingStock || 0,
+          lastPurchasePrice: lastPurchasePrice || 0,
+          averageCost: lastPurchasePrice || 0
+        }
+      });
+      
+      if (openingStock && Number(openingStock) > 0) {
+        await prisma.stockTransaction.create({
+          data: {
+            inventoryItemId: item.id,
+            type: 'OPENING_STOCK',
+            quantity: Number(openingStock),
+            unitPrice: lastPurchasePrice ? Number(lastPurchasePrice) : 0,
+            note: 'Initial opening stock'
+          }
+        });
+      }
       return res.status(201).json({ success: true, message: 'Created successfully', data: item });
     }
 

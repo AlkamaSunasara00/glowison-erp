@@ -14,7 +14,14 @@ const handler = async (req, res) => {
         }
       });
       if (!customer) return res.status(404).json({ success: false, message: 'Customer not found' });
-      return res.status(200).json({ success: true, data: customer });
+      
+      const quotations = await prisma.quotation.findMany({
+        where: { entityId: id, type: 'CUSTOMER' },
+        orderBy: { createdAt: 'desc' },
+        take: 5
+      });
+      
+      return res.status(200).json({ success: true, data: { ...customer, quotations } });
     }
 
     if (req.method === 'PUT') {

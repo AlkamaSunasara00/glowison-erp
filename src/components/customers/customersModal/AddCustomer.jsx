@@ -7,7 +7,8 @@ import Input from "@/common/Input";
 
 const customerTypeOptions = [
   { label: "Retail", value: "Retail" },
-  { label: "Dealer", value: "Dealer" },
+  { label: "Wholesale (Dealer)", value: "Wholesale" },
+  { label: "Enterprise", value: "Enterprise" },
 ];
 
 const initialFormData = {
@@ -109,7 +110,7 @@ const AddCustomer = ({ open, onClose }) => {
             <div className="grid grid-cols-1 gap-x-6 gap-y-5 md:grid-cols-2">
               <div className="space-y-1.5 md:col-span-2">
                 <label className="label">Customer Name <span className="required">*</span></label>
-                <Input name="name" value={formData.name} onChange={handleChange} required />
+                <Input name="name" value={formData.name} onChange={handleChange} placeholder="e.g. Acme Corporation or John Doe" required />
               </div>
               
               <div className="space-y-1.5">
@@ -118,18 +119,18 @@ const AddCustomer = ({ open, onClose }) => {
               </div>
               
               <div className="space-y-1.5">
-                <label className="label">GSTIN {formData.type === 'Retail' ? '(Optional)' : '<span className="required">*</span>'}</label>
-                <Input name="gstin" value={formData.gstin} onChange={handleChange} required={formData.type === 'Dealer'} />
+                <label className="label">GSTIN {formData.type === 'Retail' ? '(Optional)' : <span className="required">*</span>}</label>
+                <Input name="gstin" value={formData.gstin} onChange={handleChange} placeholder="e.g. 22AAAAA0000A1Z5" required={formData.type !== 'Retail'} />
               </div>
 
               <div className="space-y-1.5">
                 <label className="label">Phone <span className="required">*</span></label>
-                <Input name="phone" value={formData.phone} onChange={handleChange} type="tel" required />
+                <Input name="phone" value={formData.phone} onChange={handleChange} type="tel" pattern="[0-9]{10}" minLength={10} maxLength={10} title="Phone number must be exactly 10 digits" onKeyPress={(e) => { if (!/[0-9]/.test(e.key)) e.preventDefault(); }} placeholder="e.g. 9876543210" required />
               </div>
 
               <div className="space-y-1.5">
                 <label className="label">Email</label>
-                <Input name="email" value={formData.email} onChange={handleChange} type="email" />
+                <Input name="email" value={formData.email} onChange={handleChange} type="email" placeholder="e.g. contact@example.com" />
               </div>
               
               <div className="md:col-span-2 mt-2">
@@ -139,32 +140,32 @@ const AddCustomer = ({ open, onClose }) => {
 
               <div className="space-y-1.5 md:col-span-2">
                 <label className="label">Address Line 1</label>
-                <Input type="textarea" name="addressLine1" value={formData.addressLine1} onChange={handleChange} className="min-h-[80px]" />
+                <Input type="textarea" name="addressLine1" value={formData.addressLine1} onChange={handleChange} placeholder="e.g. Shop No. 12, Main Street" className="min-h-[80px]" />
               </div>
 
               <div className="space-y-1.5 md:col-span-2">
                 <label className="label">Address Line 2</label>
-                <Input name="addressLine2" value={formData.addressLine2} onChange={handleChange} />
+                <Input name="addressLine2" value={formData.addressLine2} onChange={handleChange} placeholder="e.g. Near Landmark" />
               </div>
 
               <div className="space-y-1.5">
                 <label className="label">City</label>
-                <Input name="city" value={formData.city} onChange={handleChange} />
+                <Input name="city" value={formData.city} onChange={handleChange} placeholder="e.g. Mumbai" />
               </div>
 
               <div className="space-y-1.5">
                 <label className="label">State</label>
-                <Input name="state" value={formData.state} onChange={handleChange} />
+                <Input name="state" value={formData.state} onChange={handleChange} placeholder="e.g. Maharashtra" />
               </div>
 
               <div className="space-y-1.5">
                 <label className="label">Pincode</label>
-                <Input name="pincode" value={formData.pincode} onChange={handleChange} />
+                <Input name="pincode" value={formData.pincode} onChange={handleChange} pattern="[0-9]{6}" minLength={6} maxLength={6} onKeyPress={(e) => { if (!/[0-9]/.test(e.key)) e.preventDefault(); }} placeholder="e.g. 400001" />
               </div>
 
               <div className="space-y-1.5 md:col-span-2">
                 <label className="label">Notes</label>
-                <Input type="textarea" name="notes" value={formData.notes} onChange={handleChange} className="min-h-[80px]" />
+                <Input type="textarea" name="notes" value={formData.notes} onChange={handleChange} placeholder="Any additional information..." className="min-h-[80px]" />
               </div>
 
             </div>

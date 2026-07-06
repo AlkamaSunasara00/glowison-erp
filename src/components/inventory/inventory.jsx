@@ -10,6 +10,7 @@ import AddInventory from "./inventoryModal/AddInventory";
 import EditInventory from "./inventoryModal/EditInventory";
 import AdjustStock from "./inventoryModal/AdjustStock";
 import DeleteConfirmModal from "@/common/DeleteConfirmModal";
+import InventoryDetail from "./InventoryDetail";
 
 
 
@@ -21,10 +22,13 @@ const typeOptions = [
 
 const categoryOptions = [
   { value: "all", label: "All Categories" },
-  { value: "Boards", label: "Boards" },
-  { value: "Sheets", label: "Sheets" },
-  { value: "Decor", label: "Decor" },
-  { value: "Lighting", label: "Lighting" },
+  { value: "BOARD", label: "Board" },
+  { value: "VINYL", label: "Vinyl" },
+  { value: "ACRYLIC", label: "Acrylic" },
+  { value: "FLEX", label: "Flex" },
+  { value: "LED", label: "LED" },
+  { value: "INK", label: "Ink" },
+  { value: "OTHERS", label: "Other" },
 ];
 
 export const Inventory = () => {
@@ -33,6 +37,7 @@ export const Inventory = () => {
   const [categoryFilter, setCategoryFilter] = useState("all");
   
   const [isAddOpen, setIsAddOpen] = useState(false);
+  const [viewItem, setViewItem] = useState(null);
   const [editItem, setEditItem] = useState(null);
   const [adjustItem, setAdjustItem] = useState(null);
   const [deleteItem, setDeleteItem] = useState(null);
@@ -49,10 +54,13 @@ export const Inventory = () => {
         sku: i.sku,
         name: i.name,
         type: i.type === 'RAW_MATERIAL' ? 'Raw Material' : 'Finished Good',
-        category: i.category || 'Uncategorized',
-        stock: i.quantity,
-        minStock: i.minStockLevel || 0,
-        price: i.unitPrice
+        category: i.category === 'OTHERS' ? (i.categoryOther || 'Other') : (categoryOptions.find(o => o.value === i.category)?.label || i.category),
+        stock: i.stockQty,
+        minStock: i.reorderThreshold || 0,
+        price: i.averageCost || i.lastPurchasePrice || 0,
+        baseUnit: i.baseUnit || "Piece",
+        purchaseUnit: i.purchaseUnit || "Piece",
+        unitsPerPurchase: i.unitsPerPurchase || 1,
       })));
     } catch (error) {
       toast.error('Failed to load inventory');
@@ -78,8 +86,8 @@ export const Inventory = () => {
 
   // KPIs
   const totalItems = items.length;
-  const lowStockCount = items.filter(item => item.stock <= item.minStock).length;
-  const totalValue = items.reduce((sum, item) => sum + (item.stock * item.price), 0);
+  const lowStockCount = items.filter(item => Number(item.stock) <= Number(item.minStock)).length;
+  const totalValue = items.reduce((sum, item) => sum + (Number(item.stock) * Number(item.price)), 0);
 
   return (
     <div className="flex flex-col min-h-screen w-full relative gap-4">
@@ -173,17 +181,18 @@ export const Inventory = () => {
                     <th className="px-4 py-3">Type</th>
                     <th className="px-4 py-3">Category</th>
                     <th className="px-4 py-3 text-right">Stock Level</th>
-                    <th className="px-4 py-3 text-right">Unit Price</th>
+                    <th className="px-4 py-3 text-right">Average Cost</th>
                     <th className="px-4 py-3 text-center">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="text-sm">
                   {filteredItems.map(item => {
-                     const isLowStock = item.stock <= item.minStock;
+                     const isLowStock = Number(item.stock) <= Number(item.minStock);
                      return (
                       <tr 
                         key={item.id} 
-                        className="border-b border-gray-50 hover:bg-gray-50/50 transition-colors"
+                        className="border-b border-gray-50 hover:bg-gray-50/50 transition-colors cursor-pointer"
+                        onClick={() => setViewItem(item)}
                       >
                         <td className="px-4 py-3">
                           <div className="font-semibold text-gray-900">{item.name}</div>
@@ -196,13 +205,13 @@ export const Inventory = () => {
                           {item.category}
                         </td>
                         <td className="px-4 py-3 text-right">
-                          <div className="font-medium text-gray-900">{item.stock}</div>
+                          <div className="font-medium text-gray-900">{item.stock} <span className="text-xs text-gray-500 font-normal">{item.baseUnit}</span></div>
                           {isLowStock && <div className="text-[10px] text-rose-500 font-semibold mt-0.5">Low Stock (Min {item.minStock})</div>}
                         </td>
                         <td className="px-4 py-3 text-right font-medium text-gray-900">
                           Rs. {item.price}
                         </td>
-                        <td className="px-4 py-3 text-center">
+                        <td className="px-4 py-3 text-center" onClick={(e) => e.stopPropagation()}>
                           <div className="flex items-center justify-center gap-2">
                              <Button variant="outline" size="sm" onClick={() => setAdjustItem(item)}>Adjust</Button>
                              <Button variant="ghost" size="sm" onClick={() => setEditItem(item)} className="px-2!">
@@ -224,6 +233,7 @@ export const Inventory = () => {
       </div>
 
       {isAddOpen && <AddInventory open={isAddOpen} onClose={() => { setIsAddOpen(false); fetchInventory(); }} />}
+      {viewItem && <InventoryDetail open={!!viewItem} onClose={() => { setViewItem(null); fetchInventory(); }} itemId={viewItem.id} onUpdated={fetchInventory} />}
       {editItem && <EditInventory open={!!editItem} onClose={() => { setEditItem(null); fetchInventory(); }} initialData={editItem} />}
       {adjustItem && <AdjustStock open={!!adjustItem} onClose={() => { setAdjustItem(null); fetchInventory(); }} item={adjustItem} />}
       {deleteItem && (

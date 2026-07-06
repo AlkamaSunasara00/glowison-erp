@@ -9,7 +9,7 @@ import toast from "react-hot-toast";
 
 export const Dashboard = () => {
   const router = useRouter();
-  const [metrics, setMetrics] = useState({ totalRevenue: 0, activeOrders: 0, pendingInvoices: 0, newLeads: 0 });
+  const [metrics, setMetrics] = useState({ totalRevenue: 0, activeOrders: 0, pendingInvoices: 0, newLeads: 0, lowStockCount: 0, lowStockItems: [] });
   const [salesData, setSalesData] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -38,14 +38,23 @@ export const Dashboard = () => {
     { label: "Create Invoice", icon: "FileText", path: "/invoice", color: "bg-indigo-50 text-indigo-600" },
     { label: "Log Expense", icon: "Receipt", path: "/expense", color: "bg-rose-50 text-rose-600" },
   ];
-
   const recentActivity = [
     { id: 1, title: "New Order Created", desc: "ORD-005 from Glow Signages", time: "2 hours ago", type: "order" },
     { id: 2, title: "Invoice Paid", desc: "INV-2023-001 amount Rs. 1,416", time: "5 hours ago", type: "invoice" },
     { id: 3, title: "New Lead Added", desc: "Dr. Priya Sharma (Clinic Signage)", time: "1 day ago", type: "lead" },
-    { id: 4, title: "Low Stock Alert", desc: "MDF Sheet 6mm is below minimum", time: "1 day ago", type: "inventory" },
     { id: 5, title: "Expense Logged", desc: "Rs. 2,500 paid to Meta Ads", time: "2 days ago", type: "expense" },
   ];
+  
+  const displayActivities = [
+    ...(metrics.lowStockItems?.map(item => ({
+      id: `stock-${item.id}`,
+      title: "Low Stock Alert",
+      desc: `${item.name} is below minimum (Current: ${item.stockQty} ${item.baseUnit})`,
+      time: "Just now",
+      type: "inventory"
+    })) || []),
+    ...recentActivity
+  ].slice(0, 5);
 
 
   const orderStatusData = [
@@ -82,7 +91,7 @@ export const Dashboard = () => {
       </div>
 
       {/* Top KPIs */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
         <div className="bg-white p-5 rounded-xl border border-gray-100 shadow-sm flex items-center justify-between group hover:border-primary/20 transition-colors cursor-pointer" onClick={() => router.push("/reports")}>
            <div className="flex flex-col gap-1">
              <span className="text-sm font-medium text-gray-500">Total Revenue</span>
@@ -120,6 +129,16 @@ export const Dashboard = () => {
            </div>
            <div className="w-12 h-12 rounded-full bg-indigo-50 text-indigo-600 flex items-center justify-center group-hover:bg-indigo-100 transition-colors">
               <Icons name="Users" size={24} />
+           </div>
+        </div>
+
+        <div className="bg-white p-5 rounded-xl border border-gray-100 shadow-sm flex items-center justify-between group hover:border-primary/20 transition-colors cursor-pointer" onClick={() => router.push("/inventory")}>
+           <div className="flex flex-col gap-1">
+             <span className="text-sm font-medium text-gray-500">Low Stock Alerts</span>
+             <span className={`text-2xl font-bold ${metrics.lowStockCount > 0 ? 'text-rose-600' : 'text-emerald-600'}`}>{metrics.lowStockCount}</span>
+           </div>
+           <div className={`w-12 h-12 rounded-full flex items-center justify-center transition-colors ${metrics.lowStockCount > 0 ? 'bg-rose-50 text-rose-600 group-hover:bg-rose-100' : 'bg-emerald-50 text-emerald-600 group-hover:bg-emerald-100'}`}>
+              <Icons name="AlertTriangle" size={24} />
            </div>
         </div>
       </div>
@@ -211,8 +230,8 @@ export const Dashboard = () => {
                <h3 className="text-base font-semibold text-gray-900 mb-6">Recent Activity</h3>
                <div className="flex-1 relative">
                   <div className="absolute left-4 top-2 bottom-2 w-px bg-gray-200"></div>
-                  <div className="space-y-6 relative z-10">
-                     {recentActivity.map((activity, idx) => {
+                   <div className="space-y-6 relative z-10">
+                     {displayActivities.map((activity, idx) => {
                        let iconName = "Activity";
                        let colorClass = "bg-gray-100 text-gray-500 border-white";
                        if(activity.type === 'order') { iconName = "ShoppingCart"; colorClass = "bg-blue-100 text-blue-600 border-white"; }
@@ -222,13 +241,13 @@ export const Dashboard = () => {
                        if(activity.type === 'expense') { iconName = "Receipt"; colorClass = "bg-amber-100 text-amber-600 border-white"; }
 
                        return (
-                         <div key={idx} className="flex gap-4 items-start">
+                         <div key={activity.id || idx} className="flex gap-4 items-start">
                             <div className={`w-8 h-8 rounded-full border-4 flex items-center justify-center shrink-0 ${colorClass}`}>
                                <Icons name={iconName} size={14} />
                             </div>
                             <div className="flex flex-col pt-1">
                                <span className="text-sm font-semibold text-gray-900">{activity.title}</span>
-                               <span className="text-xs text-gray-500 mt-0.5">{activity.desc}</span>
+                               <span className={`text-xs mt-0.5 ${activity.type === 'inventory' ? 'text-rose-600 font-medium' : 'text-gray-500'}`}>{activity.desc}</span>
                                <span className="text-[10px] text-gray-400 mt-1">{activity.time}</span>
                             </div>
                          </div>

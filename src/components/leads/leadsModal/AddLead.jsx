@@ -166,8 +166,11 @@ const AddLead = ({ open, onClose, onSuccess }) => {
                   name="phone"
                   value={formData.phone}
                   onChange={handleChange}
-                  placeholder="+91"
+                  placeholder="10 digit number"
                   type="tel"
+                  pattern="[0-9]{10}"
+                  maxLength="10"
+                  title="Please enter a valid 10-digit phone number"
                 />
               </div>
 

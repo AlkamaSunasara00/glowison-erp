@@ -7,6 +7,7 @@ import Icons from "@/common/Icons";
 import Input from "@/common/Input";
 import StatusBadge from "@/common/StatusBadge";
 import AddLead from "./leadsModal/AddLead";
+import EditLead from "./leadsModal/EditLead";
 import DeleteConfirmModal from "@/common/DeleteConfirmModal";
 import LeadDetail from "./LeadDetail";
 import toast from "react-hot-toast";
@@ -23,13 +24,23 @@ export const STAGES = [
 
 const sourceOptions = [
   { value: "all", label: "All sources" },
-  { value: "Website", label: "Website" },
-  { value: "Instagram", label: "Instagram" },
-  { value: "Referral", label: "Referral" },
-  { value: "Walk-in", label: "Walk-in" },
-  { value: "Amazon", label: "Amazon" },
-  { value: "Meesho", label: "Meesho" },
-  { value: "Other", label: "Other" },
+  { value: "INDIAMART", label: "IndiaMart" },
+  { value: "JUSTDIAL", label: "JustDial" },
+  { value: "WEBSITE", label: "Website" },
+  { value: "GOOGLE_ADS", label: "Google Ads" },
+  { value: "FACEBOOK_INSTAGRAM", label: "Facebook/Instagram" },
+  { value: "REFERENCE", label: "Reference" },
+  { value: "COLD_CALL", label: "Cold Call" },
+  { value: "OTHER", label: "Other" },
+];
+
+const productInterestOptions = [
+  { label: "Card Design", value: "CARD_DESIGN" },
+  { label: "Flex Design", value: "FLEX_DESIGN" },
+  { label: "Banner", value: "BANNER" },
+  { label: "Sticker", value: "STICKER" },
+  { label: "Signage Board", value: "SIGNAGE_BOARD" },
+  { label: "Other", value: "OTHER" },
 ];
 
 export const Leads = () => {
@@ -40,6 +51,7 @@ export const Leads = () => {
   const [viewMode, setViewMode] = useState("kanban"); // kanban or table
   const [isAddLeadOpen, setIsAddLeadOpen] = useState(false);
   const [leads, setLeads] = useState([]);
+  const [editItem, setEditItem] = useState(null);
   const [draggedLead, setDraggedLead] = useState(null);
   const [loading, setLoading] = useState(true);
   
@@ -248,7 +260,7 @@ export const Leads = () => {
                         </div>
                         <div className="mt-2 flex justify-between items-center">
                           <span className="text-[10px] bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded">
-                            {lead.source === 'OTHER' ? lead.sourceOther : lead.source}
+                            {lead.source === 'OTHER' ? lead.sourceOther : (sourceOptions.find(o => o.value === lead.source)?.label || lead.source)}
                           </span>
                           <span className="text-[10px] text-gray-400">{lead.created}</span>
                         </div>
@@ -286,16 +298,21 @@ export const Leads = () => {
                         <div>{lead.phone}</div>
                         <div className="text-xs">{lead.email}</div>
                       </td>
-                      <td className="px-4 py-3 text-gray-700">{lead.source === 'OTHER' ? lead.sourceOther : lead.source}</td>
-                      <td className="px-4 py-3 text-gray-700">{lead.interest === 'OTHER' ? lead.interestOther : lead.interest}</td>
+                      <td className="px-4 py-3 text-gray-700">{lead.source === 'OTHER' ? lead.sourceOther : (sourceOptions.find(o => o.value === lead.source)?.label || lead.source)}</td>
+                      <td className="px-4 py-3 text-gray-700">{lead.interest === 'OTHER' ? lead.interestOther : (productInterestOptions.find(o => o.value === lead.interest)?.label || lead.interest)}</td>
                       <td className="px-4 py-3">
                         <StatusBadge status={lead.stage} label={STAGES.find(s => s.key === lead.stage)?.label} />
                       </td>
                       <td className="px-4 py-3 text-gray-500">{lead.created}</td>
                       <td className="px-4 py-3 text-center" onClick={(e) => e.stopPropagation()}>
-                        <Button variant="ghost" size="sm" onClick={() => setDeleteItem(lead)} className="px-2!">
-                          <Icons name="Trash2" size={16} className="text-gray-400 hover:text-rose-500 transition-colors" />
-                        </Button>
+                        <div className="flex items-center justify-center gap-2">
+                          <Button variant="ghost" size="sm" onClick={() => setEditItem(lead)} className="px-2!">
+                            <Icons name="Pencil" size={16} className="text-gray-400 hover:text-indigo-600 transition-colors" />
+                          </Button>
+                          <Button variant="ghost" size="sm" onClick={() => setDeleteItem(lead)} className="px-2!">
+                            <Icons name="Trash2" size={16} className="text-gray-400 hover:text-rose-500 transition-colors" />
+                          </Button>
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -307,6 +324,7 @@ export const Leads = () => {
       </div>
 
       {isAddLeadOpen && <AddLead open={isAddLeadOpen} onClose={() => setIsAddLeadOpen(false)} onSuccess={fetchLeads} />}
+      {editItem && <EditLead open={!!editItem} onClose={() => { setEditItem(null); fetchLeads(); }} initialData={editItem} />}
       {deleteItem && (
         <DeleteConfirmModal
           open={!!deleteItem}

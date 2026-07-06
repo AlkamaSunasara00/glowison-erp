@@ -7,6 +7,7 @@ import Icons from "@/common/Icons";
 import Input from "@/common/Input";
 import StatusBadge from "@/common/StatusBadge";
 import AddOrder from "./ordersModal/AddOrder";
+import EditOrder from "./ordersModal/EditOrder";
 import DeleteConfirmModal from "@/common/DeleteConfirmModal";
 import toast from "react-hot-toast";
 
@@ -44,6 +45,7 @@ export const Orders = () => {
   const [monthFilter, setMonthFilter] = useState("");
   const [isAddOrderOpen, setIsAddOrderOpen] = useState(false);
   const [orders, setOrders] = useState([]);
+  const [editItem, setEditItem] = useState(null);
   const [deleteItem, setDeleteItem] = useState(null);
   const [loading, setLoading] = useState(true);
 
@@ -52,7 +54,8 @@ export const Orders = () => {
       setLoading(true);
       const res = await api.get('/orders?limit=100');
       setOrders(res.data.data.map(o => ({
-        id: o.orderNumber,
+        ...o,
+        id: `GLW-${o.orderNumber}`,
         originalId: o.id,
         type: o.customer?.type === 'RETAIL' ? 'Retail' : o.customer?.type === 'DEALER' ? 'Dealer' : 'Online',
         source: 'Website',
@@ -60,7 +63,8 @@ export const Orders = () => {
         phone: o.customer?.phone || '',
         items: o.items.length,
         itemsList: o.items,
-        total: `Rs. ${o.totalAmount}`,
+        total: `Rs. ${Number(o.totalAmount || o.total || 0).toLocaleString()}`,
+        balance: `Rs. ${Math.max(0, Number(o.total || 0) - Number(o.amountPaid || 0)).toLocaleString()}`,
         status: o.status.toLowerCase(),
         paymentStatus: o.paymentStatus.toLowerCase().replace('_', ' '),
         date: new Date(o.createdAt).toLocaleDateString('en-CA')
@@ -99,8 +103,8 @@ export const Orders = () => {
   
   const pendingCount = orders.filter(o => o.status === "pending" || o.status === "processing").length;
   
-  const unpaidValue = orders.filter(o => o.paymentStatus !== "paid").reduce((sum, o) => {
-      const val = parseFloat(o.total.replace(/Rs.\s|,/g, ''));
+  const unpaidValue = orders.reduce((sum, o) => {
+      const val = parseFloat(o.balance.replace(/Rs.\s|,/g, ''));
       return sum + (isNaN(val) ? 0 : val);
   }, 0);
 
@@ -220,7 +224,7 @@ export const Orders = () => {
                     <th className="px-4 py-3">Order ID</th>
                     <th className="px-4 py-3">Customer</th>
                     <th className="px-4 py-3">Type</th>
-                    <th className="px-4 py-3">Amount</th>
+                    <th className="px-4 py-3">Amount & Balance</th>
                     <th className="px-4 py-3">Status</th>
                     <th className="px-4 py-3">Payment</th>
                     <th className="px-4 py-3">Date</th>
@@ -245,7 +249,9 @@ export const Orders = () => {
                       </td>
                       <td className="px-4 py-3">
                         <div className="font-medium text-gray-900">{order.total}</div>
-                        <div className="text-[11px] text-gray-500">{order.items} item(s)</div>
+                        {order.balance !== "Rs. 0" && (
+                           <div className="text-[11px] font-semibold text-rose-500 mt-0.5">Bal: {order.balance}</div>
+                        )}
                       </td>
                       <td className="px-4 py-3">
                         <StatusBadge status={order.status} />
@@ -255,9 +261,14 @@ export const Orders = () => {
                       </td>
                       <td className="px-4 py-3 text-gray-500">{order.date}</td>
                       <td className="px-4 py-3 text-center" onClick={(e) => e.stopPropagation()}>
-                        <Button variant="ghost" size="sm" onClick={() => setDeleteItem(order)} className="px-2!">
-                          <Icons name="Trash2" size={16} className="text-gray-400 hover:text-rose-500 transition-colors" />
-                        </Button>
+                        <div className="flex items-center justify-center gap-2">
+                          <Button variant="ghost" size="sm" onClick={() => setEditItem(order)} className="px-2!">
+                            <Icons name="Pencil" size={16} className="text-gray-400 hover:text-indigo-600 transition-colors" />
+                          </Button>
+                          <Button variant="ghost" size="sm" onClick={() => setDeleteItem(order)} className="px-2!">
+                            <Icons name="Trash2" size={16} className="text-gray-400 hover:text-rose-500 transition-colors" />
+                          </Button>
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -269,6 +280,7 @@ export const Orders = () => {
       </div>
 
       {isAddOrderOpen && <AddOrder open={isAddOrderOpen} onClose={() => { setIsAddOrderOpen(false); fetchOrders(); }} />}
+      {editItem && <EditOrder open={!!editItem} onClose={() => { setEditItem(null); fetchOrders(); }} initialData={editItem} />}
       {deleteItem && (
         <DeleteConfirmModal
           open={!!deleteItem}

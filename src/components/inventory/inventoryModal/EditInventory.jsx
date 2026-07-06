@@ -9,11 +9,20 @@ const typeOptions = [
 ];
 
 const categoryOptions = [
-  { label: "Boards", value: "Boards" },
-  { label: "Sheets", value: "Sheets" },
-  { label: "Decor", value: "Decor" },
-  { label: "Lighting", value: "Lighting" },
-  { label: "Hardware", value: "Hardware" },
+  { label: "Board", value: "BOARD" },
+  { label: "Vinyl", value: "VINYL" },
+  { label: "Acrylic", value: "ACRYLIC" },
+  { label: "Flex", value: "FLEX" },
+  { label: "LED", value: "LED" },
+  { label: "Ink", value: "INK" },
+  { label: "Other", value: "OTHERS" },
+];
+
+const unitOptions = [
+  { label: "Piece", value: "Piece" },
+  { label: "Sq Ft", value: "Sq Ft" },
+  { label: "Roll", value: "Roll" },
+  { label: "Liters", value: "Liters" },
   { label: "Other", value: "Other" },
 ];
 
@@ -22,18 +31,24 @@ const EditInventory = ({ open, onClose, initialData }) => {
     sku: "",
     name: "",
     type: "Raw Material",
-    category: "Boards",
+    category: "BOARD",
     otherCategory: "",
-    minStock: "",
-    price: "",
+    baseUnit: "Piece",
+    purchaseUnit: "Piece",
+    unitsPerPurchase: "1",
+    minStock: "0",
+    lastPurchasePrice: "0",
+    stockQty: "0",
+    averageCost: "0",
   });
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
     if (initialData) {
-      let category = initialData.category || "Boards";
+      let category = initialData.category || "BOARD";
       let otherCategory = "";
       if (category && !categoryOptions.find(o => o.value === category)) {
-        category = "Other";
+        category = "OTHERS";
         otherCategory = initialData.category;
       }
 
@@ -43,8 +58,13 @@ const EditInventory = ({ open, onClose, initialData }) => {
         type: initialData.type || "Raw Material",
         category: category,
         otherCategory: otherCategory,
-        minStock: initialData.minStock || "",
-        price: initialData.price || "",
+        baseUnit: initialData.baseUnit || "Piece",
+        purchaseUnit: initialData.purchaseUnit || "Piece",
+        unitsPerPurchase: initialData.unitsPerPurchase || "1",
+        minStock: initialData.minStock || "0",
+        lastPurchasePrice: initialData.lastPurchasePrice || "0",
+        stockQty: initialData.stockQty || initialData.stock || "0",
+        averageCost: initialData.averageCost || "0",
       });
     }
   }, [initialData]);
@@ -63,9 +83,32 @@ const EditInventory = ({ open, onClose, initialData }) => {
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleSubmit = (event) => {
+  const handleSubmit = async (event) => {
     event.preventDefault();
-    onClose();
+    try {
+      setIsSubmitting(true);
+      const payload = {
+        name: formData.name,
+        sku: formData.sku || undefined,
+        type: formData.type === "Raw Material" ? "RAW_MATERIAL" : "FINISHED_GOOD",
+        category: formData.category === "OTHERS" ? "OTHERS" : formData.category,
+        categoryOther: formData.category === "OTHERS" ? formData.otherCategory : undefined,
+        baseUnit: formData.baseUnit,
+        purchaseUnit: formData.purchaseUnit,
+        unitsPerPurchase: formData.unitsPerPurchase ? Number(formData.unitsPerPurchase) : 1,
+        lastPurchasePrice: formData.lastPurchasePrice ? Number(formData.lastPurchasePrice) : 0,
+        reorderThreshold: formData.minStock ? Number(formData.minStock) : 0,
+      };
+
+      await api.put(`/inventory/${initialData.id}`, payload);
+      toast.success('Item updated successfully');
+      onClose();
+    } catch (error) {
+      toast.error('Failed to update item');
+      console.error(error);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -120,7 +163,7 @@ const EditInventory = ({ open, onClose, initialData }) => {
                 <Input type="select" name="category" value={formData.category} onChange={handleChange} options={categoryOptions} required />
               </div>
 
-              {formData.category === "Other" && (
+              {formData.category === "OTHERS" && (
                 <div className="space-y-1.5 animate-fade-in">
                   <label className="label">Specify Category <span className="required">*</span></label>
                   <Input name="otherCategory" value={formData.otherCategory} onChange={handleChange} required />
@@ -128,21 +171,41 @@ const EditInventory = ({ open, onClose, initialData }) => {
               )}
 
               <div className="space-y-1.5">
-                <label className="label">Unit Price (Rs.)</label>
-                <Input type="number" name="price" value={formData.price} onChange={handleChange} min="0" />
+                <label className="label">Base Unit (Display Unit) <span className="required">*</span></label>
+                <Input type="select" name="baseUnit" value={formData.baseUnit} onChange={handleChange} options={unitOptions} required />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="label">Purchase Unit <span className="required">*</span></label>
+                <Input type="select" name="purchaseUnit" value={formData.purchaseUnit} onChange={handleChange} options={unitOptions} required />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="label">Units Per Purchase</label>
+                <Input type="number" name="unitsPerPurchase" value={formData.unitsPerPurchase} onChange={handleChange} min="1" step="0.01" />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="label">Current Stock (Read Only)</label>
+                <Input type="number" name="stockQty" value={formData.stockQty} readOnly disabled className="bg-gray-50" />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="label">Last Purchase Price (Per Base Unit)</label>
+                <Input type="number" name="lastPurchasePrice" value={formData.lastPurchasePrice} onChange={handleChange} min="0" step="0.01" />
               </div>
 
               <div className="space-y-1.5">
                 <label className="label">Minimum Stock Alert Level</label>
-                <Input type="number" name="minStock" value={formData.minStock} onChange={handleChange} min="0" />
+                <Input type="number" name="minStock" value={formData.minStock} onChange={handleChange} min="0" step="0.01" />
               </div>
               
             </div>
           </div>
 
           <div className="shrink-0 border-t border-gray-200 bg-gray-50/50 px-6 py-4 flex justify-end gap-3">
-            <Button variant="outline" type="button" onClick={onClose}>Cancel</Button>
-            <Button variant="solid" type="submit">Save Changes</Button>
+            <Button variant="outline" type="button" onClick={onClose} disabled={isSubmitting}>Cancel</Button>
+            <Button variant="solid" type="submit" isLoading={isSubmitting} disabled={isSubmitting}>Save Changes</Button>
           </div>
         </form>
       </div>

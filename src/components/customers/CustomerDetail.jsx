@@ -9,19 +9,7 @@ const ActionIcon = ({ name, color = "currentColor", ...props }) => (
   <Icons name={name} color={color} {...props} />
 );
 
-// Mock linked data for display
-const mockOrders = [
-  { id: "O-1001", date: "Oct 15, 2023", amount: "Rs. 1,200", status: "Delivered" },
-  { id: "O-1005", date: "Oct 20, 2023", amount: "Rs. 3,500", status: "Processing" },
-];
 
-const mockInvoices = [
-  { id: "INV-201", date: "Oct 16, 2023", amount: "Rs. 1,200", status: "Paid" },
-];
-
-const mockQuotations = [
-  { id: "QT-501", date: "Oct 10, 2023", amount: "Rs. 4,500", status: "Accepted" },
-];
 
 const CustomerDetail = ({ open, onClose, customer, isPage = false, onCustomerUpdated }) => {
   const router = useRouter();
@@ -37,13 +25,15 @@ const CustomerDetail = ({ open, onClose, customer, isPage = false, onCustomerUpd
     }
   };
 
+  const parsedAddress = typeof data.address === 'string' ? (() => { try { return JSON.parse(data.address); } catch { return {}; } })() : (data.address || {});
+  
   const detailInfo = {
     "Name": data.name || "—",
     "Phone": data.phone || "—",
     "Email": data.email || "—",
     "Customer Type": data.type || "—",
     "GSTIN": data.gstin || "—",
-    "Address": data.address ? `${data.address.line1}, ${data.address.city}, ${data.address.state} - ${data.address.pincode}` : "—",
+    "Address": data.address ? [parsedAddress.line1, parsedAddress.line2, parsedAddress.city, parsedAddress.state, parsedAddress.pincode].filter(Boolean).join(', ') : "—",
     "Notes": data.notes || "—",
   };
 
@@ -80,6 +70,7 @@ const CustomerDetail = ({ open, onClose, customer, isPage = false, onCustomerUpd
             <Button
               variant="outline"
               size="md"
+              onClick={() => router.push('/orders')}
               leftIcon={(props) => <ActionIcon name="Plus" {...props} />}
               className="hidden sm:flex rounded-lg px-3! py-1.5! text-xs font-medium"
             >
@@ -88,6 +79,7 @@ const CustomerDetail = ({ open, onClose, customer, isPage = false, onCustomerUpd
             <Button
               variant="solid"
               size="md"
+              onClick={() => router.push('/invoice')}
               leftIcon={(props) => <ActionIcon name="FileText" color="white" {...props} />}
               className="rounded-lg px-3! py-1.5! text-xs font-semibold"
             >
@@ -137,11 +129,11 @@ const CustomerDetail = ({ open, onClose, customer, isPage = false, onCustomerUpd
                 <div className="rounded-xl border border-gray-100 overflow-hidden">
                     <div className="flex items-center justify-between px-4 py-2.5 text-sm border-b border-gray-100 hover:bg-gray-50/60 transition-colors">
                       <span className="text-gray-500">Total Orders</span>
-                      <span className="font-semibold text-gray-800">2</span>
+                      <span className="font-semibold text-gray-800">{data.orders?.length || 0}</span>
                     </div>
                     <div className="flex items-center justify-between px-4 py-2.5 text-sm border-b border-gray-100 hover:bg-gray-50/60 transition-colors">
                       <span className="text-gray-500">Total Spend</span>
-                      <span className="font-semibold text-primary">{data.totalValue || 'Rs. 0'}</span>
+                      <span className="font-semibold text-primary">Rs. {(data.orders || []).reduce((sum, o) => sum + parseFloat(o.total || 0), 0).toFixed(2)}</span>
                     </div>
                 </div>
               </section>
@@ -183,11 +175,13 @@ const CustomerDetail = ({ open, onClose, customer, isPage = false, onCustomerUpd
                         </tr>
                       </thead>
                       <tbody className="text-sm">
-                        {mockOrders.map(item => (
-                          <tr key={item.id} className="border-b border-gray-50 hover:bg-gray-50/50 cursor-pointer">
-                            <td className="px-4 py-3 font-medium text-primary">{item.id}</td>
-                            <td className="px-4 py-3 text-gray-500">{item.date}</td>
-                            <td className="px-4 py-3 font-medium text-gray-900">{item.amount}</td>
+                        {(data.orders || []).length === 0 ? (
+                          <tr><td colSpan="4" className="text-center py-4 text-gray-500">No orders found</td></tr>
+                        ) : (data.orders || []).map(item => (
+                          <tr key={item.id} onClick={() => router.push(`/orders/GLW-${item.orderNumber}`)} className="border-b border-gray-50 hover:bg-gray-50/50 cursor-pointer">
+                            <td className="px-4 py-3 font-medium text-primary">GLW-{item.orderNumber}</td>
+                            <td className="px-4 py-3 text-gray-500">{new Date(item.createdAt).toLocaleDateString()}</td>
+                            <td className="px-4 py-3 font-medium text-gray-900">Rs. {item.total}</td>
                             <td className="px-4 py-3"><StatusBadge status={item.status} /></td>
                           </tr>
                         ))}
@@ -206,11 +200,13 @@ const CustomerDetail = ({ open, onClose, customer, isPage = false, onCustomerUpd
                         </tr>
                       </thead>
                       <tbody className="text-sm">
-                        {mockInvoices.map(item => (
-                          <tr key={item.id} className="border-b border-gray-50 hover:bg-gray-50/50 cursor-pointer">
-                            <td className="px-4 py-3 font-medium text-primary">{item.id}</td>
-                            <td className="px-4 py-3 text-gray-500">{item.date}</td>
-                            <td className="px-4 py-3 font-medium text-gray-900">{item.amount}</td>
+                        {(data.invoices || []).length === 0 ? (
+                          <tr><td colSpan="4" className="text-center py-4 text-gray-500">No invoices found</td></tr>
+                        ) : (data.invoices || []).map(item => (
+                          <tr key={item.id} onClick={() => router.push(`/invoices/${item.id}`)} className="border-b border-gray-50 hover:bg-gray-50/50 cursor-pointer">
+                            <td className="px-4 py-3 font-medium text-primary">{item.id.slice(0, 8)}</td>
+                            <td className="px-4 py-3 text-gray-500">{new Date(item.createdAt).toLocaleDateString()}</td>
+                            <td className="px-4 py-3 font-medium text-gray-900">Rs. {item.total}</td>
                             <td className="px-4 py-3"><StatusBadge status={item.status} /></td>
                           </tr>
                         ))}
@@ -229,11 +225,13 @@ const CustomerDetail = ({ open, onClose, customer, isPage = false, onCustomerUpd
                        </tr>
                      </thead>
                      <tbody className="text-sm">
-                       {mockQuotations.map(item => (
-                         <tr key={item.id} className="border-b border-gray-50 hover:bg-gray-50/50 cursor-pointer">
-                           <td className="px-4 py-3 font-medium text-primary">{item.id}</td>
-                           <td className="px-4 py-3 text-gray-500">{item.date}</td>
-                           <td className="px-4 py-3 font-medium text-gray-900">{item.amount}</td>
+                       {(data.quotations || []).length === 0 ? (
+                          <tr><td colSpan="4" className="text-center py-4 text-gray-500">No quotations found</td></tr>
+                        ) : (data.quotations || []).map(item => (
+                         <tr key={item.id} onClick={() => router.push(`/quotations/${item.id}`)} className="border-b border-gray-50 hover:bg-gray-50/50 cursor-pointer">
+                           <td className="px-4 py-3 font-medium text-primary">{item.id.slice(0, 8)}</td>
+                           <td className="px-4 py-3 text-gray-500">{new Date(item.createdAt).toLocaleDateString()}</td>
+                           <td className="px-4 py-3 font-medium text-gray-900">Rs. {item.estimatedPrice}</td>
                            <td className="px-4 py-3"><StatusBadge status={item.status} /></td>
                          </tr>
                        ))}

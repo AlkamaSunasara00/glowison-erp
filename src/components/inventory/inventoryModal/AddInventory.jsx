@@ -11,11 +11,20 @@ const typeOptions = [
 ];
 
 const categoryOptions = [
-  { label: "Boards", value: "Boards" },
-  { label: "Sheets", value: "Sheets" },
-  { label: "Decor", value: "Decor" },
-  { label: "Lighting", value: "Lighting" },
-  { label: "Hardware", value: "Hardware" },
+  { label: "Board", value: "BOARD" },
+  { label: "Vinyl", value: "VINYL" },
+  { label: "Acrylic", value: "ACRYLIC" },
+  { label: "Flex", value: "FLEX" },
+  { label: "LED", value: "LED" },
+  { label: "Ink", value: "INK" },
+  { label: "Other", value: "OTHERS" },
+];
+
+const unitOptions = [
+  { label: "Piece", value: "Piece" },
+  { label: "Sq Ft", value: "Sq Ft" },
+  { label: "Roll", value: "Roll" },
+  { label: "Liters", value: "Liters" },
   { label: "Other", value: "Other" },
 ];
 
@@ -24,11 +33,14 @@ const AddInventory = ({ open, onClose }) => {
     sku: "",
     name: "",
     type: "Raw Material",
-    category: "Boards",
+    category: "BOARD",
     otherCategory: "",
-    minStock: "",
-    currentStock: "",
-    price: "",
+    baseUnit: "Piece",
+    purchaseUnit: "Piece",
+    unitsPerPurchase: "1",
+    openingStock: "0",
+    minStock: "0",
+    lastPurchasePrice: "0",
   });
 
   useEffect(() => {
@@ -55,10 +67,14 @@ const AddInventory = ({ open, onClose }) => {
         name: formData.name,
         sku: formData.sku || undefined,
         type: formData.type === "Raw Material" ? "RAW_MATERIAL" : "FINISHED_GOOD",
-        category: formData.category === "Other" ? formData.otherCategory : formData.category,
-        unitPrice: formData.price ? Number(formData.price) : 0,
-        quantity: formData.currentStock ? Number(formData.currentStock) : 0,
-        minStockLevel: formData.minStock ? Number(formData.minStock) : 0,
+        category: formData.category === "OTHERS" ? "OTHERS" : formData.category,
+        categoryOther: formData.category === "OTHERS" ? formData.otherCategory : undefined,
+        baseUnit: formData.baseUnit,
+        purchaseUnit: formData.purchaseUnit,
+        unitsPerPurchase: formData.unitsPerPurchase ? Number(formData.unitsPerPurchase) : 1,
+        openingStock: formData.openingStock ? Number(formData.openingStock) : 0,
+        lastPurchasePrice: formData.lastPurchasePrice ? Number(formData.lastPurchasePrice) : 0,
+        reorderThreshold: formData.minStock ? Number(formData.minStock) : 0,
       };
 
       await api.post('/inventory', payload);
@@ -124,7 +140,7 @@ const AddInventory = ({ open, onClose }) => {
                 <Input type="select" name="category" value={formData.category} onChange={handleChange} options={categoryOptions} required />
               </div>
 
-              {formData.category === "Other" && (
+              {formData.category === "OTHERS" && (
                 <div className="space-y-1.5 animate-fade-in">
                   <label className="label">Specify Category <span className="required">*</span></label>
                   <Input name="otherCategory" value={formData.otherCategory} onChange={handleChange} required />
@@ -132,18 +148,33 @@ const AddInventory = ({ open, onClose }) => {
               )}
 
               <div className="space-y-1.5">
-                <label className="label">Unit Price (Rs.)</label>
-                <Input type="number" name="price" value={formData.price} onChange={handleChange} min="0" />
+                <label className="label">Base Unit (Display Unit) <span className="required">*</span></label>
+                <Input type="select" name="baseUnit" value={formData.baseUnit} onChange={handleChange} options={unitOptions} required />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="label">Purchase Unit <span className="required">*</span></label>
+                <Input type="select" name="purchaseUnit" value={formData.purchaseUnit} onChange={handleChange} options={unitOptions} required />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="label">Units Per Purchase</label>
+                <Input type="number" name="unitsPerPurchase" value={formData.unitsPerPurchase} onChange={handleChange} min="1" step="0.01" />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="label">Opening Stock (in Base Units)</label>
+                <Input type="number" name="openingStock" value={formData.openingStock} onChange={handleChange} min="0" step="0.01" />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="label">Last Purchase Price (Per Base Unit)</label>
+                <Input type="number" name="lastPurchasePrice" value={formData.lastPurchasePrice} onChange={handleChange} min="0" step="0.01" />
               </div>
 
               <div className="space-y-1.5">
                 <label className="label">Minimum Stock Alert Level</label>
-                <Input type="number" name="minStock" value={formData.minStock} onChange={handleChange} min="0" />
-              </div>
-
-              <div className="space-y-1.5">
-                <label className="label">Current Stock</label>
-                <Input type="number" name="currentStock" value={formData.currentStock} onChange={handleChange} min="0" />
+                <Input type="number" name="minStock" value={formData.minStock} onChange={handleChange} min="0" step="0.01" />
               </div>
               
             </div>

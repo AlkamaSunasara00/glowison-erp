@@ -23,13 +23,28 @@ const handler = async (req, res) => {
           where,
           skip: parseInt(skip),
           take: parseInt(limit),
-          orderBy: { createdAt: 'desc' }
+          orderBy: { createdAt: 'desc' },
+          include: {
+            orders: {
+              where: { status: 'COMPLETED' },
+              select: { total: true }
+            }
+          }
         })
       ]);
 
+      const customersWithTotals = customers.map(c => {
+        const totalValue = c.orders.reduce((sum, order) => sum + Number(order.total || 0), 0);
+        const { orders, ...customerData } = c;
+        return {
+          ...customerData,
+          totalOrderValue: `Rs. ${totalValue.toLocaleString()}`
+        };
+      });
+
       return res.status(200).json({
         success: true,
-        data: customers,
+        data: customersWithTotals,
         pagination: {
           total,
           page: parseInt(page),

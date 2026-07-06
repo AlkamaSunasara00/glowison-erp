@@ -7,6 +7,7 @@ import Icons from "@/common/Icons";
 import Input from "@/common/Input";
 import StatusBadge from "@/common/StatusBadge";
 import AddCustomer from "./customersModal/AddCustomer";
+import EditCustomer from "./customersModal/EditCustomer";
 import DeleteConfirmModal from "@/common/DeleteConfirmModal";
 import toast from "react-hot-toast";
 
@@ -25,6 +26,7 @@ export const Customers = () => {
   const [locationFilter, setLocationFilter] = useState("");
   const [isAddCustomerOpen, setIsAddCustomerOpen] = useState(false);
   const [customers, setCustomers] = useState([]);
+  const [editItem, setEditItem] = useState(null);
   const [deleteItem, setDeleteItem] = useState(null);
   const [loading, setLoading] = useState(true);
 
@@ -203,9 +205,14 @@ export const Customers = () => {
                         {customer.totalValue}
                       </td>
                       <td className="px-4 py-3 text-center" onClick={(e) => e.stopPropagation()}>
-                        <Button variant="ghost" size="sm" onClick={() => setDeleteItem(customer)} className="px-2!">
-                          <Icons name="Trash2" size={16} className="text-gray-400 hover:text-rose-500 transition-colors" />
-                        </Button>
+                        <div className="flex items-center justify-center gap-2">
+                          <Button variant="ghost" size="sm" onClick={() => setEditItem(customer)} className="px-2!">
+                            <Icons name="Pencil" size={16} className="text-gray-400 hover:text-indigo-600 transition-colors" />
+                          </Button>
+                          <Button variant="ghost" size="sm" onClick={() => setDeleteItem(customer)} className="px-2!">
+                            <Icons name="Trash2" size={16} className="text-gray-400 hover:text-rose-500 transition-colors" />
+                          </Button>
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -217,6 +224,7 @@ export const Customers = () => {
       </div>
 
       {isAddCustomerOpen && <AddCustomer open={isAddCustomerOpen} onClose={() => { setIsAddCustomerOpen(false); fetchCustomers(); }} />}
+      {editItem && <EditCustomer open={!!editItem} onClose={() => { setEditItem(null); fetchCustomers(); }} initialData={editItem} />}
       {deleteItem && (
         <DeleteConfirmModal
           open={!!deleteItem}

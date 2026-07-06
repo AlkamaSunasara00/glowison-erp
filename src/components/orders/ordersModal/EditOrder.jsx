@@ -3,6 +3,8 @@ import Button from "@/common/Button";
 import Icons from "@/common/Icons";
 import Input from "@/common/Input";
 import CustomerPicker from "@/common/CustomerPicker";
+import api from "@/lib/api";
+import toast from "react-hot-toast";
 
 const orderTypeOptions = [
   { label: "Retail/Dealer", value: "Retail/Dealer" },
@@ -22,26 +24,39 @@ const EditOrder = ({ open, onClose, initialData }) => {
   const [customerId, setCustomerId] = useState("");
   const [onlineData, setOnlineData] = useState({ source: "Website", otherSource: "", name: "", phone: "" });
   const [lineItems, setLineItems] = useState([{ id: Date.now(), name: "", qty: 1, price: 0, size: "", color: "", unit: "inch", taxPercent: "" }]);
+  const [paymentStatus, setPaymentStatus] = useState("UNPAID");
+  const [amountPaid, setAmountPaid] = useState("");
   const [notes, setNotes] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
     if (initialData) {
       setOrderType(initialData.type === 'Online' ? 'Online' : 'Retail/Dealer');
       if (initialData.type === 'Online') {
         setOnlineData({
-          source: initialData.source || "Website",
-          otherSource: "",
-          name: initialData.customer || "",
-          phone: initialData.phone || "",
+          source: initialData.onlineSource || "Website",
+          otherSource: initialData.onlineSourceOther || "",
+          name: initialData.buyerName || "",
+          phone: initialData.buyerContact || "",
         });
       } else {
-        // Just mock matching a customer ID for demo
-        setCustomerId("1"); 
+        setCustomerId(initialData.customerId || ""); 
       }
-      setNotes(initialData.notes || "");
-      // Mock line items setup
-      if (initialData.items) {
-        setLineItems([{ id: Date.now(), name: "Mock Product", qty: initialData.items, price: 100, size: "6mm", color: "Natural", unit: "inch", taxPercent: "" }]);
+      setNotes(initialData.note || "");
+      setPaymentStatus(initialData.paymentStatus || "UNPAID");
+      setAmountPaid(initialData.amountPaid || "");
+      
+      if (initialData.items && initialData.items.length > 0) {
+        setLineItems(initialData.items.map(item => ({
+          id: item.id,
+          name: item.product,
+          qty: item.qty,
+          price: item.unitPrice,
+          size: item.size || "",
+          color: item.color || "",
+          unit: item.unit || "inch",
+          taxPercent: item.taxRate || ""
+        })));
       }
     }
   }, [initialData]);
@@ -55,9 +70,41 @@ const EditOrder = ({ open, onClose, initialData }) => {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [open, onClose]);
 
-  const handleSubmit = (event) => {
+  const handleSubmit = async (event) => {
     event.preventDefault();
-    onClose();
+    try {
+      setIsSubmitting(true);
+      const payload = {
+        type: orderType === "Retail/Dealer" ? "RETAIL_DEALER" : "ONLINE",
+        customerId: orderType === "Retail/Dealer" ? customerId : undefined,
+        note: notes,
+        total: calculateTotal(),
+        paymentStatus,
+        amountPaid: paymentStatus === "PAID" ? calculateTotal() : (paymentStatus === "PARTIAL" ? Number(amountPaid) : 0),
+        onlineSource: orderType === "Online" ? (onlineData.source.toUpperCase() === "OTHER" ? "OTHER" : onlineData.source.toUpperCase()) : undefined,
+        onlineSourceOther: orderType === "Online" && onlineData.source === "Other" ? onlineData.otherSource : undefined,
+        buyerName: orderType === "Online" ? onlineData.name : undefined,
+        buyerContact: orderType === "Online" ? onlineData.phone : undefined,
+        items: lineItems.map(item => ({
+          product: item.name,
+          qty: Number(item.qty),
+          unitPrice: Number(item.price),
+          taxRate: item.taxPercent ? Number(item.taxPercent) : 0,
+          unit: item.unit,
+          size: item.size || null,
+          color: item.color || null
+        }))
+      };
+
+      await api.put(`/orders/${initialData.id}`, payload);
+      toast.success('Order updated successfully');
+      onClose();
+    } catch (error) {
+      toast.error('Failed to update order');
+      console.error(error);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleAddLineItem = () => {
@@ -225,6 +272,23 @@ const EditOrder = ({ open, onClose, initialData }) => {
                </div>
             </div>
 
+            {/* Payment Details */}
+            <div className="mb-6 p-4 rounded-xl border border-gray-100 bg-gray-50/30">
+               <h3 className="text-sm font-semibold text-gray-800 mb-4">Payment Details</h3>
+               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                 <div className="space-y-1.5">
+                   <label className="text-xs font-semibold text-gray-600">Payment Status</label>
+                   <Input type="select" options={[{label: "Unpaid", value: "UNPAID"}, {label: "Partially Paid", value: "PARTIAL"}, {label: "Fully Paid", value: "PAID"}]} value={paymentStatus} onChange={(e) => setPaymentStatus(e.target.value)} />
+                 </div>
+                 {paymentStatus === "PARTIAL" && (
+                   <div className="space-y-1.5 animate-fade-in">
+                     <label className="text-xs font-semibold text-gray-600">Amount Paid (Installment) <span className="text-red-500">*</span></label>
+                     <Input type="number" min="0" placeholder="e.g. 500" value={amountPaid} onChange={(e) => setAmountPaid(e.target.value)} required />
+                   </div>
+                 )}
+               </div>
+            </div>
+
             {/* Notes */}
             <div className="space-y-1.5">
               <label className="label">Order Notes</label>
@@ -234,8 +298,8 @@ const EditOrder = ({ open, onClose, initialData }) => {
           </div>
 
           <div className="shrink-0 border-t border-gray-200 bg-gray-50/50 px-6 py-4 flex justify-end gap-3">
-            <Button variant="outline" type="button" onClick={onClose}>Cancel</Button>
-            <Button variant="solid" type="submit">Save Changes</Button>
+            <Button variant="outline" type="button" onClick={onClose} disabled={isSubmitting}>Cancel</Button>
+            <Button variant="solid" type="submit" isLoading={isSubmitting} disabled={isSubmitting}>Save Changes</Button>
           </div>
         </form>
       </div>

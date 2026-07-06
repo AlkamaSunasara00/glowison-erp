@@ -33,15 +33,15 @@ const AdjustStock = ({ open, onClose, item }) => {
     try {
       setIsSubmitting(true);
       const qty = Number(formData.qty);
-      const newStock = formData.action === "add" ? item.stock + qty : item.stock - qty;
+      const adjustmentQuantity = formData.action === "add" ? qty : -qty;
       
-      if (newStock < 0) {
+      if (item.stock + adjustmentQuantity < 0) {
         toast.error("Stock cannot be negative");
         setIsSubmitting(false);
         return;
       }
 
-      await api.put(`/inventory/${item.id}`, { quantity: newStock });
+      await api.post(`/inventory/${item.id}/adjust`, { quantity: adjustmentQuantity, note: formData.reason });
       toast.success('Stock adjusted successfully');
       onClose();
     } catch (error) {

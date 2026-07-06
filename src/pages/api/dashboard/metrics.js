@@ -24,13 +24,26 @@ const handler = async (req, res) => {
       where: { status: 'NEW' }
     });
     
+    const allInventory = await prisma.inventoryItem.findMany({
+      select: { id: true, name: true, sku: true, stockQty: true, reorderThreshold: true, baseUnit: true }
+    });
+    
+    const lowStockItems = allInventory
+      .filter(item => Number(item.stockQty) <= Number(item.reorderThreshold))
+      .slice(0, 5); // Limit to top 5 for alerts
+      
+    const lowStockCount = allInventory.filter(item => Number(item.stockQty) <= Number(item.reorderThreshold)).length;
+
+    
     return res.status(200).json({
       success: true,
       data: {
         totalRevenue: totalRevenueAgg._sum.total || 0,
         activeOrders,
         pendingInvoices,
-        newLeads
+        newLeads,
+        lowStockCount,
+        lowStockItems
       }
     });
   } catch (error) {

@@ -6,15 +6,23 @@ const handler = async (req, res) => {
 
   try {
     if (req.method === 'GET') {
-      const item = await prisma.inventoryItem.findUnique({ where: { id } });
+      const item = await prisma.inventoryItem.findUnique({
+        where: { id },
+        include: {
+          transactions: {
+            orderBy: { createdAt: 'desc' }
+          }
+        }
+      });
       if (!item) return res.status(404).json({ success: false, message: 'Not found' });
       return res.status(200).json({ success: true, data: item });
     }
 
     if (req.method === 'PUT') {
+      const { stockQty, openingStock, ...updateData } = req.body;
       const item = await prisma.inventoryItem.update({
         where: { id },
-        data: req.body
+        data: updateData
       });
       return res.status(200).json({ success: true, message: 'Updated successfully', data: item });
     }

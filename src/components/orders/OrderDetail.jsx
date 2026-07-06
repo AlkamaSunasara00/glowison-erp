@@ -1,9 +1,12 @@
 import React, { useState } from "react";
+import Input from "@/common/Input";
 import Button from "@/common/Button";
 import Icons from "@/common/Icons";
 import { useRouter } from "next/router";
 import StatusBadge from "@/common/StatusBadge";
 import EditOrder from "./ordersModal/EditOrder";
+import api from "@/lib/api";
+import toast from "react-hot-toast";
 
 const ActionIcon = ({ name, color = "currentColor", ...props }) => (
   <Icons name={name} color={color} {...props} />
@@ -13,9 +16,11 @@ const mockLineItems = [
   { id: 1, name: "MDF Sheet", size: "6mm", color: "Natural", qty: 10, price: 120, total: 1200 },
 ];
 
-const OrderDetail = ({ open, onClose, order, isPage = false }) => {
+const OrderDetail = ({ open, onClose, order, isPage = false, onOrderUpdated }) => {
   const router = useRouter();
   const [isEditOpen, setIsEditOpen] = useState(false);
+  const [showPartialInput, setShowPartialInput] = useState(false);
+  const [partialAmount, setPartialAmount] = useState("");
   const data = order || {};
 
   const handleBack = () => {
@@ -26,13 +31,31 @@ const OrderDetail = ({ open, onClose, order, isPage = false }) => {
     }
   };
 
+  const handleStatusUpdate = async (field, value, amount = null) => {
+    try {
+      const payload = { [field]: value };
+      if (field === 'paymentStatus') {
+        if (value === 'PAID') payload.amountPaid = Number(data.total || 0);
+        else if (value === 'PARTIAL') payload.amountPaid = Number(amount || 0);
+        else if (value === 'UNPAID') payload.amountPaid = 0;
+      }
+      
+      await api.put(`/orders/${data.id}`, payload);
+      toast.success(`Marked as ${value.charAt(0) + value.slice(1).toLowerCase()}`);
+      if (onOrderUpdated) onOrderUpdated();
+      else if (isPage) router.replace(router.asPath);
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Failed to update status');
+    }
+  };
+
   const detailInfo = {
-    "Order ID": data.id || "—",
-    "Customer": data.customer || "—",
-    "Phone": data.phone || "—",
-    "Order Type": data.type || "—",
-    "Source": data.type === 'Online' ? data.source || "—" : "N/A",
-    "Order Date": data.date || "—",
+    "Order ID": data.orderNumber ? `GLW-${data.orderNumber}` : (data.id || "—"),
+    "Customer": data.customer ? (typeof data.customer === 'string' ? data.customer : data.customer.name) : (data.buyerName || "—"),
+    "Phone": data.customer?.phone || data.buyerContact || "—",
+    "Order Type": data.type === 'RETAIL_DEALER' ? 'Retail/Dealer' : (data.type || "—"),
+    "Source": data.type === 'ONLINE' ? (data.onlineSource || "—") : "N/A",
+    "Order Date": data.createdAt ? new Date(data.createdAt).toLocaleDateString('en-CA') : "—",
   };
 
   const detailPanelContent = (
@@ -55,11 +78,11 @@ const OrderDetail = ({ open, onClose, order, isPage = false }) => {
           </button>
           <div>
             <h2 className="page-header flex items-center gap-2">
-              {data.id || "Order Details"}
+              {data.orderNumber ? `GLW-${data.orderNumber}` : (data.id || "Order Details")}
               <StatusBadge status={data.status} />
               <StatusBadge status={data.paymentStatus} />
             </h2>
-            <p className="text-xs text-gray-400 mt-0.5">Customer: {data.customer}</p>
+            <p className="text-xs text-gray-400 mt-0.5">Customer: {data.customer ? data.customer.name || data.customer : "—"}</p>
           </div>
         </div>
 
@@ -88,32 +111,79 @@ const OrderDetail = ({ open, onClose, order, isPage = false }) => {
         <div className={isPage ? "" : "flex-1 overflow-hidden"}>
           <div className={isPage ? "grid grid-cols-1 lg:grid-cols-[1fr_340px] gap-4" : "grid h-full grid-cols-1 lg:grid-cols-[1fr_340px] divide-y lg:divide-y-0 lg:divide-x divide-gray-100"}>
 
-            {/* ── LEFT (Line items & Details) ── */}
+            {/* ── TOP SECTION (Details & Status) ── */}
             <div className={isPage ? "flex flex-col gap-4" : "h-full overflow-y-auto px-7 py-6 space-y-7 bg-gray-50/40"}>
 
               <section className={isPage ? "bg-white border border-slate-200/60 rounded-xl p-6 shadow-sm" : ""}>
-                <h3 className="text-sm font-bold text-gray-800 tracking-wide uppercase mb-4">
+                <h3 className="text-base font-semibold text-gray-900 mb-4">
                   Order Information
                 </h3>
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-x-8 gap-y-4">
                   {Object.entries(detailInfo).map(([key, value]) => (
-                    <div key={key} className="flex flex-col gap-0.5">
-                      <span className="text-[11px] font-semibold uppercase tracking-wider text-gray-400">
+                    <div key={key} className="flex flex-col gap-1">
+                      <span className="text-xs font-medium text-gray-500">
                         {key}
                       </span>
-                      <span className="text-sm text-gray-800 font-medium">{value}</span>
+                      <span className="text-sm text-gray-900 font-medium">{value}</span>
                     </div>
                   ))}
                 </div>
               </section>
+            </div>
 
-              <section className={isPage ? "bg-white border border-slate-200/60 rounded-xl p-6 shadow-sm" : ""}>
-                 <h3 className="text-sm font-bold text-gray-800 tracking-wide uppercase mb-4">
+            {/* ── RIGHT (Customer link & Status) ── */}
+            <div className={isPage ? "flex flex-col gap-4" : "h-full overflow-y-auto px-6 py-6 space-y-6"}>
+              
+              {data.type !== 'ONLINE' && (
+                <section className={isPage ? "bg-white border border-slate-200/60 rounded-xl p-6 shadow-sm" : ""}>
+                  <h3 className="text-base font-semibold text-gray-900 mb-3">
+                    Customer Details
+                  </h3>
+                  <div className="flex items-center gap-3 p-3 border border-gray-100 rounded-lg hover:border-primary/30 transition-colors cursor-pointer group" onClick={() => router.push('/customers/1')}>
+                    <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold">
+                      {data.customer ? (typeof data.customer === 'string' ? data.customer.charAt(0) : data.customer.name?.charAt(0) || 'C') : 'C'}
+                    </div>
+                    <div className="flex-1">
+                      <div className="font-semibold text-sm group-hover:text-primary transition-colors">{data.customer ? data.customer.name || data.customer : "—"}</div>
+                      <div className="text-xs text-gray-500">{data.customer?.phone || data.phone}</div>
+                    </div>
+                    <Icons name="ChevronRight" size={16} className="text-gray-400" />
+                  </div>
+                </section>
+              )}
+
+               <section className={isPage ? "bg-white border border-slate-200/60 rounded-xl p-6 shadow-sm" : ""}>
+                 <h3 className="text-base font-semibold text-gray-900 mb-3">
+                    Status Updates
+                  </h3>
+                  <div className="flex flex-col gap-3">
+                     <Button variant="outline" size="sm" onClick={() => handleStatusUpdate('status', 'PROCESSING')} className="justify-start text-indigo-600 border-indigo-200 hover:bg-indigo-50">Mark as Processing</Button>
+                     <Button variant="outline" size="sm" onClick={() => handleStatusUpdate('status', 'COMPLETED')} className="justify-start text-emerald-600 border-emerald-200 hover:bg-emerald-50">Mark as Completed</Button>
+                     <Button variant="outline" size="sm" onClick={() => handleStatusUpdate('status', 'CANCELLED')} className="justify-start text-red-600 border-red-200 hover:bg-red-50">Mark as Cancelled</Button>
+                     <div className="my-2 h-px bg-gray-100" />
+                     <Button variant="outline" size="sm" onClick={() => setShowPartialInput(!showPartialInput)} className="justify-start text-amber-600 border-amber-200 hover:bg-amber-50">Mark as Partially Paid</Button>
+                     {showPartialInput && (
+                       <div className="flex gap-2 animate-fade-in pl-1">
+                         <Input type="number" min="0" placeholder="Amount (Rs)" value={partialAmount} onChange={(e) => setPartialAmount(e.target.value)} className="w-full text-sm py-1 min-h-0" />
+                         <Button size="sm" onClick={() => { handleStatusUpdate('paymentStatus', 'PARTIAL', partialAmount); setShowPartialInput(false); }} className="px-3">Save</Button>
+                       </div>
+                     )}
+                     <Button variant="outline" size="sm" onClick={() => handleStatusUpdate('paymentStatus', 'PAID')} className="justify-start text-emerald-600 border-emerald-200 hover:bg-emerald-50">Mark as Fully Paid</Button>
+                  </div>
+               </section>
+
+            </div>
+          </div>
+          
+          {/* ── FULL WIDTH BOTTOM SECTION (Line Items) ── */}
+          <div className="mt-4 px-0 md:px-0">
+             <section className={isPage ? "bg-white border border-slate-200/60 rounded-xl p-6 shadow-sm" : "mx-7 mb-7 bg-white border border-gray-200 rounded-xl p-6 shadow-sm"}>
+                 <h3 className="text-base font-semibold text-gray-900 mb-4">
                   Line Items
                 </h3>
                 <div className="rounded-xl border border-gray-100 overflow-hidden">
                    <table className="w-full text-left border-collapse">
-                      <thead className="bg-gray-50 border-b border-gray-100 text-[11px] font-semibold text-gray-500 uppercase tracking-wider">
+                      <thead className="bg-gray-50 border-b border-gray-100 text-xs font-medium text-gray-500">
                         <tr>
                           <th className="px-4 py-3">Product</th>
                           <th className="px-4 py-3">Details</th>
@@ -123,71 +193,33 @@ const OrderDetail = ({ open, onClose, order, isPage = false }) => {
                         </tr>
                       </thead>
                       <tbody className="text-sm">
-                        {mockLineItems.map(item => (
+                        {(data.items && data.items.length > 0 ? data.items : mockLineItems).map(item => (
                           <tr key={item.id} className="border-b border-gray-50">
-                            <td className="px-4 py-3 font-medium text-gray-900">{item.name}</td>
-                            <td className="px-4 py-3 text-gray-500 text-xs">Size: {item.size} | Color: {item.color}</td>
+                            <td className="px-4 py-3 font-medium text-gray-900">{item.product || item.name}</td>
+                            <td className="px-4 py-3 text-gray-500 text-xs">Size: {item.size || "N/A"} | Color: {item.color || "N/A"}</td>
                             <td className="px-4 py-3 text-right">{item.qty}</td>
-                            <td className="px-4 py-3 text-right">Rs. {item.price}</td>
-                            <td className="px-4 py-3 text-right font-semibold">Rs. {item.total}</td>
+                            <td className="px-4 py-3 text-right">Rs. {item.unitPrice || item.price}</td>
+                            <td className="px-4 py-3 text-right font-semibold">Rs. {(item.qty * (item.unitPrice || item.price)).toFixed(2)}</td>
                           </tr>
                         ))}
                       </tbody>
                    </table>
-                   <div className="bg-gray-50/50 p-4 border-t border-gray-100 flex flex-col items-end gap-2 text-sm">
-                      <div className="flex justify-between w-48 text-gray-500">
-                        <span>Subtotal</span>
-                        <span>Rs. 1,200</span>
-                      </div>
-                      <div className="flex justify-between w-48 text-gray-500">
-                        <span>Tax (18%)</span>
-                        <span>Rs. 216</span>
-                      </div>
+                    <div className="bg-gray-50/50 p-4 border-t border-gray-100 flex flex-col items-end gap-2 text-sm">
                       <div className="flex justify-between w-48 text-gray-900 font-bold border-t border-gray-200 pt-2">
                         <span>Total</span>
-                        <span>Rs. 1,416</span>
+                        <span>Rs. {Number(data.total || 0).toLocaleString()}</span>
+                      </div>
+                      <div className="flex justify-between w-48 text-gray-600 text-sm mt-1">
+                        <span>Amount Paid</span>
+                        <span>Rs. {Number(data.amountPaid || 0).toLocaleString()}</span>
+                      </div>
+                      <div className="flex justify-between w-48 text-red-600 font-bold mt-1">
+                        <span>Balance Due</span>
+                        <span>Rs. {Math.max(0, Number(data.total || 0) - Number(data.amountPaid || 0)).toLocaleString()}</span>
                       </div>
                    </div>
                 </div>
               </section>
-
-            </div>
-
-            {/* ── RIGHT (Customer link & Status) ── */}
-            <div className={isPage ? "flex flex-col gap-4" : "h-full overflow-y-auto px-6 py-6 space-y-6"}>
-              
-              {data.type !== 'Online' && (
-                <section className={isPage ? "bg-white border border-slate-200/60 rounded-xl p-6 shadow-sm" : ""}>
-                  <h3 className="text-sm font-bold text-gray-800 tracking-wide uppercase mb-3">
-                    Customer Details
-                  </h3>
-                  <div className="flex items-center gap-3 p-3 border border-gray-100 rounded-lg hover:border-primary/30 transition-colors cursor-pointer group" onClick={() => router.push('/customers/1')}>
-                    <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold">
-                      {data.customer ? data.customer.charAt(0) : 'C'}
-                    </div>
-                    <div className="flex-1">
-                      <div className="font-semibold text-sm group-hover:text-primary transition-colors">{data.customer}</div>
-                      <div className="text-xs text-gray-500">{data.phone}</div>
-                    </div>
-                    <Icons name="ChevronRight" size={16} className="text-gray-400" />
-                  </div>
-                </section>
-              )}
-
-               <section className={isPage ? "bg-white border border-slate-200/60 rounded-xl p-6 shadow-sm" : ""}>
-                 <h3 className="text-sm font-bold text-gray-800 tracking-wide uppercase mb-3">
-                    Status Updates
-                  </h3>
-                  <div className="flex flex-col gap-3">
-                     <Button variant="outline" size="sm" className="justify-start">Mark as Processing</Button>
-                     <Button variant="outline" size="sm" className="justify-start">Mark as Shipped</Button>
-                     <Button variant="outline" size="sm" className="justify-start text-emerald-600 border-emerald-200 hover:bg-emerald-50">Mark as Delivered</Button>
-                     <div className="my-2 h-px bg-gray-100" />
-                     <Button variant="outline" size="sm" className="justify-start text-emerald-600 border-emerald-200 hover:bg-emerald-50">Mark as Paid</Button>
-                  </div>
-               </section>
-
-            </div>
           </div>
         </div>
       </div>

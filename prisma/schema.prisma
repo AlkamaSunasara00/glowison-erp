@@ -92,6 +92,14 @@ enum InventoryCategory {
   OTHERS
 }
 
+enum StockTransactionType {
+  OPENING_STOCK
+  PURCHASE
+  SALE
+  ADJUSTMENT
+  PRODUCTION_USAGE
+}
+
 // Purchases & Expenses Enums
 enum PurchasePaymentStatus {
   PAID
@@ -211,6 +219,7 @@ model Customer {
 
 model Order {
   id                String        @id @default(uuid())
+  orderNumber       Int           @unique @default(autoincrement())
   type              OrderType
   customer          Customer?     @relation(fields: [customerId], references: [id])
   customerId        String?
@@ -220,6 +229,7 @@ model Order {
   buyerContact      String?       // Used if type is ONLINE
   items             OrderItem[]
   total             Decimal       @db.Decimal(10, 2)
+  amountPaid        Decimal       @default(0) @db.Decimal(10, 2)
   status            OrderStatus   @default(PENDING)
   paymentStatus     PaymentStatus @default(UNPAID)
   note              String?
@@ -241,6 +251,9 @@ model OrderItem {
   qty          Int
   unitPrice    Decimal  @db.Decimal(10, 2)
   size         String?
+  color        String?
+  unit         String?
+  taxRate      Decimal? @db.Decimal(10, 2)
   pricePerInch Decimal? @db.Decimal(10, 2)
 }
 
@@ -253,14 +266,36 @@ model InventoryItem {
   size             String?
   color            String?
   sku              String?
-  unit             String
-  stockQty         Int               @default(0)
-  reorderThreshold Int               @default(10)
+  baseUnit         String
+  purchaseUnit     String            @default("Piece")
+  unitsPerPurchase Decimal           @default(1) @db.Decimal(10, 2)
+  openingStock     Decimal           @default(0) @db.Decimal(10, 2)
+  stockQty         Decimal           @default(0) @db.Decimal(10, 2)
+  reorderThreshold Decimal           @default(10) @db.Decimal(10, 2)
+  lastPurchasePrice Decimal          @default(0) @db.Decimal(10, 2)
+  averageCost      Decimal           @default(0) @db.Decimal(10, 2)
   images           String[]          // Cloudinary URLs
   createdAt        DateTime          @default(now())
   updatedAt        DateTime          @updatedAt
+  transactions     StockTransaction[]
 
   @@index([category])
+}
+
+model StockTransaction {
+  id              String               @id @default(uuid())
+  inventoryItem   InventoryItem        @relation(fields: [inventoryItemId], references: [id], onDelete: Cascade)
+  inventoryItemId String
+  type            StockTransactionType
+  quantity        Decimal              @db.Decimal(10, 2) // Positive or negative
+  unitPrice       Decimal              @default(0) @db.Decimal(10, 2)
+  referenceId     String?              // e.g., Purchase ID, Order ID
+  note            String?
+  createdAt       DateTime             @default(now())
+
+  @@index([inventoryItemId])
+  @@index([type])
+  @@index([createdAt])
 }
 
 model Purchase {

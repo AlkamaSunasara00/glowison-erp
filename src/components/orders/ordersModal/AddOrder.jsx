@@ -23,7 +23,9 @@ const AddOrder = ({ open, onClose }) => {
   const [orderType, setOrderType] = useState("Retail/Dealer");
   const [customerId, setCustomerId] = useState("");
   const [onlineData, setOnlineData] = useState({ source: "Website", otherSource: "", name: "", phone: "" });
-  const [lineItems, setLineItems] = useState([{ id: Date.now(), name: "", qty: 1, price: 0, size: "", color: "", unit: "inch", taxPercent: "" }]);
+  const [lineItems, setLineItems] = useState([{ id: Date.now(), name: "", qty: 1, price: 0, pricePerUnit: "", size: "", color: "", unit: "inch", taxPercent: "" }]);
+  const [paymentStatus, setPaymentStatus] = useState("UNPAID");
+  const [amountPaid, setAmountPaid] = useState("");
   const [notes, setNotes] = useState("");
 
   useEffect(() => {
@@ -45,14 +47,23 @@ const AddOrder = ({ open, onClose }) => {
       setIsSubmitting(true);
       
       const payload = {
+        type: orderType === "Retail/Dealer" ? "RETAIL_DEALER" : "ONLINE",
         customerId: orderType === "Retail/Dealer" ? customerId : undefined,
-        notes: notes,
+        note: notes,
+        total: calculateTotal(),
+        paymentStatus,
+        amountPaid: paymentStatus === "PAID" ? calculateTotal() : (paymentStatus === "PARTIAL" ? Number(amountPaid) : 0),
+        onlineSource: orderType === "Online" ? (onlineData.source.toUpperCase() === "OTHER" ? "OTHER" : onlineData.source.toUpperCase()) : undefined,
+        onlineSourceOther: orderType === "Online" && onlineData.source === "Other" ? onlineData.otherSource : undefined,
+        buyerName: orderType === "Online" ? onlineData.name : undefined,
+        buyerContact: orderType === "Online" ? onlineData.phone : undefined,
         items: lineItems.map(item => ({
-          name: item.name,
-          quantity: Number(item.qty),
+          product: item.name,
+          qty: Number(item.qty),
           unitPrice: Number(item.price),
+          pricePerInch: item.pricePerUnit ? Number(item.pricePerUnit) : null,
           taxRate: item.taxPercent ? Number(item.taxPercent) : 0,
-          unitType: item.unit,
+          unit: item.unit,
           size: item.size || null,
           color: item.color || null
         }))
@@ -72,7 +83,7 @@ const AddOrder = ({ open, onClose }) => {
   const handleAddLineItem = () => {
     setLineItems([
       ...lineItems,
-      { id: Date.now(), name: "", size: "", color: "", qty: 1, price: 0, unit: "inch", taxPercent: "" }
+      { id: Date.now(), name: "", size: "", color: "", qty: 1, price: 0, pricePerUnit: "", unit: "inch", taxPercent: "" }
     ]);
   };
 
@@ -182,39 +193,50 @@ const AddOrder = ({ open, onClose }) => {
                
                <div className="space-y-3">
                   {lineItems.map((item, index) => (
-                    <div key={item.id} className="flex flex-col md:flex-row gap-3 items-end bg-gray-50/50 p-3 rounded-lg border border-gray-100">
-                       <div className="flex-1 w-full space-y-1.5">
-                         {index === 0 && <label className="text-xs font-semibold text-gray-600">Product Name</label>}
-                         <Input placeholder="E.g. MDF Sheet" value={item.name} onChange={(e) => handleLineItemChange(item.id, 'name', e.target.value)} required />
+                    <div key={item.id} className="relative bg-gray-50/50 p-4 md:p-5 rounded-xl border border-gray-200 mb-4 group shadow-sm">
+                       <div className="absolute -left-3 -top-3 bg-white text-gray-500 border border-gray-200 rounded-full w-7 h-7 flex items-center justify-center text-xs font-bold shadow-sm">
+                         {index + 1}
                        </div>
-                       <div className="w-full md:w-24 space-y-1.5">
-                         {index === 0 && <label className="text-xs font-semibold text-gray-600">Size</label>}
-                         <Input placeholder="E.g. 6mm" value={item.size} onChange={(e) => handleLineItemChange(item.id, 'size', e.target.value)} />
+                       <button type="button" onClick={() => handleRemoveLineItem(item.id)} className="absolute right-2 top-2 p-1.5 text-gray-400 hover:text-red-500 rounded-md hover:bg-red-50 transition-colors" disabled={lineItems.length === 1}>
+                         <Icons name="X" size={16} />
+                       </button>
+
+                       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4 pr-6">
+                         <div className="space-y-1.5">
+                           <label className="text-xs font-semibold text-gray-600">Product Name <span className="text-red-500">*</span></label>
+                           <Input placeholder="E.g. MDF Sheet" value={item.name} onChange={(e) => handleLineItemChange(item.id, 'name', e.target.value)} required />
+                         </div>
+                         <div className="space-y-1.5">
+                           <label className="text-xs font-semibold text-gray-600">Size</label>
+                           <Input placeholder="E.g. 6mm" value={item.size} onChange={(e) => handleLineItemChange(item.id, 'size', e.target.value)} />
+                         </div>
+                         <div className="space-y-1.5">
+                           <label className="text-xs font-semibold text-gray-600">Color</label>
+                           <Input placeholder="E.g. Red" value={item.color} onChange={(e) => handleLineItemChange(item.id, 'color', e.target.value)} />
+                         </div>
                        </div>
-                       <div className="w-full md:w-24 space-y-1.5">
-                         {index === 0 && <label className="text-xs font-semibold text-gray-600">Color</label>}
-                         <Input placeholder="E.g. Red" value={item.color} onChange={(e) => handleLineItemChange(item.id, 'color', e.target.value)} />
-                       </div>
-                       <div className="w-full md:w-20 space-y-1.5">
-                         {index === 0 && <label className="text-xs font-semibold text-gray-600">Qty</label>}
-                         <Input type="number" min="1" value={item.qty} onChange={(e) => handleLineItemChange(item.id, 'qty', e.target.value)} required />
-                       </div>
-                       <div className="w-full md:w-24 space-y-1.5">
-                         {index === 0 && <label className="text-xs font-semibold text-gray-600">Unit Type</label>}
-                         <Input type="select" options={[{label: "Inch", value: "inch"}, {label: "Sq Ft", value: "sqft"}, {label: "Piece", value: "piece"}]} value={item.unit} onChange={(e) => handleLineItemChange(item.id, 'unit', e.target.value)} />
-                       </div>
-                       <div className="w-full md:w-28 space-y-1.5">
-                         {index === 0 && <label className="text-xs font-semibold text-gray-600">Price / Unit</label>}
-                         <Input type="number" min="0" value={item.price} onChange={(e) => handleLineItemChange(item.id, 'price', e.target.value)} required />
-                       </div>
-                       <div className="w-full md:w-20 space-y-1.5">
-                         {index === 0 && <label className="text-xs font-semibold text-gray-600">Tax %</label>}
-                         <Input type="number" min="0" placeholder="e.g. 18" value={item.taxPercent} onChange={(e) => handleLineItemChange(item.id, 'taxPercent', e.target.value)} />
-                       </div>
-                       <div className="pb-1">
-                          <button type="button" onClick={() => handleRemoveLineItem(item.id)} className="p-1.5 text-gray-400 hover:text-red-500 rounded bg-white border border-gray-200 shadow-sm transition-colors" disabled={lineItems.length === 1}>
-                            <Icons name="Trash2" size={16} />
-                          </button>
+
+                       <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+                         <div className="space-y-1.5">
+                           <label className="text-xs font-semibold text-gray-600">Pricing Unit</label>
+                           <Input type="select" options={[{label: "Inch", value: "inch"}, {label: "Sq Ft", value: "sqft"}, {label: "Piece", value: "piece"}]} value={item.unit} onChange={(e) => handleLineItemChange(item.id, 'unit', e.target.value)} />
+                         </div>
+                         <div className="space-y-1.5">
+                           <label className="text-xs font-semibold text-gray-600">Price / {item.unit === 'sqft' ? 'Sq Ft' : item.unit === 'piece' ? 'Piece' : 'Inch'} (Info)</label>
+                           <Input type="number" min="0" placeholder="e.g. 15" value={item.pricePerUnit} onChange={(e) => handleLineItemChange(item.id, 'pricePerUnit', e.target.value)} />
+                         </div>
+                         <div className="space-y-1.5">
+                           <label className="text-xs font-semibold text-gray-600">Qty <span className="text-red-500">*</span></label>
+                           <Input type="number" min="1" placeholder="1" value={item.qty} onChange={(e) => handleLineItemChange(item.id, 'qty', e.target.value)} required />
+                         </div>
+                         <div className="space-y-1.5">
+                           <label className="text-xs font-semibold text-gray-600">Unit Price <span className="text-red-500">*</span></label>
+                           <Input type="number" min="0" placeholder="0.00" value={item.price} onChange={(e) => handleLineItemChange(item.id, 'price', e.target.value)} required />
+                         </div>
+                         <div className="space-y-1.5">
+                           <label className="text-xs font-semibold text-gray-600">Tax %</label>
+                           <Input type="number" min="0" placeholder="e.g. 18" value={item.taxPercent} onChange={(e) => handleLineItemChange(item.id, 'taxPercent', e.target.value)} />
+                         </div>
                        </div>
                     </div>
                   ))}
@@ -235,6 +257,23 @@ const AddOrder = ({ open, onClose }) => {
                         <span>Rs. {calculateTotal().toLocaleString()}</span>
                      </div>
                   </div>
+               </div>
+            </div>
+
+            {/* Payment Details */}
+            <div className="mb-6 p-4 rounded-xl border border-gray-100 bg-gray-50/30">
+               <h3 className="text-sm font-semibold text-gray-800 mb-4">Payment Details</h3>
+               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                 <div className="space-y-1.5">
+                   <label className="text-xs font-semibold text-gray-600">Payment Status</label>
+                   <Input type="select" options={[{label: "Unpaid", value: "UNPAID"}, {label: "Partially Paid", value: "PARTIAL"}, {label: "Fully Paid", value: "PAID"}]} value={paymentStatus} onChange={(e) => setPaymentStatus(e.target.value)} />
+                 </div>
+                 {paymentStatus === "PARTIAL" && (
+                   <div className="space-y-1.5 animate-fade-in">
+                     <label className="text-xs font-semibold text-gray-600">Amount Paid (Installment) <span className="text-red-500">*</span></label>
+                     <Input type="number" min="0" placeholder="e.g. 500" value={amountPaid} onChange={(e) => setAmountPaid(e.target.value)} required />
+                   </div>
+                 )}
                </div>
             </div>
 

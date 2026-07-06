@@ -190,21 +190,33 @@ const LeadDetail = ({ open, onClose, lead, isPage = false, onLeadUpdated }) => {
                   Quick Actions
                 </h3>
                 <div className="grid grid-cols-2 gap-2">
-                  {[
-                    { icon: "MessageCircle", label: "WhatsApp",  variant: "secondary" },
-                    { icon: "Phone",         label: "Log call",  variant: "secondary" },
-                    { icon: "FileText",      label: "Quotation", variant: "secondary"},
-                  ].map(({ icon: iconName, label, variant }) => (
-                    <Button
-                      key={label}
-                      variant={variant === "secondary" ? "outline" : variant}
-                      size="md"
-                      leftIcon={(props) => <LeadActionIcon name={iconName} {...props} />}
-                      className="w-full justify-start rounded-lg px-3! py-2! text-xs font-medium"
-                    >
-                      {label}
-                    </Button>
-                  ))}
+                  <Button
+                    variant="outline"
+                    size="md"
+                    leftIcon={(props) => <LeadActionIcon name="MessageCircle" {...props} />}
+                    className="w-full justify-start rounded-lg px-3! py-2! text-xs font-medium"
+                    onClick={() => data.phone && window.open(`https://wa.me/${data.phone.length === 10 ? '91' + data.phone : data.phone.replace(/\D/g, '')}`, '_blank')}
+                  >
+                    WhatsApp
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="md"
+                    leftIcon={(props) => <LeadActionIcon name="Phone" {...props} />}
+                    className="w-full justify-start rounded-lg px-3! py-2! text-xs font-medium"
+                    onClick={() => data.phone && (window.location.href = `tel:${data.phone}`)}
+                  >
+                    Call
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="md"
+                    leftIcon={(props) => <LeadActionIcon name="FileText" {...props} />}
+                    className="w-full justify-start rounded-lg px-3! py-2! text-xs font-medium"
+                    onClick={() => router.push('/quotation')}
+                  >
+                    Quotation
+                  </Button>
                 </div>
               </section>
 
