@@ -1,40 +1,72 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/pages/api-reference/create-next-app).
+# Glowison ERP
 
-## Getting Started
+This project is a single Next.js application that serves both:
 
-First, run the development server:
+- the frontend pages
+- the backend API through `src/pages/api/*`
+
+That structure is compatible with Vercel, so you do not need a separate Express server deployment.
+
+## Local development
+
+Install dependencies and run the app:
 
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open `http://localhost:3000`.
 
-You can start editing the page by modifying `pages/index.js`. The page auto-updates as you edit the file.
+## Required environment variables
 
-[API routes](https://nextjs.org/docs/pages/building-your-application/routing/api-routes) can be accessed on [http://localhost:3000/api/hello](http://localhost:3000/api/hello). This endpoint can be edited in `pages/api/hello.js`.
+Set these in your local `.env` file and in the Vercel project settings:
 
-The `pages/api` directory is mapped to `/api/*`. Files in this directory are treated as [API routes](https://nextjs.org/docs/pages/building-your-application/routing/api-routes) instead of React pages.
+```env
+DATABASE_URL=
+DIRECT_URL=
+JWT_SECRET=
+CLOUDINARY_CLOUD_NAME=
+CLOUDINARY_API_KEY=
+CLOUDINARY_API_SECRET=
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/pages/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Notes:
 
-## Learn More
+- `DATABASE_URL` should be the pooled connection string for runtime usage.
+- `DIRECT_URL` should be the direct database connection for Prisma migrations if you use them.
+- `JWT_SECRET` is required for login and authenticated API routes.
 
-To learn more about Next.js, take a look at the following resources:
+## Prisma
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn-pages-router) - an interactive Next.js tutorial.
+Generate the Prisma client:
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+```bash
+npm run db:generate
+```
 
-## Deploy on Vercel
+Seed the first admin user:
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+```bash
+npm run db:seed
+```
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/pages/building-your-application/deploying) for more details.
+## Vercel deployment
+
+This repo now includes Vercel-safe Prisma setup:
+
+- `postinstall` runs `prisma generate`
+- `vercel.json` runs `prisma generate && next build`
+- API routes use the built-in Next.js serverless runtime
+
+Deploy steps:
+
+1. Import this repository into Vercel.
+2. Add the required environment variables in the Vercel dashboard.
+3. Deploy.
+
+If the login API fails on Vercel, the first things to verify are:
+
+1. `DATABASE_URL` is present.
+2. `JWT_SECRET` is present.
+3. The deployed database already contains the `User` table and at least one admin user.

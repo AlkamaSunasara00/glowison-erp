@@ -4,9 +4,12 @@
   "private": true,
   "scripts": {
     "dev": "next dev --webpack",
+    "postinstall": "prisma generate",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "db:generate": "prisma generate",
+    "db:seed": "node seed.js"
   },
   "dependencies": {
     "@prisma/client": "^5.22.0",
@@ -43,5 +46,8 @@
     "nodemon": "^3.1.14",
     "prisma": "^5.22.0",
     "tailwindcss": "^4"
+  },
+  "prisma": {
+    "seed": "node seed.js"
   }
 }

@@ -1,4 +1,5 @@
 import prisma from '@/lib/prisma';
+import { assertServerEnv } from '@/lib/server-env';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 
@@ -8,6 +9,8 @@ export default async function handler(req, res) {
   }
 
   try {
+    assertServerEnv();
+
     const { email, password } = req.body;
 
     const user = await prisma.user.findUnique({ where: { email } });
