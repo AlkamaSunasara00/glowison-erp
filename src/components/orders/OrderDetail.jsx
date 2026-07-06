@@ -7,6 +7,7 @@ import StatusBadge from "@/common/StatusBadge";
 import EditOrder from "./ordersModal/EditOrder";
 import api from "@/lib/api";
 import toast from "react-hot-toast";
+import { formatDate } from "@/utils/formatters";
 
 const ActionIcon = ({ name, color = "currentColor", ...props }) => (
   <Icons name={name} color={color} {...props} />
@@ -55,7 +56,7 @@ const OrderDetail = ({ open, onClose, order, isPage = false, onOrderUpdated }) =
     "Phone": data.customer?.phone || data.buyerContact || "—",
     "Order Type": data.type === 'RETAIL_DEALER' ? 'Retail/Dealer' : (data.type || "—"),
     "Source": data.type === 'ONLINE' ? (data.onlineSource || "—") : "N/A",
-    "Order Date": data.createdAt ? new Date(data.createdAt).toLocaleDateString('en-CA') : "—",
+    "Order Date": data.createdAt ? formatDate(data.createdAt) : "—",
   };
 
   const detailPanelContent = (

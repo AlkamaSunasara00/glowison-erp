@@ -61,6 +61,7 @@ export const Inventory = () => {
         baseUnit: i.baseUnit || "Piece",
         purchaseUnit: i.purchaseUnit || "Piece",
         unitsPerPurchase: i.unitsPerPurchase || 1,
+        images: i.images || [],
       })));
     } catch (error) {
       toast.error('Failed to load inventory');
@@ -195,11 +196,22 @@ export const Inventory = () => {
                         onClick={() => setViewItem(item)}
                       >
                         <td className="px-4 py-3">
-                          <div className="font-semibold text-gray-900">{item.name}</div>
-                          <div className="text-xs text-gray-500">{item.sku}</div>
+                          <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-md bg-gray-100 flex items-center justify-center overflow-hidden shrink-0">
+                              {item.images && item.images.length > 0 ? (
+                                <img src={item.images[0]} alt={item.name} className="w-full h-full object-cover" />
+                              ) : (
+                                <Icons name="Image" size={18} className="text-gray-400" />
+                              )}
+                            </div>
+                            <div>
+                              <div className="font-semibold text-gray-900">{item.name}</div>
+                              <div className="text-xs text-gray-500">{item.sku}</div>
+                            </div>
+                          </div>
                         </td>
                         <td className="px-4 py-3">
-                           <StatusBadge status={item.type === "Raw Material" ? "Pending" : "Delivered"} label={item.type} />
+                           <StatusBadge status={item.type} />
                         </td>
                         <td className="px-4 py-3 text-gray-700">
                           {item.category}

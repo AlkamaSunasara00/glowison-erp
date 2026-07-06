@@ -5,6 +5,7 @@ import api from "@/lib/api";
 import StatusBadge from "@/common/StatusBadge";
 import EditInventory from "./inventoryModal/EditInventory";
 import AdjustStock from "./inventoryModal/AdjustStock";
+import { formatDateTime } from "@/utils/formatters";
 
 const InventoryDetail = ({ open, onClose, itemId, onUpdated }) => {
   const [data, setData] = useState(null);
@@ -68,7 +69,7 @@ const InventoryDetail = ({ open, onClose, itemId, onUpdated }) => {
               <div>
                 <h2 className="page-header flex items-center gap-2">
                   {data.name || "Unknown Item"}
-                  <StatusBadge status={Number(data.stockQty) <= Number(data.reorderThreshold) ? "Cancelled" : "Delivered"} label={Number(data.stockQty) <= Number(data.reorderThreshold) ? "Low Stock" : "In Stock"} />
+                  <StatusBadge status={Number(data.stockQty) <= Number(data.reorderThreshold) ? "Low Stock" : "In Stock"} />
                 </h2>
                 <p className="text-xs text-gray-400 mt-0.5">{data.sku || "No SKU"}</p>
               </div>
@@ -163,6 +164,24 @@ const InventoryDetail = ({ open, onClose, itemId, onUpdated }) => {
                     </div>
                   </div>
                 </section>
+                
+                {data.images && data.images.length > 0 && (
+                  <>
+                    <div className="h-px bg-gray-100" />
+                    <section>
+                      <h3 className="text-sm font-bold text-gray-800 tracking-wide uppercase mb-4">
+                        Images
+                      </h3>
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                        {data.images.map((url, idx) => (
+                          <div key={idx} className="relative w-full aspect-square rounded-lg overflow-hidden border border-gray-200">
+                            <img src={url} alt={`${data.name} ${idx + 1}`} className="object-cover w-full h-full hover:scale-105 transition-transform duration-300 cursor-pointer" onClick={() => window.open(url, '_blank')} />
+                          </div>
+                        ))}
+                      </div>
+                    </section>
+                  </>
+                )}
               </div>
 
               {/* ── RIGHT ── */}
@@ -185,7 +204,7 @@ const InventoryDetail = ({ open, onClose, itemId, onUpdated }) => {
                                 {tx.type.replace('_', ' ')}
                                 {tx.referenceId && <span className="text-[10px] bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded">Ref: {tx.referenceId}</span>}
                               </p>
-                              <p className="text-[11px] text-gray-500 mt-1">{new Date(tx.createdAt).toLocaleString()}</p>
+                              <p className="text-[11px] text-gray-500 mt-1">{formatDateTime(tx.createdAt)}</p>
                               {tx.note && <p className="text-xs text-gray-600 mt-2 bg-gray-50 p-1.5 rounded inline-block">{tx.note}</p>}
                             </div>
                             <div className={`text-sm font-bold ${isPositive ? 'text-emerald-600' : 'text-rose-600'}`}>

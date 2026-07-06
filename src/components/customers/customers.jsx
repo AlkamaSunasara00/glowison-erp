@@ -10,6 +10,7 @@ import AddCustomer from "./customersModal/AddCustomer";
 import EditCustomer from "./customersModal/EditCustomer";
 import DeleteConfirmModal from "@/common/DeleteConfirmModal";
 import toast from "react-hot-toast";
+import { formatDate } from "@/utils/formatters";
 
 
 
@@ -37,7 +38,7 @@ export const Customers = () => {
       setCustomers(res.data.data.map(c => ({
         ...c,
         type: c.type.toLowerCase() === 'retail' ? 'Retail' : 'Dealer',
-        created: new Date(c.createdAt).toLocaleDateString(),
+        created: formatDate(c.createdAt),
         address: typeof c.address === 'string' ? JSON.parse(c.address) : (c.address || { city: '', state: '' }),
         totalValue: c.totalOrderValue || "Rs. 0"
       })));

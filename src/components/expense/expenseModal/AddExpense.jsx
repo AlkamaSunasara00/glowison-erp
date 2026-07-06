@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import api from "@/lib/api";
 import toast from "react-hot-toast";
 import Button from "@/common/Button";
@@ -6,27 +6,64 @@ import Icons from "@/common/Icons";
 import Input from "@/common/Input";
 
 const categoryOptions = [
-  { label: "Rent", value: "Rent" },
-  { label: "Salary", value: "Salary" },
-  { label: "Marketing", value: "Marketing" },
-  { label: "Utilities", value: "Utilities" },
-  { label: "Misc", value: "Misc" },
+  { value: "OFFICE_SUPPLIES", label: "Office Supplies" },
+  { value: "TRAVEL", label: "Travel" },
+  { value: "UTILITIES", label: "Utilities" },
+  { value: "SALARY", label: "Salary" },
+  { value: "MARKETING", label: "Marketing" },
+  { value: "MAINTENANCE", label: "Maintenance" },
+  { value: "OTHER", label: "Other" },
 ];
 
 const statusOptions = [
-  { label: "Paid", value: "Paid" },
-  { label: "Pending", value: "Pending" },
+  { value: "PAID", label: "Paid" },
+  { value: "PENDING", label: "Pending" },
+  { value: "PARTIALLY_PAID", label: "Partially Paid" }
+];
+
+const paidToTypeOptions = [
+  { value: "OTHER", label: "Other" },
+  { value: "SUPPLIER", label: "Supplier" },
+  { value: "EMPLOYEE", label: "Employee" },
+];
+
+const paymentMethodOptions = [
+  { value: "CASH", label: "Cash" },
+  { value: "UPI", label: "UPI" },
+  { value: "BANK_TRANSFER", label: "Bank Transfer" },
+  { value: "CARD", label: "Card" },
+  { value: "CHEQUE", label: "Cheque" },
+  { value: "OTHER", label: "Other" },
 ];
 
 const AddExpense = ({ open, onClose }) => {
   const [formData, setFormData] = useState({
-    date: "",
-    category: "Misc",
+    spentOn: new Date().toISOString().slice(0, 10),
+    category: "OFFICE_SUPPLIES",
+    categoryOther: "",
     amount: "",
-    paidTo: "",
+    paidAmount: "",
+    paidToType: "OTHER",
+    paidToName: "",
+    supplierId: "",
+    paymentMethod: "CASH",
+    status: "PAID",
+    referenceNumber: "",
     notes: "",
-    status: "Paid",
   });
+
+  const [suppliers, setSuppliers] = useState([]);
+  const [file, setFile] = useState(null);
+  const fileInputRef = useRef(null);
+
+  useEffect(() => {
+    if (open) {
+      api.get('/suppliers').then(res => {
+        const activeSuppliers = res.data.data.filter(s => s.status === 'ACTIVE');
+        setSuppliers(activeSuppliers.map(s => ({ value: s.id, label: s.name })));
+      }).catch(console.error);
+    }
+  }, [open]);
 
   useEffect(() => {
     if (!open) return undefined;
@@ -44,17 +81,44 @@ const AddExpense = ({ open, onClose }) => {
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
+  const handleFileChange = (e) => {
+    if (e.target.files && e.target.files[0]) {
+      setFile(e.target.files[0]);
+    }
+  };
+
+  const uploadReceipt = async () => {
+    if (!file) return null;
+    const formDataFile = new FormData();
+    formDataFile.append('images', file);
+    const res = await api.post('/upload', formDataFile, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    });
+    return res.data.urls[0];
+  };
+
   const handleSubmit = async (event) => {
     event.preventDefault();
     try {
       setIsSubmitting(true);
+      
+      let receiptUrl = null;
+      if (file) {
+        receiptUrl = await uploadReceipt();
+      }
+
       const payload = {
-        category: formData.category.toUpperCase().replace(' ', '_'),
+        ...formData,
         amount: Number(formData.amount),
-        spentOn: formData.date,
-        note: formData.paidTo ? `${formData.paidTo} - ${formData.notes}` : formData.notes,
-        status: formData.status.toUpperCase()
+        receiptUrl
       };
+      
+      if (payload.paidToType !== 'OTHER') {
+        payload.categoryOther = null;
+      }
+      if (payload.paidToType !== 'SUPPLIER') {
+        payload.supplierId = null;
+      }
 
       await api.post('/expenses', payload);
       toast.success('Expense logged successfully');
@@ -82,7 +146,7 @@ const AddExpense = ({ open, onClose }) => {
       />
 
       <div
-        className={`relative flex h-full w-full max-w-2xl flex-col overflow-hidden rounded-md border border-gray-200 bg-white shadow-lg md:h-auto md:max-h-[90vh] ${
+        className={`relative flex h-full w-full max-w-3xl flex-col overflow-hidden rounded-md border border-gray-200 bg-white shadow-lg md:h-auto md:max-h-[90vh] ${
           open ? "animate-modal-in" : "animate-modal-out"
         }`}
       >
@@ -99,19 +163,32 @@ const AddExpense = ({ open, onClose }) => {
 
           <div className="min-h-0 flex-1 overflow-y-auto px-6 py-5 custom-scrollbar">
             <div className="grid grid-cols-1 gap-x-6 gap-y-5 md:grid-cols-2">
-              <div className="space-y-1.5 md:col-span-2">
-                <label className="label">Paid To <span className="required">*</span></label>
-                <Input name="paidTo" value={formData.paidTo} onChange={handleChange} placeholder="Vendor, Employee, or Entity name" required />
-              </div>
               
               <div className="space-y-1.5">
-                <label className="label">Date <span className="required">*</span></label>
-                <Input type="date" name="date" value={formData.date} onChange={handleChange} required />
+                <label className="label">Paid To Type <span className="required">*</span></label>
+                <Input type="select" name="paidToType" value={formData.paidToType} onChange={handleChange} options={paidToTypeOptions} required />
               </div>
 
+              {formData.paidToType === 'SUPPLIER' ? (
+                <div className="space-y-1.5">
+                  <label className="label">Select Supplier <span className="required">*</span></label>
+                  <Input type="select" name="supplierId" value={formData.supplierId} onChange={handleChange} options={[{value: "", label: "Select Supplier"}, ...suppliers]} required />
+                </div>
+              ) : (
+                <div className="space-y-1.5">
+                  <label className="label">Paid To Name {formData.paidToType === 'EMPLOYEE' && <span className="required">*</span>}</label>
+                  <Input name="paidToName" value={formData.paidToName} onChange={handleChange} placeholder={formData.paidToType === 'EMPLOYEE' ? "Employee name" : "Vendor or Entity name"} required={formData.paidToType === 'EMPLOYEE'} />
+                </div>
+              )}
+              
               <div className="space-y-1.5">
                 <label className="label">Amount (Rs.) <span className="required">*</span></label>
                 <Input type="number" name="amount" value={formData.amount} onChange={handleChange} min="0" required />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="label">Date <span className="required">*</span></label>
+                <Input type="date" name="spentOn" value={formData.spentOn} onChange={handleChange} required />
               </div>
 
               <div className="space-y-1.5">
@@ -119,9 +196,33 @@ const AddExpense = ({ open, onClose }) => {
                 <Input type="select" name="category" value={formData.category} onChange={handleChange} options={categoryOptions} required />
               </div>
 
+              {formData.category === 'OTHER' && (
+                <div className="space-y-1.5">
+                  <label className="label">Specify Category <span className="required">*</span></label>
+                  <Input name="categoryOther" value={formData.categoryOther} onChange={handleChange} required />
+                </div>
+              )}
+
+              <div className="space-y-1.5">
+                <label className="label">Payment Method <span className="required">*</span></label>
+                <Input type="select" name="paymentMethod" value={formData.paymentMethod} onChange={handleChange} options={paymentMethodOptions} required />
+              </div>
+
               <div className="space-y-1.5">
                 <label className="label">Status <span className="required">*</span></label>
                 <Input type="select" name="status" value={formData.status} onChange={handleChange} options={statusOptions} required />
+              </div>
+
+              {formData.status === 'PARTIALLY_PAID' && (
+                <div className="space-y-1.5">
+                  <label className="label">Amount Paid (Rs.) <span className="required">*</span></label>
+                  <Input type="number" name="paidAmount" value={formData.paidAmount} onChange={handleChange} min="0" max={formData.amount || undefined} required />
+                </div>
+              )}
+
+              <div className="space-y-1.5">
+                <label className="label">Reference / Txn ID</label>
+                <Input name="referenceNumber" value={formData.referenceNumber} onChange={handleChange} placeholder="e.g. UPI ID or Cheque No" />
               </div>
 
               <div className="space-y-1.5 md:col-span-2">
@@ -131,10 +232,16 @@ const AddExpense = ({ open, onClose }) => {
 
               <div className="space-y-1.5 md:col-span-2">
                  <label className="label">Receipt Upload</label>
-                 <div className="border-2 border-dashed border-gray-200 rounded-lg p-6 flex flex-col items-center justify-center bg-gray-50/50 hover:bg-gray-50 transition-colors cursor-pointer text-gray-500 hover:text-gray-700">
+                 <div 
+                   onClick={() => fileInputRef.current?.click()}
+                   className="border-2 border-dashed border-gray-200 rounded-lg p-6 flex flex-col items-center justify-center bg-gray-50/50 hover:bg-gray-50 transition-colors cursor-pointer text-gray-500 hover:text-gray-700"
+                 >
                     <Icons name="UploadCloud" size={24} className="mb-2" />
-                    <span className="text-sm font-medium">Click to upload or drag and drop</span>
+                    <span className="text-sm font-medium">
+                      {file ? file.name : "Click to upload or drag and drop"}
+                    </span>
                     <span className="text-xs mt-1">PDF, JPG, PNG up to 5MB</span>
+                    <input type="file" className="hidden" ref={fileInputRef} onChange={handleFileChange} accept="image/*,.pdf" />
                  </div>
               </div>
               

@@ -4,27 +4,75 @@ import toast from "react-hot-toast";
 import Button from "@/common/Button";
 import Icons from "@/common/Icons";
 import Input from "@/common/Input";
+import { X, Plus, UploadCloud } from "lucide-react";
 
-const paymentOptions = [
-  { label: "Paid", value: "paid" },
-  { label: "Pending", value: "pending" },
+const paymentMethods = [
+  { value: "CASH", label: "Cash" },
+  { value: "BANK_TRANSFER", label: "Bank Transfer" },
+  { value: "UPI", label: "UPI" },
+  { value: "CHEQUE", label: "Cheque" },
+  { value: "CREDIT", label: "Credit" }
 ];
 
-const deliveryOptions = [
-  { label: "Delivered", value: "delivered" },
-  { label: "Pending", value: "pending" },
+const paymentStatuses = [
+  { value: "PENDING", label: "Pending" },
+  { value: "PAID", label: "Paid" }
+];
+
+const deliveryStatuses = [
+  { value: "PENDING", label: "Pending" },
+  { value: "DELIVERED", label: "Delivered" }
 ];
 
 const AddPurchase = ({ open, onClose }) => {
+  const [suppliers, setSuppliers] = useState([]);
+  const [inventoryItems, setInventoryItems] = useState([]);
+  const [loadingInitial, setLoadingInitial] = useState(true);
+  
   const [formData, setFormData] = useState({
-    vendor: "",
-    date: "",
-    items: "",
-    total: "",
-    tax: "",
-    paymentStatus: "pending",
-    deliveryStatus: "pending",
+    invoiceNumber: "",
+    supplierId: "",
+    purchaseDate: new Date().toISOString().slice(0, 10),
+    paymentMethod: "CASH",
+    paymentStatus: "PENDING",
+    deliveryStatus: "DELIVERED",
+    notes: "",
+    subtotal: 0,
+    discount: 0,
+    tax: 0,
+    shippingCharges: 0,
+    grandTotal: 0,
+    paidAmount: 0,
+    dueAmount: 0,
   });
+
+  const [items, setItems] = useState([
+    { id: Date.now(), inventoryItemId: "", purchaseUnit: "", quantity: 1, unitPrice: 0, discount: 0, tax: 0, total: 0 }
+  ]);
+
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [uploadingFile, setUploadingFile] = useState(false);
+  const [invoiceUrl, setInvoiceUrl] = useState("");
+
+  useEffect(() => {
+    if (open) {
+      const fetchData = async () => {
+        try {
+          const [supRes, invRes] = await Promise.all([
+            api.get('/suppliers'),
+            api.get('/inventory?limit=500')
+          ]);
+          setSuppliers(supRes.data.data.map(s => ({ value: s.id, label: s.name })));
+          setInventoryItems(invRes.data.data);
+        } catch (error) {
+          toast.error("Failed to load necessary data");
+        } finally {
+          setLoadingInitial(false);
+        }
+      };
+      fetchData();
+    }
+  }, [open]);
 
   useEffect(() => {
     if (!open) return undefined;
@@ -35,32 +83,112 @@ const AddPurchase = ({ open, onClose }) => {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [open, onClose]);
 
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({ ...prev, [name]: value }));
+  };
 
-  const handleChange = (event) => {
-    const { name, value } = event.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
+  const handleItemChange = (index, field, value) => {
+    const newItems = [...items];
+    const item = newItems[index];
+    item[field] = value;
+
+    if (field === 'inventoryItemId') {
+      const inv = inventoryItems.find(i => i.id === value);
+      if (inv) {
+        item.purchaseUnit = inv.purchaseUnit;
+        item.unitPrice = inv.lastPurchasePrice || 0;
+      }
+    }
+
+    if (['quantity', 'unitPrice', 'discount', 'tax', 'inventoryItemId'].includes(field)) {
+      const q = parseFloat(item.quantity) || 0;
+      const up = parseFloat(item.unitPrice) || 0;
+      const d = parseFloat(item.discount) || 0;
+      const t = parseFloat(item.tax) || 0;
+      
+      const baseTotal = q * up;
+      const afterDiscount = baseTotal - d;
+      const taxAmount = (afterDiscount * t) / 100;
+      item.total = afterDiscount + taxAmount;
+    }
+
+    setItems(newItems);
+  };
+
+  const addItem = () => {
+    setItems([...items, { id: Date.now(), inventoryItemId: "", purchaseUnit: "", quantity: 1, unitPrice: 0, discount: 0, tax: 0, total: 0 }]);
+  };
+
+  const removeItem = (index) => {
+    if (items.length === 1) return;
+    setItems(items.filter((_, i) => i !== index));
+  };
+
+  // Recalculate totals
+  useEffect(() => {
+    const newSubtotal = items.reduce((sum, item) => sum + (parseFloat(item.total) || 0), 0);
+    const d = parseFloat(formData.discount) || 0;
+    const t = parseFloat(formData.tax) || 0; // Tax as amount on grand total? Let's say flat tax amount here
+    const s = parseFloat(formData.shippingCharges) || 0;
+    
+    const gt = newSubtotal - d + t + s;
+    const paid = parseFloat(formData.paidAmount) || 0;
+
+    setFormData(prev => ({
+      ...prev,
+      subtotal: newSubtotal,
+      grandTotal: gt,
+      dueAmount: gt - paid
+    }));
+  }, [items, formData.discount, formData.tax, formData.shippingCharges, formData.paidAmount]);
+
+  const handleFileUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const fd = new FormData();
+    fd.append('images', file);
+    fd.append('folder', 'erp/invoices');
+
+    try {
+      setUploadingFile(true);
+      const res = await api.post('/upload', fd, { headers: { 'Content-Type': 'multipart/form-data' } });
+      setInvoiceUrl(res.data.urls[0]);
+      toast.success("Invoice uploaded");
+    } catch (error) {
+      toast.error("Failed to upload invoice");
+    } finally {
+      setUploadingFile(false);
+    }
   };
 
   const handleSubmit = async (event) => {
     event.preventDefault();
+    if (!formData.supplierId) return toast.error("Please select a supplier");
+    if (items.some(i => !i.inventoryItemId)) return toast.error("Please select an inventory item for all rows");
+
     try {
       setIsSubmitting(true);
       const payload = {
-        supplierName: formData.vendor,
-        material: formData.items || "Multiple Items",
-        quantity: 1, // Defaulting to 1 as UI doesn't have it
-        amount: Number(formData.total),
-        paymentStatus: formData.paymentStatus.toUpperCase(),
-        deliveryStatus: formData.deliveryStatus.toUpperCase(),
-        purchaseDate: formData.date
+        ...formData,
+        invoiceUrl,
+        items: items.map(i => ({
+          inventoryItemId: i.inventoryItemId,
+          purchaseUnit: i.purchaseUnit,
+          quantity: i.quantity,
+          unitPrice: i.unitPrice,
+          discount: i.discount,
+          tax: i.tax,
+          total: i.total
+        }))
       };
 
       await api.post('/purchases', payload);
       toast.success('Purchase recorded successfully');
       onClose();
     } catch (error) {
-      toast.error('Failed to record purchase');
+      toast.error(error.response?.data?.message || 'Failed to record purchase');
       console.error(error);
     } finally {
       setIsSubmitting(false);
@@ -69,7 +197,7 @@ const AddPurchase = ({ open, onClose }) => {
 
   return (
     <div
-      className={`fixed inset-x-0 bottom-0 top-16 z-[1000] flex items-start justify-center p-4 md:inset-0 md:items-center md:p-6 ${
+      className={`fixed inset-0 z-[1000] flex items-center justify-center p-4 ${
         open ? "pointer-events-auto" : "pointer-events-none"
       }`}
       aria-hidden={!open}
@@ -82,75 +210,198 @@ const AddPurchase = ({ open, onClose }) => {
       />
 
       <div
-        className={`relative flex h-full w-full max-w-2xl flex-col overflow-hidden rounded-md border border-gray-200 bg-white shadow-lg md:h-auto md:max-h-[90vh] ${
+        className={`relative flex flex-col w-full max-w-5xl bg-white shadow-xl rounded-xl h-[95vh] ${
           open ? "animate-modal-in" : "animate-modal-out"
         }`}
       >
-        <form onSubmit={handleSubmit} className="flex h-full min-h-0 flex-col">
-          <div className="shrink-0 border-b border-gray-200 px-6 py-4 flex items-center justify-between">
-            <div>
-              <h2 className="text-base font-semibold text-gray-900">Record Purchase</h2>
-              <p className="mt-1 text-sm text-gray-500">Add a new raw material purchase order.</p>
-            </div>
-            <button type="button" onClick={onClose}>
-              <Icons name="X" size={18} className="text-gray-500 hover:text-gray-700" />
-            </button>
+        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 shrink-0">
+          <div>
+            <h2 className="text-lg font-bold text-gray-900">Record New Purchase</h2>
+            <p className="text-xs text-gray-500 mt-0.5">Create a purchase invoice and update inventory stock.</p>
           </div>
+          <button onClick={onClose} className="p-2 text-gray-400 hover:text-gray-600 rounded-full hover:bg-gray-100 transition-colors">
+            <X size={20} />
+          </button>
+        </div>
 
-          <div className="min-h-0 flex-1 overflow-y-auto px-6 py-5 custom-scrollbar">
-            <div className="grid grid-cols-1 gap-x-6 gap-y-5 md:grid-cols-2">
-              <div className="space-y-1.5 md:col-span-2">
-                <label className="label">Vendor Name <span className="required">*</span></label>
-                <Input name="vendor" value={formData.vendor} onChange={handleChange} required />
-              </div>
+        {loadingInitial ? (
+          <div className="flex-1 flex items-center justify-center">
+            <div className="h-8 w-8 animate-spin rounded-full border-b-2 border-primary"></div>
+          </div>
+        ) : (
+          <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0">
+            <div className="flex-1 overflow-y-auto px-6 py-6 custom-scrollbar space-y-8">
               
-              <div className="space-y-1.5">
-                <label className="label">Purchase Date <span className="required">*</span></label>
-                <Input type="date" name="date" value={formData.date} onChange={handleChange} required />
+              {/* Top Section */}
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div className="space-y-1.5 md:col-span-2">
+                  <label className="label">Supplier <span className="required">*</span></label>
+                  <Input type="select" name="supplierId" value={formData.supplierId} onChange={handleChange} options={[{value: "", label: "Select Supplier"}, ...suppliers]} required />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="label">Invoice Number <span className="required">*</span></label>
+                  <Input name="invoiceNumber" value={formData.invoiceNumber} onChange={handleChange} required placeholder="INV-2023-001" />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="label">Purchase Date <span className="required">*</span></label>
+                  <Input type="date" name="purchaseDate" value={formData.purchaseDate} onChange={handleChange} required />
+                </div>
               </div>
 
-              <div className="space-y-1.5">
-                <label className="label">Total Amount (Rs.) <span className="required">*</span></label>
-                <Input type="number" name="total" value={formData.total} onChange={handleChange} min="0" required />
+              {/* Items Table */}
+              <div className="space-y-3">
+                <h3 className="font-semibold text-gray-800 text-sm border-b pb-2">Line Items</h3>
+                <div className="overflow-x-auto rounded-lg border border-gray-200">
+                  <table className="w-full text-sm text-left">
+                    <thead className="bg-gray-50 border-b border-gray-200 text-gray-600 font-medium">
+                      <tr>
+                        <th className="px-3 py-2 w-[250px]">Item</th>
+                        <th className="px-3 py-2 w-[100px]">Unit</th>
+                        <th className="px-3 py-2 w-[100px]">Qty</th>
+                        <th className="px-3 py-2 w-[120px]">Price</th>
+                        <th className="px-3 py-2 w-[100px]">Disc.</th>
+                        <th className="px-3 py-2 w-[100px]">Tax (%)</th>
+                        <th className="px-3 py-2 w-[120px] text-right">Total</th>
+                        <th className="px-3 py-2 w-[50px] text-center"></th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {items.map((item, index) => (
+                        <tr key={item.id} className="border-b border-gray-100 last:border-0">
+                          <td className="p-2">
+                            <select 
+                              className="input text-sm py-1.5 px-2"
+                              value={item.inventoryItemId}
+                              onChange={(e) => handleItemChange(index, 'inventoryItemId', e.target.value)}
+                              required
+                            >
+                              <option value="">Select Item</option>
+                              {inventoryItems.map(i => (
+                                <option key={i.id} value={i.id}>{i.name} ({i.category})</option>
+                              ))}
+                            </select>
+                          </td>
+                          <td className="p-2">
+                            <Input value={item.purchaseUnit} disabled className="bg-gray-50 text-sm py-1.5 px-2" />
+                          </td>
+                          <td className="p-2">
+                            <Input type="number" step="0.01" min="0.01" value={item.quantity} onChange={(e) => handleItemChange(index, 'quantity', e.target.value)} required className="text-sm py-1.5 px-2" />
+                          </td>
+                          <td className="p-2">
+                            <Input type="number" step="0.01" min="0" value={item.unitPrice} onChange={(e) => handleItemChange(index, 'unitPrice', e.target.value)} required className="text-sm py-1.5 px-2" />
+                          </td>
+                          <td className="p-2">
+                            <Input type="number" step="0.01" min="0" value={item.discount} onChange={(e) => handleItemChange(index, 'discount', e.target.value)} className="text-sm py-1.5 px-2" />
+                          </td>
+                          <td className="p-2">
+                            <Input type="number" step="0.01" min="0" value={item.tax} onChange={(e) => handleItemChange(index, 'tax', e.target.value)} className="text-sm py-1.5 px-2" />
+                          </td>
+                          <td className="p-2 text-right font-medium text-gray-800">
+                            {item.total.toFixed(2)}
+                          </td>
+                          <td className="p-2 text-center">
+                            <button type="button" onClick={() => removeItem(index)} className="p-1 text-gray-400 hover:text-rose-500 rounded transition-colors" disabled={items.length === 1}>
+                              <X size={16} />
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                <Button type="button" variant="outline" size="sm" onClick={addItem} leftIcon={(props) => <Plus {...props} />}>
+                  Add Item
+                </Button>
               </div>
 
-              <div className="space-y-1.5">
-                <label className="label">Tax (Rs.)</label>
-                <Input type="number" name="tax" placeholder="e.g. 500" value={formData.tax} onChange={handleChange} min="0" />
+              {/* Bottom Section */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 pt-4 border-t border-gray-100">
+                <div className="space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-1.5">
+                      <label className="label">Payment Method</label>
+                      <Input type="select" name="paymentMethod" value={formData.paymentMethod} onChange={handleChange} options={paymentMethods} />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="label">Payment Status</label>
+                      <Input type="select" name="paymentStatus" value={formData.paymentStatus} onChange={handleChange} options={paymentStatuses} />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="label">Delivery Status</label>
+                      <Input type="select" name="deliveryStatus" value={formData.deliveryStatus} onChange={handleChange} options={deliveryStatuses} />
+                    </div>
+                    <div className="space-y-1.5">
+                    <label className="label">Invoice Attachment</label>
+                    <div className="relative">
+                      <input type="file" onChange={handleFileUpload} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" accept="image/*,.pdf" />
+                      <Button type="button" variant="outline" className="w-full text-xs font-normal justify-start" leftIcon={(props) => <UploadCloud {...props} size={16} />}>
+                        {uploadingFile ? "Uploading..." : invoiceUrl ? "Invoice Attached" : "Upload File"}
+                      </Button>
+                    </div>
+                    {invoiceUrl && (
+                      <div className="mt-2 p-2 bg-gray-50 border border-gray-100 rounded-lg">
+                        {invoiceUrl.endsWith('.pdf') ? (
+                          <a href={invoiceUrl} target="_blank" rel="noopener noreferrer" className="text-primary text-xs underline font-medium">View Uploaded PDF</a>
+                        ) : (
+                          <a href={invoiceUrl} target="_blank" rel="noopener noreferrer">
+                            <img src={invoiceUrl} alt="Preview" className="h-16 w-auto object-contain rounded hover:opacity-90" />
+                          </a>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="label">Notes / Terms</label>
+                    <Input type="textarea" name="notes" value={formData.notes} onChange={handleChange} />
+                  </div>
+                </div>
+
+                {/* Summary Totals */}
+                <div className="bg-gray-50/50 rounded-xl p-5 border border-gray-100 space-y-3 shadow-inner">
+                  <div className="flex justify-between text-sm text-gray-600">
+                    <span>Subtotal</span>
+                    <span className="font-medium">Rs. {formData.subtotal.toFixed(2)}</span>
+                  </div>
+                  <div className="flex items-center justify-between text-sm text-gray-600 gap-4">
+                    <span>Overall Discount (-)</span>
+                    <Input type="number" name="discount" value={formData.discount} onChange={handleChange} className="w-24 text-right py-1 text-sm h-8" />
+                  </div>
+                  <div className="flex items-center justify-between text-sm text-gray-600 gap-4">
+                    <span>Overall Tax (+)</span>
+                    <Input type="number" name="tax" value={formData.tax} onChange={handleChange} className="w-24 text-right py-1 text-sm h-8" />
+                  </div>
+                  <div className="flex items-center justify-between text-sm text-gray-600 gap-4">
+                    <span>Shipping (+)</span>
+                    <Input type="number" name="shippingCharges" value={formData.shippingCharges} onChange={handleChange} className="w-24 text-right py-1 text-sm h-8" />
+                  </div>
+                  
+                  <div className="border-t border-gray-200 my-2 pt-2 flex justify-between font-bold text-gray-900 text-lg">
+                    <span>Grand Total</span>
+                    <span>Rs. {formData.grandTotal.toFixed(2)}</span>
+                  </div>
+
+                  <div className="flex items-center justify-between text-sm font-semibold text-gray-800 pt-2 gap-4">
+                    <span>Amount Paid</span>
+                    <Input type="number" name="paidAmount" value={formData.paidAmount} onChange={handleChange} className="w-32 text-right font-semibold text-primary py-1 h-9 bg-primary/5 border-primary/20" />
+                  </div>
+                  <div className="flex justify-between text-sm font-medium text-rose-600 pt-1">
+                    <span>Balance Due</span>
+                    <span>Rs. {formData.dueAmount.toFixed(2)}</span>
+                  </div>
+                </div>
               </div>
 
-              <div className="space-y-1.5 md:col-span-2">
-                <label className="label">Items Description</label>
-                <Input name="items" value={formData.items} onChange={handleChange} placeholder="e.g. MDF Sheet 6mm x 50, Glue x 5" className="min-h-[60px]" />
-              </div>
-
-              <div className="space-y-1.5">
-                <label className="label">Payment Status <span className="required">*</span></label>
-                <Input type="select" name="paymentStatus" value={formData.paymentStatus} onChange={handleChange} options={paymentOptions} required />
-              </div>
-
-              <div className="space-y-1.5">
-                <label className="label">Delivery Status <span className="required">*</span></label>
-                <Input type="select" name="deliveryStatus" value={formData.deliveryStatus} onChange={handleChange} options={deliveryOptions} required />
-              </div>
-
-              <div className="space-y-1.5 md:col-span-2">
-                 <label className="label">Invoice / Receipt Upload</label>
-                 <div className="border-2 border-dashed border-gray-200 rounded-lg p-6 flex flex-col items-center justify-center bg-gray-50/50 hover:bg-gray-50 transition-colors cursor-pointer text-gray-500 hover:text-gray-700">
-                    <Icons name="UploadCloud" size={24} className="mb-2" />
-                    <span className="text-sm font-medium">Click to upload or drag and drop</span>
-                    <span className="text-xs mt-1">PDF, JPG, PNG up to 10MB</span>
-                 </div>
-              </div>
-              
             </div>
-          </div>
 
-          <div className="shrink-0 border-t border-gray-200 bg-gray-50/50 px-6 py-4 flex justify-end gap-3">
-            <Button variant="outline" type="button" onClick={onClose} disabled={isSubmitting}>Cancel</Button>
-            <Button variant="solid" type="submit" isLoading={isSubmitting} disabled={isSubmitting}>Save Purchase</Button>
-          </div>
-        </form>
+            <div className="shrink-0 border-t border-gray-200 bg-gray-50/80 px-6 py-4 flex justify-end gap-3 backdrop-blur-sm">
+              <Button variant="outline" type="button" onClick={onClose} disabled={isSubmitting}>Cancel</Button>
+              <Button variant="solid" type="submit" isLoading={isSubmitting} disabled={isSubmitting}>
+                Save Purchase & {formData.deliveryStatus === 'DELIVERED' ? 'Update Stock' : 'Keep Pending'}
+              </Button>
+            </div>
+          </form>
+        )}
       </div>
     </div>
   );

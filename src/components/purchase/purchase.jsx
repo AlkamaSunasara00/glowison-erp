@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { useRouter } from "next/router";
 import api from "@/lib/api";
 import toast from "react-hot-toast";
 import Button from "@/common/Button";
@@ -14,17 +15,18 @@ import DeleteConfirmModal from "@/common/DeleteConfirmModal";
 
 const paymentOptions = [
   { value: "all", label: "All Payments" },
-  { value: "paid", label: "Paid" },
-  { value: "pending", label: "Pending" },
+  { value: "PAID", label: "Paid" },
+  { value: "PENDING", label: "Pending" },
 ];
 
 const deliveryOptions = [
   { value: "all", label: "All Deliveries" },
-  { value: "delivered", label: "Delivered" },
-  { value: "pending", label: "Pending" },
+  { value: "DELIVERED", label: "Delivered" },
+  { value: "PENDING", label: "Pending" },
 ];
 
 export const Purchase = () => {
+  const router = useRouter();
   const [search, setSearch] = useState("");
   const [paymentFilter, setPaymentFilter] = useState("all");
   const [deliveryFilter, setDeliveryFilter] = useState("all");
@@ -42,15 +44,16 @@ export const Purchase = () => {
       setLoading(true);
       const res = await api.get('/purchases?limit=200');
       setPurchases(res.data.data.map(p => ({
-        id: p.poNumber,
+        ...p,
+        id: p.invoiceNumber,
         originalId: p.id,
-        vendor: p.vendorName,
-        date: new Date(p.orderDate).toLocaleDateString('en-CA'),
-        items: p.items.map(i => i.itemName).join(', '),
+        vendor: p.supplier?.name || "Unknown",
+        date: new Date(p.purchaseDate).toLocaleDateString('en-CA'),
+        items: p.items?.map(i => i.inventoryItem?.name).join(', ') || "",
         itemsData: p.items,
-        total: p.totalAmount,
-        paymentStatus: p.paymentStatus.toLowerCase().replace('_', ' '),
-        deliveryStatus: p.deliveryStatus.toLowerCase()
+        total: p.grandTotal,
+        paymentStatus: p.paymentStatus,
+        deliveryStatus: p.deliveryStatus
       })));
     } catch (error) {
       toast.error('Failed to load purchases');
@@ -77,9 +80,9 @@ export const Purchase = () => {
 
   // KPIs
   const totalPurchases = purchases.length;
-  const totalPaid = purchases.filter(p => p.paymentStatus === "paid").reduce((sum, p) => sum + p.total, 0);
-  const totalOutstanding = purchases.filter(p => p.paymentStatus === "pending").reduce((sum, p) => sum + p.total, 0);
-  const pendingDeliveries = purchases.filter(p => p.deliveryStatus === "pending").length;
+  const totalPaid = purchases.filter(p => p.paymentStatus === "PAID").reduce((sum, p) => sum + parseFloat(p.total), 0);
+  const totalOutstanding = purchases.filter(p => p.paymentStatus === "PENDING").reduce((sum, p) => sum + parseFloat(p.total), 0);
+  const pendingDeliveries = purchases.filter(p => p.deliveryStatus === "PENDING").length;
 
   return (
     <div className="flex flex-col min-h-screen w-full relative gap-4">
@@ -181,7 +184,7 @@ export const Purchase = () => {
               <table className="w-full text-left border-collapse min-w-[900px]">
                 <thead className="bg-gray-50 border-b border-gray-100 text-xs font-semibold text-gray-600">
                   <tr>
-                    <th className="px-4 py-3">PO Number</th>
+                    <th className="px-4 py-3">Invoice Number</th>
                     <th className="px-4 py-3">Vendor</th>
                     <th className="px-4 py-3">Items Summary</th>
                     <th className="px-4 py-3">Date</th>
@@ -196,7 +199,8 @@ export const Purchase = () => {
                      return (
                       <tr 
                         key={purchase.id} 
-                        className="border-b border-gray-50 hover:bg-gray-50/50 transition-colors"
+                        onClick={() => router.push(`/purchase/${purchase.originalId}`)}
+                        className="border-b border-gray-50 hover:bg-gray-50/50 transition-colors cursor-pointer"
                       >
                         <td className="px-4 py-3 font-semibold text-primary">{purchase.id}</td>
                         <td className="px-4 py-3 font-medium text-gray-900">{purchase.vendor}</td>
@@ -213,7 +217,7 @@ export const Purchase = () => {
                         <td className="px-4 py-3">
                            <StatusBadge status={purchase.deliveryStatus} />
                         </td>
-                        <td className="px-4 py-3 text-center">
+                        <td className="px-4 py-3 text-center" onClick={(e) => e.stopPropagation()}>
                           <Button variant="ghost" size="sm" onClick={() => setEditItem(purchase)} className="px-2!">
                             <Icons name="Pencil" size={16} className="text-gray-500 hover:text-primary" />
                           </Button>

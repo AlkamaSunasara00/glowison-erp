@@ -1,43 +1,88 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
+import api from "@/lib/api";
+import toast from "react-hot-toast";
 import Button from "@/common/Button";
 import Icons from "@/common/Icons";
 import Input from "@/common/Input";
 
 const categoryOptions = [
-  { label: "Rent", value: "Rent" },
-  { label: "Salary", value: "Salary" },
-  { label: "Marketing", value: "Marketing" },
-  { label: "Utilities", value: "Utilities" },
-  { label: "Misc", value: "Misc" },
+  { value: "OFFICE_SUPPLIES", label: "Office Supplies" },
+  { value: "TRAVEL", label: "Travel" },
+  { value: "UTILITIES", label: "Utilities" },
+  { value: "SALARY", label: "Salary" },
+  { value: "MARKETING", label: "Marketing" },
+  { value: "MAINTENANCE", label: "Maintenance" },
+  { value: "OTHER", label: "Other" },
 ];
 
 const statusOptions = [
-  { label: "Paid", value: "Paid" },
-  { label: "Pending", value: "Pending" },
+  { value: "PAID", label: "Paid" },
+  { value: "PENDING", label: "Pending" },
+  { value: "PARTIALLY_PAID", label: "Partially Paid" }
+];
+
+const paidToTypeOptions = [
+  { value: "OTHER", label: "Other" },
+  { value: "SUPPLIER", label: "Supplier" },
+  { value: "EMPLOYEE", label: "Employee" },
+];
+
+const paymentMethodOptions = [
+  { value: "CASH", label: "Cash" },
+  { value: "UPI", label: "UPI" },
+  { value: "BANK_TRANSFER", label: "Bank Transfer" },
+  { value: "CARD", label: "Card" },
+  { value: "CHEQUE", label: "Cheque" },
+  { value: "OTHER", label: "Other" },
 ];
 
 const EditExpense = ({ open, onClose, initialData }) => {
   const [formData, setFormData] = useState({
-    date: "",
-    category: "Misc",
+    spentOn: "",
+    category: "OFFICE_SUPPLIES",
+    categoryOther: "",
     amount: "",
-    paidTo: "",
+    paidAmount: "",
+    paidToType: "OTHER",
+    paidToName: "",
+    supplierId: "",
+    paymentMethod: "CASH",
+    status: "PAID",
+    referenceNumber: "",
     notes: "",
-    status: "Paid",
   });
 
+  const [suppliers, setSuppliers] = useState([]);
+  const [file, setFile] = useState(null);
+  const fileInputRef = useRef(null);
+
   useEffect(() => {
-    if (initialData) {
+    if (open) {
+      api.get('/suppliers').then(res => {
+        const activeSuppliers = res.data.data.filter(s => s.status === 'ACTIVE');
+        setSuppliers(activeSuppliers.map(s => ({ value: s.id, label: s.name })));
+      }).catch(console.error);
+    }
+  }, [open]);
+
+  useEffect(() => {
+    if (initialData && open) {
       setFormData({
-        date: initialData.date || "",
-        category: initialData.category || "Misc",
+        spentOn: initialData.spentOn ? new Date(initialData.spentOn).toISOString().slice(0, 10) : "",
+        category: initialData.category || "OFFICE_SUPPLIES",
+        categoryOther: initialData.categoryOther || "",
         amount: initialData.amount || "",
-        paidTo: initialData.paidTo || "",
-        notes: initialData.notes || "",
-        status: initialData.status || "Paid",
+        paidAmount: initialData.paidAmount || "",
+        paidToType: initialData.paidToType || "OTHER",
+        paidToName: initialData.paidToName || "",
+        supplierId: initialData.supplierId || "",
+        paymentMethod: initialData.paymentMethod || "CASH",
+        status: initialData.status || "PAID",
+        referenceNumber: initialData.referenceNumber || "",
+        notes: initialData.note || "",
       });
     }
-  }, [initialData]);
+  }, [initialData, open]);
 
   useEffect(() => {
     if (!open) return undefined;
@@ -48,14 +93,62 @@ const EditExpense = ({ open, onClose, initialData }) => {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [open, onClose]);
 
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
   const handleChange = (event) => {
     const { name, value } = event.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleSubmit = (event) => {
+  const handleFileChange = (e) => {
+    if (e.target.files && e.target.files[0]) {
+      setFile(e.target.files[0]);
+    }
+  };
+
+  const uploadReceipt = async () => {
+    if (!file) return null;
+    const formDataFile = new FormData();
+    formDataFile.append('images', file);
+    const res = await api.post('/upload', formDataFile, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    });
+    return res.data.urls[0];
+  };
+
+  const handleSubmit = async (event) => {
     event.preventDefault();
-    onClose();
+    try {
+      setIsSubmitting(true);
+      
+      let receiptUrl = initialData?.receiptUrl;
+      if (file) {
+        receiptUrl = await uploadReceipt();
+      }
+
+      const payload = {
+        ...formData,
+        amount: Number(formData.amount),
+        receiptUrl,
+        note: formData.notes
+      };
+      
+      if (payload.paidToType !== 'OTHER') {
+        payload.categoryOther = null;
+      }
+      if (payload.paidToType !== 'SUPPLIER') {
+        payload.supplierId = null;
+      }
+
+      await api.put(`/expenses/${initialData.id}`, payload);
+      toast.success('Expense updated successfully');
+      onClose();
+    } catch (error) {
+      toast.error('Failed to update expense');
+      console.error(error);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -73,7 +166,7 @@ const EditExpense = ({ open, onClose, initialData }) => {
       />
 
       <div
-        className={`relative flex h-full w-full max-w-2xl flex-col overflow-hidden rounded-md border border-gray-200 bg-white shadow-lg md:h-auto md:max-h-[90vh] ${
+        className={`relative flex h-full w-full max-w-3xl flex-col overflow-hidden rounded-md border border-gray-200 bg-white shadow-lg md:h-auto md:max-h-[90vh] ${
           open ? "animate-modal-in" : "animate-modal-out"
         }`}
       >
@@ -90,19 +183,32 @@ const EditExpense = ({ open, onClose, initialData }) => {
 
           <div className="min-h-0 flex-1 overflow-y-auto px-6 py-5 custom-scrollbar">
             <div className="grid grid-cols-1 gap-x-6 gap-y-5 md:grid-cols-2">
-              <div className="space-y-1.5 md:col-span-2">
-                <label className="label">Paid To <span className="required">*</span></label>
-                <Input name="paidTo" value={formData.paidTo} onChange={handleChange} placeholder="Vendor, Employee, or Entity name" required />
-              </div>
               
               <div className="space-y-1.5">
-                <label className="label">Date <span className="required">*</span></label>
-                <Input type="date" name="date" value={formData.date} onChange={handleChange} required />
+                <label className="label">Paid To Type <span className="required">*</span></label>
+                <Input type="select" name="paidToType" value={formData.paidToType} onChange={handleChange} options={paidToTypeOptions} required />
               </div>
 
+              {formData.paidToType === 'SUPPLIER' ? (
+                <div className="space-y-1.5">
+                  <label className="label">Select Supplier <span className="required">*</span></label>
+                  <Input type="select" name="supplierId" value={formData.supplierId} onChange={handleChange} options={[{value: "", label: "Select Supplier"}, ...suppliers]} required />
+                </div>
+              ) : (
+                <div className="space-y-1.5">
+                  <label className="label">Paid To Name {formData.paidToType === 'EMPLOYEE' && <span className="required">*</span>}</label>
+                  <Input name="paidToName" value={formData.paidToName} onChange={handleChange} placeholder={formData.paidToType === 'EMPLOYEE' ? "Employee name" : "Vendor or Entity name"} required={formData.paidToType === 'EMPLOYEE'} />
+                </div>
+              )}
+              
               <div className="space-y-1.5">
                 <label className="label">Amount (Rs.) <span className="required">*</span></label>
                 <Input type="number" name="amount" value={formData.amount} onChange={handleChange} min="0" required />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="label">Date <span className="required">*</span></label>
+                <Input type="date" name="spentOn" value={formData.spentOn} onChange={handleChange} required />
               </div>
 
               <div className="space-y-1.5">
@@ -110,9 +216,33 @@ const EditExpense = ({ open, onClose, initialData }) => {
                 <Input type="select" name="category" value={formData.category} onChange={handleChange} options={categoryOptions} required />
               </div>
 
+              {formData.category === 'OTHER' && (
+                <div className="space-y-1.5">
+                  <label className="label">Specify Category <span className="required">*</span></label>
+                  <Input name="categoryOther" value={formData.categoryOther} onChange={handleChange} required />
+                </div>
+              )}
+
+              <div className="space-y-1.5">
+                <label className="label">Payment Method <span className="required">*</span></label>
+                <Input type="select" name="paymentMethod" value={formData.paymentMethod} onChange={handleChange} options={paymentMethodOptions} required />
+              </div>
+
               <div className="space-y-1.5">
                 <label className="label">Status <span className="required">*</span></label>
                 <Input type="select" name="status" value={formData.status} onChange={handleChange} options={statusOptions} required />
+              </div>
+
+              {formData.status === 'PARTIALLY_PAID' && (
+                <div className="space-y-1.5">
+                  <label className="label">Amount Paid (Rs.) <span className="required">*</span></label>
+                  <Input type="number" name="paidAmount" value={formData.paidAmount} onChange={handleChange} min="0" max={formData.amount || undefined} required />
+                </div>
+              )}
+
+              <div className="space-y-1.5">
+                <label className="label">Reference / Txn ID</label>
+                <Input name="referenceNumber" value={formData.referenceNumber} onChange={handleChange} placeholder="e.g. UPI ID or Cheque No" />
               </div>
 
               <div className="space-y-1.5 md:col-span-2">
@@ -122,10 +252,16 @@ const EditExpense = ({ open, onClose, initialData }) => {
 
               <div className="space-y-1.5 md:col-span-2">
                  <label className="label">Receipt Upload</label>
-                 <div className="border-2 border-dashed border-gray-200 rounded-lg p-6 flex flex-col items-center justify-center bg-gray-50/50 hover:bg-gray-50 transition-colors cursor-pointer text-gray-500 hover:text-gray-700">
+                 <div 
+                   onClick={() => fileInputRef.current?.click()}
+                   className="border-2 border-dashed border-gray-200 rounded-lg p-6 flex flex-col items-center justify-center bg-gray-50/50 hover:bg-gray-50 transition-colors cursor-pointer text-gray-500 hover:text-gray-700"
+                 >
                     <Icons name="UploadCloud" size={24} className="mb-2" />
-                    <span className="text-sm font-medium">Click to upload or drag and drop</span>
+                    <span className="text-sm font-medium">
+                      {file ? file.name : (initialData?.receiptUrl ? "Click to replace existing receipt" : "Click to upload or drag and drop")}
+                    </span>
                     <span className="text-xs mt-1">PDF, JPG, PNG up to 5MB</span>
+                    <input type="file" className="hidden" ref={fileInputRef} onChange={handleFileChange} accept="image/*,.pdf" />
                  </div>
               </div>
               
@@ -133,8 +269,8 @@ const EditExpense = ({ open, onClose, initialData }) => {
           </div>
 
           <div className="shrink-0 border-t border-gray-200 bg-gray-50/50 px-6 py-4 flex justify-end gap-3">
-            <Button variant="outline" type="button" onClick={onClose}>Cancel</Button>
-            <Button variant="solid" type="submit">Save Changes</Button>
+            <Button variant="outline" type="button" onClick={onClose} disabled={isSubmitting}>Cancel</Button>
+            <Button variant="solid" type="submit" isLoading={isSubmitting} disabled={isSubmitting}>Save Changes</Button>
           </div>
         </form>
       </div>

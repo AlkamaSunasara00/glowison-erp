@@ -4,6 +4,7 @@ import Icons from "@/common/Icons";
 import { useRouter } from "next/router";
 import StatusBadge from "@/common/StatusBadge";
 import EditCustomer from "./customersModal/EditCustomer";
+import { formatDate } from "@/utils/formatters";
 
 const ActionIcon = ({ name, color = "currentColor", ...props }) => (
   <Icons name={name} color={color} {...props} />
@@ -180,7 +181,7 @@ const CustomerDetail = ({ open, onClose, customer, isPage = false, onCustomerUpd
                         ) : (data.orders || []).map(item => (
                           <tr key={item.id} onClick={() => router.push(`/orders/GLW-${item.orderNumber}`)} className="border-b border-gray-50 hover:bg-gray-50/50 cursor-pointer">
                             <td className="px-4 py-3 font-medium text-primary">GLW-{item.orderNumber}</td>
-                            <td className="px-4 py-3 text-gray-500">{new Date(item.createdAt).toLocaleDateString()}</td>
+                            <td className="px-4 py-3 text-gray-500">{formatDate(item.createdAt)}</td>
                             <td className="px-4 py-3 font-medium text-gray-900">Rs. {item.total}</td>
                             <td className="px-4 py-3"><StatusBadge status={item.status} /></td>
                           </tr>
@@ -205,7 +206,7 @@ const CustomerDetail = ({ open, onClose, customer, isPage = false, onCustomerUpd
                         ) : (data.invoices || []).map(item => (
                           <tr key={item.id} onClick={() => router.push(`/invoices/${item.id}`)} className="border-b border-gray-50 hover:bg-gray-50/50 cursor-pointer">
                             <td className="px-4 py-3 font-medium text-primary">{item.id.slice(0, 8)}</td>
-                            <td className="px-4 py-3 text-gray-500">{new Date(item.createdAt).toLocaleDateString()}</td>
+                            <td className="px-4 py-3 text-gray-500">{formatDate(item.createdAt)}</td>
                             <td className="px-4 py-3 font-medium text-gray-900">Rs. {item.total}</td>
                             <td className="px-4 py-3"><StatusBadge status={item.status} /></td>
                           </tr>
@@ -230,7 +231,7 @@ const CustomerDetail = ({ open, onClose, customer, isPage = false, onCustomerUpd
                         ) : (data.quotations || []).map(item => (
                          <tr key={item.id} onClick={() => router.push(`/quotations/${item.id}`)} className="border-b border-gray-50 hover:bg-gray-50/50 cursor-pointer">
                            <td className="px-4 py-3 font-medium text-primary">{item.id.slice(0, 8)}</td>
-                           <td className="px-4 py-3 text-gray-500">{new Date(item.createdAt).toLocaleDateString()}</td>
+                           <td className="px-4 py-3 text-gray-500">{formatDate(item.createdAt)}</td>
                            <td className="px-4 py-3 font-medium text-gray-900">Rs. {item.estimatedPrice}</td>
                            <td className="px-4 py-3"><StatusBadge status={item.status} /></td>
                          </tr>

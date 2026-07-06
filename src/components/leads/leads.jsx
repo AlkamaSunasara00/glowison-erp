@@ -11,6 +11,7 @@ import EditLead from "./leadsModal/EditLead";
 import DeleteConfirmModal from "@/common/DeleteConfirmModal";
 import LeadDetail from "./LeadDetail";
 import toast from "react-hot-toast";
+import { formatDate } from "@/utils/formatters";
 
 export const STAGES = [
   { key: "NEW", label: "New", color: "bg-sky-50 border-sky-200 text-sky-800" },
@@ -64,7 +65,7 @@ export const Leads = () => {
       setLeads(res.data.data.map(l => ({
         ...l, 
         stage: l.status,
-        created: new Date(l.createdAt).toLocaleDateString()
+        created: formatDate(l.createdAt)
       })));
     } catch (error) {
       toast.error('Failed to load leads');

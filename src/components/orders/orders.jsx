@@ -10,6 +10,7 @@ import AddOrder from "./ordersModal/AddOrder";
 import EditOrder from "./ordersModal/EditOrder";
 import DeleteConfirmModal from "@/common/DeleteConfirmModal";
 import toast from "react-hot-toast";
+import { formatDate } from "@/utils/formatters";
 
 
 
@@ -67,7 +68,7 @@ export const Orders = () => {
         balance: `Rs. ${Math.max(0, Number(o.total || 0) - Number(o.amountPaid || 0)).toLocaleString()}`,
         status: o.status.toLowerCase(),
         paymentStatus: o.paymentStatus.toLowerCase().replace('_', ' '),
-        date: new Date(o.createdAt).toLocaleDateString('en-CA')
+        date: formatDate(o.createdAt)
       })));
     } catch (error) {
       toast.error('Failed to load orders');

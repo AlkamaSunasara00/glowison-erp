@@ -13,8 +13,16 @@ const defaultColors = {
   demo: 'bg-amber-50 text-amber-700 border-amber-100',
   negotiation: 'bg-violet-50 text-violet-700 border-violet-100',
   won: 'bg-emerald-50 text-emerald-700 border-emerald-100',
+  'closed_won': 'bg-emerald-50 text-emerald-700 border-emerald-100',
+  'closed won': 'bg-emerald-50 text-emerald-700 border-emerald-100',
   lost: 'bg-rose-50 text-rose-700 border-rose-100',
+  'closed_lost': 'bg-rose-50 text-rose-700 border-rose-100',
+  'closed lost': 'bg-rose-50 text-rose-700 border-rose-100',
   'not interested': 'bg-slate-50 text-slate-700 border-slate-100',
+  
+  // Customers
+  retail: 'bg-indigo-50 text-indigo-700 border-indigo-100',
+  dealer: 'bg-violet-50 text-violet-700 border-violet-100',
   
   // Orders
   processing: 'bg-blue-50 text-blue-700 border-blue-100',
@@ -28,6 +36,8 @@ const defaultColors = {
   
   // Inventory
   'in stock': 'bg-emerald-50 text-emerald-700 border-emerald-100',
+  'raw material': 'bg-amber-50 text-amber-700 border-amber-100',
+  'finished good': 'bg-emerald-50 text-emerald-700 border-emerald-100',
   'low stock': 'bg-amber-50 text-amber-700 border-amber-100',
   'out of stock': 'bg-rose-50 text-rose-700 border-rose-100',
   

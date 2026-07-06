@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { useRouter } from "next/router";
 import api from "@/lib/api";
 import toast from "react-hot-toast";
 import Button from "@/common/Button";
@@ -10,48 +11,59 @@ import AddExpense from "./expenseModal/AddExpense";
 import EditExpense from "./expenseModal/EditExpense";
 import DeleteConfirmModal from "@/common/DeleteConfirmModal";
 
-
-
 const categoryOptions = [
-  { value: "all", label: "All Categories" },
-  { value: "Rent", label: "Rent" },
-  { value: "Salary", label: "Salary" },
-  { value: "Marketing", label: "Marketing" },
-  { value: "Utilities", label: "Utilities" },
-  { value: "Misc", label: "Misc" },
+  { value: "", label: "All Categories" },
+  { value: "OFFICE_SUPPLIES", label: "Office Supplies" },
+  { value: "TRAVEL", label: "Travel" },
+  { value: "UTILITIES", label: "Utilities" },
+  { value: "SALARY", label: "Salary" },
+  { value: "MARKETING", label: "Marketing" },
+  { value: "MAINTENANCE", label: "Maintenance" },
+  { value: "OTHER", label: "Other" },
 ];
 
 const statusOptions = [
-  { value: "all", label: "All Statuses" },
-  { value: "Paid", label: "Paid" },
-  { value: "Pending", label: "Pending" },
+  { value: "", label: "All Statuses" },
+  { value: "PAID", label: "Paid" },
+  { value: "PENDING", label: "Pending" },
+  { value: "PARTIALLY_PAID", label: "Partially Paid" }
 ];
 
 export const Expense = () => {
+  const router = useRouter();
   const [search, setSearch] = useState("");
-  const [categoryFilter, setCategoryFilter] = useState("all");
-  const [statusFilter, setStatusFilter] = useState("all");
+  const [categoryFilter, setCategoryFilter] = useState("");
+  const [statusFilter, setStatusFilter] = useState("");
   
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [editItem, setEditItem] = useState(null);
   const [deleteItem, setDeleteItem] = useState(null);
   
   const [expenses, setExpenses] = useState([]);
+  const [stats, setStats] = useState({
+    totalAmount: 0,
+    dueAmount: 0,
+    paidAmount: 0,
+    categoryBreakdown: {}
+  });
   const [loading, setLoading] = useState(true);
 
   const fetchExpenses = async () => {
     try {
       setLoading(true);
-      const res = await api.get('/expenses?limit=200');
-      setExpenses(res.data.data.map(e => ({
-        id: e.id,
-        date: new Date(e.spentOn).toLocaleDateString('en-CA'),
-        category: e.category.toLowerCase().replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase()), // OFFICE_SUPPLIES -> Office Supplies
-        amount: e.amount,
-        paidTo: e.note || "N/A", // The schema didn't have a paidTo field, so using note if any, else N/A
-        notes: e.note || "",
-        status: e.status === "PAID" ? "Paid" : "Pending"
-      })));
+      const res = await api.get('/expenses', {
+        params: {
+          limit: 200,
+          search: search || undefined,
+          category: categoryFilter || undefined,
+          status: statusFilter || undefined,
+          includeStats: true
+        }
+      });
+      setExpenses(res.data.data);
+      if (res.data.stats) {
+        setStats(res.data.stats);
+      }
     } catch (error) {
       toast.error('Failed to load expenses');
     } finally {
@@ -60,30 +72,15 @@ export const Expense = () => {
   };
 
   useEffect(() => {
-    fetchExpenses();
-  }, []);
+    const delayDebounceFn = setTimeout(() => {
+      fetchExpenses();
+    }, 300);
+    return () => clearTimeout(delayDebounceFn);
+  }, [search, categoryFilter, statusFilter]);
 
-  // Filters
-  const hasActiveFilters = categoryFilter !== "all" || statusFilter !== "all";
-  const filteredExpenses = expenses.filter((expense) => {
-    const query = search.trim().toLowerCase();
-    const matchesSearch = query.length === 0 || expense.paidTo.toLowerCase().includes(query) || expense.notes.toLowerCase().includes(query);
-    const matchesCategory = categoryFilter === "all" || expense.category === categoryFilter;
-    const matchesStatus = statusFilter === "all" || expense.status === statusFilter;
-
-    return matchesSearch && matchesCategory && matchesStatus;
-  });
-
-  // KPIs
-  const totalExpenses = expenses.filter(e => e.status === 'Paid').reduce((sum, e) => sum + e.amount, 0);
-  const pendingExpenses = expenses.filter(e => e.status === 'Pending').reduce((sum, e) => sum + e.amount, 0);
+  const hasActiveFilters = categoryFilter || statusFilter || search;
   
-  const expensesByCategory = expenses.filter(e => e.status === 'Paid').reduce((acc, e) => {
-     acc[e.category] = (acc[e.category] || 0) + e.amount;
-     return acc;
-  }, {});
-  
-  const topCategory = Object.entries(expensesByCategory).sort((a,b) => b[1] - a[1])[0] || ["None", 0];
+  const topCategory = Object.entries(stats.categoryBreakdown).sort((a,b) => b[1] - a[1])[0] || ["None", 0];
 
   return (
     <div className="flex flex-col min-h-screen w-full relative gap-4">
@@ -92,7 +89,7 @@ export const Expense = () => {
           <div className="space-y-1">
             <h1 className="page-header text-2xl font-bold text-gray-900">Expenses</h1>
             <p className="text-sm text-gray-500 max-w-md lg:max-w-xl">
-              Track business operating expenses and bills.
+              Track business operating expenses, bills, and employee payments.
             </p>
           </div>
 
@@ -110,18 +107,22 @@ export const Expense = () => {
         </div>
 
         {/* KPIs */}
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           <div className="rounded-xl border border-gray-100 bg-white p-4 shadow-sm">
-            <p className="text-sm font-medium text-gray-500">Total Expenses (Paid)</p>
-            <p className="mt-1 text-2xl font-bold text-gray-900">Rs. {totalExpenses.toLocaleString()}</p>
+            <p className="text-sm font-medium text-gray-500">Total Expenses</p>
+            <p className="mt-1 text-2xl font-bold text-gray-900">Rs. {stats.totalAmount.toLocaleString()}</p>
           </div>
           <div className="rounded-xl border border-gray-100 bg-white p-4 shadow-sm">
-            <p className="text-sm font-medium text-gray-500">Pending Bills</p>
-            <p className="mt-1 text-2xl font-bold text-rose-600">Rs. {pendingExpenses.toLocaleString()}</p>
+            <p className="text-sm font-medium text-gray-500">Paid Amount</p>
+            <p className="mt-1 text-2xl font-bold text-emerald-600">Rs. {stats.paidAmount.toLocaleString()}</p>
+          </div>
+          <div className="rounded-xl border border-gray-100 bg-white p-4 shadow-sm">
+            <p className="text-sm font-medium text-gray-500">Due Amount</p>
+            <p className="mt-1 text-2xl font-bold text-rose-600">Rs. {stats.dueAmount.toLocaleString()}</p>
           </div>
           <div className="rounded-xl border border-gray-100 bg-white p-4 shadow-sm">
             <p className="text-sm font-medium text-gray-500">Highest Category</p>
-            <p className="mt-1 text-2xl font-bold text-indigo-600">{topCategory[0]} <span className="text-sm font-medium text-gray-500">(Rs. {topCategory[1].toLocaleString()})</span></p>
+            <p className="mt-1 text-xl font-bold text-indigo-600 truncate">{topCategory[0]} <span className="text-sm font-medium text-gray-500 block truncate">Rs. {topCategory[1].toLocaleString()}</span></p>
           </div>
         </div>
 
@@ -132,7 +133,7 @@ export const Expense = () => {
               id="search"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search Paid To or Notes..."
+              placeholder="Search Expense No, Name, Notes..."
               startIcon={<Icons name="Search" size={16} className="text-gray-400" />}
             />
           </div>
@@ -155,55 +156,65 @@ export const Expense = () => {
         </div>
 
         {/* Content */}
-        {filteredExpenses.length === 0 ? (
+        {loading ? (
+           <div className="flex-1 flex items-center justify-center p-12">
+             <div className="h-8 w-8 animate-spin rounded-full border-b-2 border-primary"></div>
+           </div>
+        ) : expenses.length === 0 ? (
           <EmptyState
-            search={search || (hasActiveFilters ? "active filters" : "")}
+            search={hasActiveFilters ? "active filters" : ""}
             entityName="Expenses"
             entityIcon="Receipt"
             onClearSearch={() => {
               setSearch("");
-              setCategoryFilter("all");
-              setStatusFilter("all");
+              setCategoryFilter("");
+              setStatusFilter("");
             }}
             addLabel="Log Expense"
+            onAdd={() => setIsAddOpen(true)}
           />
         ) : (
           <div className="bg-white rounded-lg border border-gray-100 shadow-sm overflow-hidden flex-1 custom-scrollbar">
             <div className="overflow-x-auto">
-              <table className="w-full text-left border-collapse min-w-[800px]">
-                <thead className="bg-gray-50 border-b border-gray-100 text-xs font-semibold text-gray-600">
+              <table className="w-full text-left border-collapse min-w-[900px]">
+                <thead className="bg-gray-50 border-b border-gray-100 text-xs font-semibold text-gray-600 uppercase tracking-wider">
                   <tr>
+                    <th className="px-4 py-3">Expense No</th>
                     <th className="px-4 py-3">Date</th>
                     <th className="px-4 py-3">Paid To</th>
                     <th className="px-4 py-3">Category</th>
-                    <th className="px-4 py-3">Notes</th>
                     <th className="px-4 py-3 text-right">Amount</th>
                     <th className="px-4 py-3">Status</th>
                     <th className="px-4 py-3 text-center">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="text-sm">
-                  {filteredExpenses.map(expense => {
+                  {expenses.map(expense => {
                      return (
                       <tr 
                         key={expense.id} 
-                        className="border-b border-gray-50 hover:bg-gray-50/50 transition-colors"
+                        className="border-b border-gray-50 hover:bg-gray-50/50 transition-colors cursor-pointer"
+                        onClick={() => router.push(`/expense/${expense.id}`)}
                       >
-                        <td className="px-4 py-3 text-gray-500 font-medium">{expense.date}</td>
-                        <td className="px-4 py-3 font-semibold text-gray-900">{expense.paidTo}</td>
-                        <td className="px-4 py-3 text-gray-600">
-                          {expense.category}
+                        <td className="px-4 py-3 font-medium text-primary">{expense.expenseNumber}</td>
+                        <td className="px-4 py-3 text-gray-500 font-medium">
+                          {new Date(expense.spentOn).toLocaleDateString('en-CA')}
                         </td>
-                        <td className="px-4 py-3 text-gray-500 text-xs truncate max-w-[200px]" title={expense.notes}>
-                          {expense.notes}
+                        <td className="px-4 py-3 font-semibold text-gray-900">
+                          {expense.paidToType === 'SUPPLIER' && expense.supplier 
+                            ? expense.supplier.name 
+                            : (expense.paidToName || "N/A")}
+                        </td>
+                        <td className="px-4 py-3 text-gray-600">
+                          {expense.category === 'OTHER' ? expense.categoryOther : expense.category.replace('_', ' ')}
                         </td>
                         <td className="px-4 py-3 text-right font-medium text-gray-900">
-                          Rs. {expense.amount.toLocaleString()}
+                          Rs. {parseFloat(expense.amount).toLocaleString()}
                         </td>
                         <td className="px-4 py-3">
                            <StatusBadge status={expense.status} />
                         </td>
-                        <td className="px-4 py-3 text-center">
+                        <td className="px-4 py-3 text-center" onClick={(e) => e.stopPropagation()}>
                           <Button variant="ghost" size="sm" onClick={() => setEditItem(expense)} className="px-2!">
                             <Icons name="Pencil" size={16} className="text-gray-500 hover:text-primary" />
                           </Button>
@@ -227,12 +238,12 @@ export const Expense = () => {
         <DeleteConfirmModal
           open={!!deleteItem}
           onClose={() => setDeleteItem(null)}
-          entityName={deleteItem.id}
+          entityName={deleteItem.expenseNumber}
           onConfirm={async () => {
             try {
               await api.delete(`/expenses/${deleteItem.id}`);
               toast.success("Expense deleted");
-              setExpenses(expenses.filter(e => e.id !== deleteItem.id));
+              fetchExpenses();
             } catch (err) {
               toast.error("Failed to delete expense");
             }

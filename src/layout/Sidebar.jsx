@@ -20,7 +20,8 @@ import {
     Clipboard,
     Palette,
     Brush,
-    X
+    X,
+    Truck
 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
@@ -32,6 +33,7 @@ const menuItems = [
     { name: "Customers", icon: User, path: "/customers" },
     { name: "Orders", icon: ListChecks, path: "/orders" },
     { name: "Inventory", icon: Package, path: "/inventory" },
+    { name: "Suppliers", icon: Truck, path: "/suppliers" },
     { name: "Price List", icon: Palette, path: "/price-list" },
     { name: "Purchase", icon: CheckSquare, path: "/purchase" },
     { name: "Expense", icon: Clipboard, path: "/expense" },

@@ -4,6 +4,8 @@ import Icons from "@/common/Icons";
 import { useRouter } from "next/router";
 import { useState } from "react";
 import EditLead from "./leadsModal/EditLead";
+import StatusBadge from "@/common/StatusBadge";
+import { formatDate } from "@/utils/formatters";
 
 const stages = ["NEW", "CONTACTED", "NEGOTIATION", "CLOSED_WON"];
 
@@ -36,8 +38,8 @@ const LeadDetail = ({ open, onClose, lead, isPage = false, onLeadUpdated }) => {
 
 
   const timeline = [
-    { label: "Lead created", date: data.created || "May 19", by: "System", dot: "bg-gray-300" },
-    { label: `Stage set to ${data.stage || 'new'}`, date: data.created || "May 19", by: "Admin", dot: "bg-blue-500" },
+    { label: "Lead created", date: data.createdAt ? formatDate(data.createdAt) : "May 19", by: "System", dot: "bg-gray-300" },
+    { label: `Stage set to ${data.stage || 'new'}`, date: data.updatedAt ? formatDate(data.updatedAt) : "May 19", by: "Admin", dot: "bg-blue-500" },
   ];
 
   const stageIndex = stages.findIndex(
@@ -71,9 +73,7 @@ const LeadDetail = ({ open, onClose, lead, isPage = false, onLeadUpdated }) => {
             </h2>
             <p className="text-xs text-gray-400 mt-0.5">{data.phone}</p>
           </div>
-          <span className="ml-1 text-xs font-semibold px-2.5 py-1 rounded-full bg-amber-50 text-amber-700 border border-amber-200 capitalize">
-            {(data.status || data.stage || "NEW").replace('_', ' ')}
-          </span>
+          <StatusBadge status={(data.status || data.stage || "NEW").replace('_', ' ')} />
         </div>
 
           <div className="flex items-center gap-2">
@@ -169,9 +169,7 @@ const LeadDetail = ({ open, onClose, lead, isPage = false, onLeadUpdated }) => {
                         {key}
                       </span>
                       {key === "Stage" ? (
-                        <span className="inline-flex w-fit text-xs font-semibold px-2.5 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200 capitalize">
-                          {value}
-                        </span>
+                        <StatusBadge status={value} />
                       ) : (
                         <span className="text-sm text-gray-800 font-medium">{value}</span>
                       )}
