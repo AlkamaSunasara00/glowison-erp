@@ -186,6 +186,7 @@ const OrderDetail = ({ open, onClose, order, isPage = false, onOrderUpdated }) =
                    <table className="w-full text-left border-collapse">
                       <thead className="bg-gray-50 border-b border-gray-100 text-xs font-medium text-gray-500">
                         <tr>
+                          <th className="px-4 py-3 w-16">Image</th>
                           <th className="px-4 py-3">Product</th>
                           <th className="px-4 py-3">Details</th>
                           <th className="px-4 py-3 text-right">Qty</th>
@@ -194,8 +195,19 @@ const OrderDetail = ({ open, onClose, order, isPage = false, onOrderUpdated }) =
                         </tr>
                       </thead>
                       <tbody className="text-sm">
-                        {(data.items && data.items.length > 0 ? data.items : mockLineItems).map(item => (
+                        {(data.items ? data.items : []).map(item => (
                           <tr key={item.id} className="border-b border-gray-50">
+                            <td className="px-4 py-3">
+                              {item.imageUrl ? (
+                                <a href={item.imageUrl} target="_blank" rel="noreferrer" className="block w-10 h-10 rounded border border-gray-200 overflow-hidden hover:opacity-80 transition-opacity bg-white">
+                                  <img src={item.imageUrl} alt={item.product} className="w-full h-full object-cover" />
+                                </a>
+                              ) : (
+                                <div className="w-10 h-10 rounded bg-gray-100 flex items-center justify-center text-gray-400 border border-gray-200">
+                                  <Icons name="Image" size={16} />
+                                </div>
+                              )}
+                            </td>
                             <td className="px-4 py-3 font-medium text-gray-900">{item.product || item.name}</td>
                             <td className="px-4 py-3 text-gray-500 text-xs">Size: {item.size || "N/A"} | Color: {item.color || "N/A"}</td>
                             <td className="px-4 py-3 text-right">{item.qty}</td>
@@ -230,7 +242,7 @@ const OrderDetail = ({ open, onClose, order, isPage = false, onOrderUpdated }) =
     return (
       <>
         {detailPanelContent}
-        {isEditOpen && <EditOrder open={isEditOpen} onClose={() => setIsEditOpen(false)} initialData={data} />}
+        {isEditOpen && <EditOrder open={isEditOpen} onClose={() => { setIsEditOpen(false); if (onOrderUpdated) onOrderUpdated(); else if (isPage) router.replace(router.asPath); }} initialData={data} />}
       </>
     );
   }
@@ -251,7 +263,7 @@ const OrderDetail = ({ open, onClose, order, isPage = false, onOrderUpdated }) =
         />
         {detailPanelContent}
       </div>
-      {isEditOpen && <EditOrder open={isEditOpen} onClose={() => setIsEditOpen(false)} initialData={data} />}
+      {isEditOpen && <EditOrder open={isEditOpen} onClose={() => { setIsEditOpen(false); if (onOrderUpdated) onOrderUpdated(); }} initialData={data} />}
     </>
   );
 };

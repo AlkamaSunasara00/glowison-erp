@@ -26,7 +26,7 @@ const Layout = ({ children }) => {
                     </button>
                     {/* Simplified logo/text for mobile header */}
                     <span className="text-base font-semibold tracking-wide text-white">
-                        Skool ERP
+                        Glowison ERP
                     </span>
                 </div>
             </header>

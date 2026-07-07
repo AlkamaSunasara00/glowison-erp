@@ -10,7 +10,7 @@ const OrderDetailPage = () => {
   const [order, setOrder] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
+  const fetchOrder = () => {
     if (id) {
       api.get(`/orders/${id}`)
         .then(res => {
@@ -23,6 +23,10 @@ const OrderDetailPage = () => {
           setLoading(false);
         });
     }
+  };
+
+  useEffect(() => {
+    fetchOrder();
   }, [id]);
 
   if (!id || loading) {
@@ -50,7 +54,7 @@ const OrderDetailPage = () => {
     );
   }
 
-  return <OrderDetail open={true} order={order} isPage={true} />;
+  return <OrderDetail open={true} order={order} isPage={true} onOrderUpdated={fetchOrder} />;
 };
 
 export default OrderDetailPage;

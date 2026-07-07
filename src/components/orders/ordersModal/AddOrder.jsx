@@ -23,7 +23,7 @@ const AddOrder = ({ open, onClose }) => {
   const [orderType, setOrderType] = useState("Retail/Dealer");
   const [customerId, setCustomerId] = useState("");
   const [onlineData, setOnlineData] = useState({ source: "Website", otherSource: "", name: "", phone: "" });
-  const [lineItems, setLineItems] = useState([{ id: Date.now(), name: "", qty: 1, price: 0, pricePerUnit: "", size: "", color: "", unit: "inch", taxPercent: "" }]);
+  const [lineItems, setLineItems] = useState([{ id: Date.now(), name: "", qty: 1, price: 0, pricePerUnit: "", size: "", color: "", unit: "inch", taxPercent: "", imageUrl: "" }]);
   const [paymentStatus, setPaymentStatus] = useState("UNPAID");
   const [amountPaid, setAmountPaid] = useState("");
   const [notes, setNotes] = useState("");
@@ -65,7 +65,8 @@ const AddOrder = ({ open, onClose }) => {
           taxRate: item.taxPercent ? Number(item.taxPercent) : 0,
           unit: item.unit,
           size: item.size || null,
-          color: item.color || null
+          color: item.color || null,
+          imageUrl: item.imageUrl || null
         }))
       };
 
@@ -93,6 +94,26 @@ const AddOrder = ({ open, onClose }) => {
 
   const handleLineItemChange = (id, field, value) => {
     setLineItems(prev => prev.map(item => item.id === id ? { ...item, [field]: value } : item));
+  };
+
+  const handleImageUpload = async (id, file) => {
+    if (!file) return;
+    try {
+      const formData = new FormData();
+      formData.append('images', file);
+      
+      const res = await api.post('/upload', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+      
+      if (res.data.success && res.data.urls.length > 0) {
+        handleLineItemChange(id, 'imageUrl', res.data.urls[0]);
+        toast.success('Image uploaded successfully');
+      }
+    } catch (error) {
+      toast.error('Failed to upload image');
+      console.error(error);
+    }
   };
 
   const calculateSubtotal = () => {
@@ -233,10 +254,33 @@ const AddOrder = ({ open, onClose }) => {
                            <label className="text-xs font-semibold text-gray-600">Unit Price <span className="text-red-500">*</span></label>
                            <Input type="number" min="0" placeholder="0.00" value={item.price} onChange={(e) => handleLineItemChange(item.id, 'price', e.target.value)} required />
                          </div>
-                         <div className="space-y-1.5">
-                           <label className="text-xs font-semibold text-gray-600">Tax %</label>
+                         <div className="w-full md:w-20 space-y-1.5">
+                           {index === 0 && <label className="text-xs font-semibold text-gray-600">Tax %</label>}
                            <Input type="number" min="0" placeholder="e.g. 18" value={item.taxPercent} onChange={(e) => handleLineItemChange(item.id, 'taxPercent', e.target.value)} />
                          </div>
+                       </div>
+                       
+                       <div className="mt-3 flex items-center gap-3">
+                         <div className="relative">
+                            <input 
+                              type="file" 
+                              accept="image/*" 
+                              onChange={(e) => handleImageUpload(item.id, e.target.files[0])}
+                              className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                              title="Upload reference image"
+                            />
+                            <Button type="button" size="sm" variant="outline" className="text-xs">
+                               <Icons name="ImagePlus" size={14} className="mr-1.5" /> Upload Image
+                            </Button>
+                         </div>
+                         {item.imageUrl && (
+                            <div className="flex items-center gap-2">
+                               <a href={item.imageUrl} target="_blank" rel="noreferrer" className="block w-8 h-8 rounded border border-gray-200 overflow-hidden hover:opacity-80 transition-opacity">
+                                  <img src={item.imageUrl} alt="Reference" className="w-full h-full object-cover" />
+                               </a>
+                               <button type="button" onClick={() => handleLineItemChange(item.id, 'imageUrl', '')} className="text-xs text-red-500 hover:underline">Remove</button>
+                            </div>
+                         )}
                        </div>
                     </div>
                   ))}

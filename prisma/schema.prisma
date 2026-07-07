@@ -282,6 +282,7 @@ model OrderItem {
   unit         String?
   taxRate      Decimal? @db.Decimal(10, 2)
   pricePerInch Decimal? @db.Decimal(10, 2)
+  imageUrl     String?
 }
 
 model InventoryItem {

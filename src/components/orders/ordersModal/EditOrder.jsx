@@ -23,7 +23,7 @@ const EditOrder = ({ open, onClose, initialData }) => {
   const [orderType, setOrderType] = useState("Retail/Dealer");
   const [customerId, setCustomerId] = useState("");
   const [onlineData, setOnlineData] = useState({ source: "Website", otherSource: "", name: "", phone: "" });
-  const [lineItems, setLineItems] = useState([{ id: Date.now(), name: "", qty: 1, price: 0, size: "", color: "", unit: "inch", taxPercent: "" }]);
+  const [lineItems, setLineItems] = useState([{ id: Date.now(), name: "", qty: 1, price: 0, size: "", color: "", unit: "inch", taxPercent: "", imageUrl: "" }]);
   const [paymentStatus, setPaymentStatus] = useState("UNPAID");
   const [amountPaid, setAmountPaid] = useState("");
   const [notes, setNotes] = useState("");
@@ -31,31 +31,45 @@ const EditOrder = ({ open, onClose, initialData }) => {
 
   useEffect(() => {
     if (initialData) {
-      setOrderType(initialData.type === 'Online' ? 'Online' : 'Retail/Dealer');
-      if (initialData.type === 'Online') {
+      const typeStr = initialData.type || '';
+      const isOnline = typeStr.toUpperCase() === 'ONLINE' || typeStr === 'Online';
+      setOrderType(isOnline ? 'Online' : 'Retail/Dealer');
+      
+      if (isOnline) {
         setOnlineData({
-          source: initialData.onlineSource || "Website",
+          source: initialData.onlineSource || initialData.source || "Website",
           otherSource: initialData.onlineSourceOther || "",
-          name: initialData.buyerName || "",
-          phone: initialData.buyerContact || "",
+          name: initialData.buyerName || initialData.customer || "",
+          phone: initialData.buyerContact || initialData.phone || "",
         });
       } else {
-        setCustomerId(initialData.customerId || ""); 
+        setCustomerId(initialData.customerId || (initialData.customer?.id) || ""); 
       }
       setNotes(initialData.note || "");
-      setPaymentStatus(initialData.paymentStatus || "UNPAID");
-      setAmountPaid(initialData.amountPaid || "");
       
-      if (initialData.items && initialData.items.length > 0) {
-        setLineItems(initialData.items.map(item => ({
-          id: item.id,
-          name: item.product,
-          qty: item.qty,
-          price: item.unitPrice,
+      let pStatus = (initialData.paymentStatus || "UNPAID").toUpperCase();
+      if (pStatus.includes("PARTIAL")) pStatus = "PARTIAL";
+      setPaymentStatus(pStatus);
+      
+      // Extract numeric amount paid
+      let amtPaid = initialData.amountPaid || "";
+      if (typeof amtPaid === 'string' && amtPaid.startsWith('Rs.')) {
+        amtPaid = amtPaid.replace(/Rs.\s|,/g, '');
+      }
+      setAmountPaid(amtPaid);
+      
+      const itemsToLoad = initialData.itemsList || initialData.items;
+      if (itemsToLoad && Array.isArray(itemsToLoad) && itemsToLoad.length > 0) {
+        setLineItems(itemsToLoad.map(item => ({
+          id: item.id || Date.now() + Math.random(),
+          name: item.product || item.name || "",
+          qty: item.qty !== undefined ? item.qty : 1,
+          price: item.unitPrice !== undefined ? item.unitPrice : (item.price || 0),
           size: item.size || "",
           color: item.color || "",
           unit: item.unit || "inch",
-          taxPercent: item.taxRate || ""
+          taxPercent: item.taxRate !== undefined ? item.taxRate : (item.taxPercent || ""),
+          imageUrl: item.imageUrl || ""
         })));
       }
     }
@@ -92,7 +106,8 @@ const EditOrder = ({ open, onClose, initialData }) => {
           taxRate: item.taxPercent ? Number(item.taxPercent) : 0,
           unit: item.unit,
           size: item.size || null,
-          color: item.color || null
+          color: item.color || null,
+          imageUrl: item.imageUrl || null
         }))
       };
 
@@ -110,7 +125,7 @@ const EditOrder = ({ open, onClose, initialData }) => {
   const handleAddLineItem = () => {
     setLineItems([
       ...lineItems,
-      { id: Date.now(), name: "", size: "", color: "", qty: 1, price: 0, unit: "inch", taxPercent: "" }
+      { id: Date.now(), name: "", size: "", color: "", qty: 1, price: 0, unit: "inch", taxPercent: "", imageUrl: "" }
     ]);
   };
 
@@ -120,6 +135,26 @@ const EditOrder = ({ open, onClose, initialData }) => {
 
   const handleLineItemChange = (id, field, value) => {
     setLineItems(prev => prev.map(item => item.id === id ? { ...item, [field]: value } : item));
+  };
+
+  const handleImageUpload = async (id, file) => {
+    if (!file) return;
+    try {
+      const formData = new FormData();
+      formData.append('images', file);
+      
+      const res = await api.post('/upload', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+      
+      if (res.data.success && res.data.urls.length > 0) {
+        handleLineItemChange(id, 'imageUrl', res.data.urls[0]);
+        toast.success('Image uploaded successfully');
+      }
+    } catch (error) {
+      toast.error('Failed to upload image');
+      console.error(error);
+    }
   };
 
   const calculateSubtotal = () => {
@@ -220,35 +255,65 @@ const EditOrder = ({ open, onClose, initialData }) => {
                
                <div className="space-y-3">
                   {lineItems.map((item, index) => (
-                    <div key={item.id} className="flex flex-col md:flex-row gap-3 items-end bg-gray-50/50 p-3 rounded-lg border border-gray-100">
-                       <div className="flex-1 w-full space-y-1.5">
-                         {index === 0 && <label className="text-xs font-semibold text-gray-600">Product Name</label>}
-                         <Input placeholder="E.g. MDF Sheet" value={item.name} onChange={(e) => handleLineItemChange(item.id, 'name', e.target.value)} required />
+                    <div key={item.id} className="relative bg-gray-50/50 p-4 md:p-5 rounded-xl border border-gray-200 mb-4 group shadow-sm">
+                       <div className="absolute -left-3 -top-3 bg-white text-gray-500 border border-gray-200 rounded-full w-7 h-7 flex items-center justify-center text-xs font-bold shadow-sm">
+                         {index + 1}
                        </div>
-                       <div className="w-full md:w-24 space-y-1.5">
-                         {index === 0 && <label className="text-xs font-semibold text-gray-600">Size</label>}
-                         <Input placeholder="E.g. 6mm" value={item.size} onChange={(e) => handleLineItemChange(item.id, 'size', e.target.value)} />
+                       <button type="button" onClick={() => handleRemoveLineItem(item.id)} className="absolute right-2 top-2 p-1.5 text-gray-400 hover:text-red-500 rounded-md hover:bg-red-50 transition-colors" disabled={lineItems.length === 1}>
+                         <Icons name="X" size={16} />
+                       </button>
+
+                       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4 pr-6">
+                         <div className="space-y-1.5">
+                           <label className="text-xs font-semibold text-gray-600">Product Name <span className="text-red-500">*</span></label>
+                           <Input placeholder="E.g. MDF Sheet" value={item.name} onChange={(e) => handleLineItemChange(item.id, 'name', e.target.value)} required />
+                         </div>
+                         <div className="space-y-1.5">
+                           <label className="text-xs font-semibold text-gray-600">Size</label>
+                           <Input placeholder="E.g. 6mm" value={item.size} onChange={(e) => handleLineItemChange(item.id, 'size', e.target.value)} />
+                         </div>
+                         <div className="space-y-1.5">
+                           <label className="text-xs font-semibold text-gray-600">Color</label>
+                           <Input placeholder="E.g. Red" value={item.color} onChange={(e) => handleLineItemChange(item.id, 'color', e.target.value)} />
+                         </div>
                        </div>
-                       <div className="w-full md:w-24 space-y-1.5">
-                         {index === 0 && <label className="text-xs font-semibold text-gray-600">Color</label>}
-                         <Input placeholder="E.g. Red" value={item.color} onChange={(e) => handleLineItemChange(item.id, 'color', e.target.value)} />
+
+                       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                         <div className="space-y-1.5">
+                           <label className="text-xs font-semibold text-gray-600">Qty <span className="text-red-500">*</span></label>
+                           <Input type="number" min="1" value={item.qty} onChange={(e) => handleLineItemChange(item.id, 'qty', e.target.value)} required />
+                         </div>
+                         <div className="space-y-1.5">
+                           <label className="text-xs font-semibold text-gray-600">Unit Price <span className="text-red-500">*</span></label>
+                           <Input type="number" min="0" value={item.price} onChange={(e) => handleLineItemChange(item.id, 'price', e.target.value)} required />
+                         </div>
+                         <div className="space-y-1.5">
+                           <label className="text-xs font-semibold text-gray-600">Tax %</label>
+                           <Input type="number" min="0" placeholder="e.g. 18" value={item.taxPercent} onChange={(e) => handleLineItemChange(item.id, 'taxPercent', e.target.value)} />
+                         </div>
                        </div>
-                       <div className="w-full md:w-20 space-y-1.5">
-                         {index === 0 && <label className="text-xs font-semibold text-gray-600">Qty</label>}
-                         <Input type="number" min="1" value={item.qty} onChange={(e) => handleLineItemChange(item.id, 'qty', e.target.value)} required />
-                       </div>
-                       <div className="w-full md:w-28 space-y-1.5">
-                         {index === 0 && <label className="text-xs font-semibold text-gray-600">Unit Price</label>}
-                         <Input type="number" min="0" value={item.price} onChange={(e) => handleLineItemChange(item.id, 'price', e.target.value)} required />
-                       </div>
-                       <div className="w-full md:w-20 space-y-1.5">
-                         {index === 0 && <label className="text-xs font-semibold text-gray-600">Tax %</label>}
-                         <Input type="number" min="0" placeholder="e.g. 18" value={item.taxPercent} onChange={(e) => handleLineItemChange(item.id, 'taxPercent', e.target.value)} />
-                       </div>
-                       <div className="pb-1">
-                          <button type="button" onClick={() => handleRemoveLineItem(item.id)} className="p-1.5 text-gray-400 hover:text-red-500 rounded bg-white border border-gray-200 shadow-sm transition-colors" disabled={lineItems.length === 1}>
-                            <Icons name="Trash2" size={16} />
-                          </button>
+                       
+                       <div className="mt-4 flex items-center gap-3 border-t border-gray-100 pt-3">
+                         <div className="relative">
+                            <input 
+                              type="file" 
+                              accept="image/*" 
+                              onChange={(e) => handleImageUpload(item.id, e.target.files[0])}
+                              className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                              title="Upload reference image"
+                            />
+                            <Button type="button" size="sm" variant="outline" className="text-xs">
+                               <Icons name="ImagePlus" size={14} className="mr-1.5" /> {item.imageUrl ? 'Change Image' : 'Upload Image'}
+                            </Button>
+                         </div>
+                         {item.imageUrl && (
+                            <div className="flex items-center gap-2">
+                               <a href={item.imageUrl} target="_blank" rel="noreferrer" className="block w-10 h-10 rounded-md border border-gray-200 overflow-hidden hover:opacity-80 transition-opacity shadow-sm">
+                                  <img src={item.imageUrl} alt="Reference" className="w-full h-full object-cover" />
+                               </a>
+                               <button type="button" onClick={() => handleLineItemChange(item.id, 'imageUrl', '')} className="text-xs text-red-500 hover:underline">Remove</button>
+                            </div>
+                         )}
                        </div>
                     </div>
                   ))}
