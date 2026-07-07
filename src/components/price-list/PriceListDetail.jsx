@@ -5,6 +5,37 @@ import { useRouter } from "next/router";
 import { useState } from "react";
 import EditPriceItem from "./priceListModal/EditPriceItem";
 
+const categoryOptions = [
+  { value: "CARD_DESIGN", label: "Card Design" },
+  { value: "FLEX_DESIGN", label: "Flex Design" },
+  { value: "BANNER", label: "Banner" },
+  { value: "STICKER", label: "Sticker" },
+  { value: "SIGNAGE_BOARD", label: "Signage Board" },
+  { value: "OTHER", label: "Other" },
+];
+
+const sizeOptions = [
+  { value: "STANDARD", label: "Standard" },
+  { value: "EIGHT_BY_FOUR", label: "8x4 ft" },
+  { value: "SIX_BY_FOUR", label: "6x4 ft" },
+  { value: "THREE_BY_TWO", label: "3x2 ft" },
+  { value: "CUSTOM", label: "Custom" },
+];
+
+const unitOptions = [
+  { value: "PER_PIECE", label: "Per Piece" },
+  { value: "PER_SQ_FT", label: "Per Sq Ft" },
+  { value: "PER_SET", label: "Per Set" },
+  { value: "CUSTOM", label: "Custom" },
+];
+
+const formatEnum = (value, options) => {
+  if (!value) return "—";
+  const option = options?.find(o => o.value === value);
+  if (option) return option.label;
+  return value.split('_').map(word => word.charAt(0) + word.slice(1).toLowerCase()).join(' ');
+};
+
 const PriceListDetail = ({ open, onClose, item, isPage = false }) => {
   const router = useRouter();
   const [isEditOpen, setIsEditOpen] = useState(false);
@@ -19,11 +50,11 @@ const PriceListDetail = ({ open, onClose, item, isPage = false }) => {
   };
 
   const detailInfo = {
-    "Category": data.category || "—",
-    "Size": data.size || "—",
+    "Category": data.category === "OTHER" ? data.otherLabel : formatEnum(data.category, categoryOptions),
+    "Size": data.size === "CUSTOM" ? data.sizeOther : formatEnum(data.size, sizeOptions),
     "Price": data.price ? `Rs. ${data.price}` : "—",
-    "Unit": data.unit || "—",
-    "Notes": data.notes || "—",
+    "Unit": data.priceUnit === "CUSTOM" ? data.unitOther : formatEnum(data.priceUnit, unitOptions),
+    "Notes": data.note || "—",
   };
 
   const detailPanelContent = (
@@ -51,7 +82,7 @@ const PriceListDetail = ({ open, onClose, item, isPage = false }) => {
             <p className="text-xs text-gray-400 mt-0.5">{data.id}</p>
           </div>
           <span className="ml-1 text-xs font-semibold px-2.5 py-1 rounded bg-gray-100 text-gray-800">
-            {data.category}
+            {data.category === "OTHER" ? data.otherLabel : formatEnum(data.category, categoryOptions)}
           </span>
         </div>
 
@@ -106,9 +137,11 @@ const PriceListDetail = ({ open, onClose, item, isPage = false }) => {
                     Reference Image
                   </h3>
                 </div>
-                {data.image ? (
-                   <div className="rounded-lg overflow-hidden border border-gray-200 inline-block">
-                      <img src={data.image} alt={data.name} className="w-full max-w-md h-auto object-cover" />
+                {data.imageUrl ? (
+                   <div className="rounded-lg overflow-hidden border border-gray-200 inline-block shadow-sm">
+                      <a href={data.imageUrl} target="_blank" rel="noopener noreferrer">
+                        <img src={data.imageUrl} alt={data.name} className="w-full max-w-md h-auto object-cover hover:opacity-90 transition-opacity cursor-pointer" />
+                      </a>
                    </div>
                 ) : (
                    <div className="rounded-lg border border-dashed border-gray-300 bg-gray-50 flex flex-col items-center justify-center p-8 text-center w-full max-w-md">
@@ -129,9 +162,9 @@ const PriceListDetail = ({ open, onClose, item, isPage = false }) => {
                 <h3 className="text-sm font-bold text-gray-800 tracking-wide uppercase mb-4">
                   Pricing Summary
                 </h3>
-                <div className="bg-primary/5 border border-primary/10 rounded-xl p-4 flex flex-col items-center justify-center text-center">
-                   <span className="text-sm font-semibold text-primary/80 mb-1">{data.unit}</span>
-                   <span className="text-3xl font-bold text-primary">Rs. {data.price}</span>
+                <div className="bg-primary/5 border border-primary/10 rounded-xl p-6 flex flex-col items-center justify-center text-center shadow-sm">
+                   <span className="text-sm font-semibold text-primary/80 mb-2">{data.priceUnit === "CUSTOM" ? data.unitOther : formatEnum(data.priceUnit, unitOptions)}</span>
+                   <span className="text-4xl font-bold text-primary">Rs. {data.price}</span>
                 </div>
               </section>
             </div>
@@ -171,3 +204,4 @@ const PriceListDetail = ({ open, onClose, item, isPage = false }) => {
 };
 
 export default PriceListDetail;
+

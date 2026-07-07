@@ -16,6 +16,7 @@ const paymentMethods = [
 
 const paymentStatuses = [
   { value: "PENDING", label: "Pending" },
+  { value: "PARTIAL", label: "Partially Paid" },
   { value: "PAID", label: "Paid" }
 ];
 
@@ -129,19 +130,26 @@ const AddPurchase = ({ open, onClose }) => {
   useEffect(() => {
     const newSubtotal = items.reduce((sum, item) => sum + (parseFloat(item.total) || 0), 0);
     const d = parseFloat(formData.discount) || 0;
-    const t = parseFloat(formData.tax) || 0; // Tax as amount on grand total? Let's say flat tax amount here
+    const t = parseFloat(formData.tax) || 0; 
     const s = parseFloat(formData.shippingCharges) || 0;
     
     const gt = newSubtotal - d + t + s;
-    const paid = parseFloat(formData.paidAmount) || 0;
+    let paid = parseFloat(formData.paidAmount) || 0;
+    
+    if (formData.paymentStatus === 'PAID') {
+      paid = gt;
+    } else if (formData.paymentStatus === 'PENDING') {
+      paid = 0;
+    }
 
     setFormData(prev => ({
       ...prev,
       subtotal: newSubtotal,
       grandTotal: gt,
+      paidAmount: paid,
       dueAmount: gt - paid
     }));
-  }, [items, formData.discount, formData.tax, formData.shippingCharges, formData.paidAmount]);
+  }, [items, formData.discount, formData.tax, formData.shippingCharges, formData.paidAmount, formData.paymentStatus]);
 
   const handleFileUpload = async (e) => {
     const file = e.target.files?.[0];
@@ -234,13 +242,9 @@ const AddPurchase = ({ open, onClose }) => {
               
               {/* Top Section */}
               <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                <div className="space-y-1.5 md:col-span-2">
+                <div className="space-y-1.5 md:col-span-3">
                   <label className="label">Supplier <span className="required">*</span></label>
                   <Input type="select" name="supplierId" value={formData.supplierId} onChange={handleChange} options={[{value: "", label: "Select Supplier"}, ...suppliers]} required />
-                </div>
-                <div className="space-y-1.5">
-                  <label className="label">Invoice Number <span className="required">*</span></label>
-                  <Input name="invoiceNumber" value={formData.invoiceNumber} onChange={handleChange} required placeholder="INV-2023-001" />
                 </div>
                 <div className="space-y-1.5">
                   <label className="label">Purchase Date <span className="required">*</span></label>
@@ -381,10 +385,19 @@ const AddPurchase = ({ open, onClose }) => {
                     <span>Rs. {formData.grandTotal.toFixed(2)}</span>
                   </div>
 
-                  <div className="flex items-center justify-between text-sm font-semibold text-gray-800 pt-2 gap-4">
-                    <span>Amount Paid</span>
-                    <Input type="number" name="paidAmount" value={formData.paidAmount} onChange={handleChange} className="w-32 text-right font-semibold text-primary py-1 h-9 bg-primary/5 border-primary/20" />
-                  </div>
+                  {formData.paymentStatus === "PARTIAL" && (
+                    <div className="flex items-center justify-between text-sm font-semibold text-gray-800 pt-2 gap-4">
+                      <span>Amount Paid</span>
+                      <Input type="number" name="paidAmount" value={formData.paidAmount} onChange={handleChange} className="w-32 text-right font-semibold text-primary py-1 h-9 bg-primary/5 border-primary/20" />
+                    </div>
+                  )}
+                  {formData.paymentStatus === "PAID" && (
+                    <div className="flex justify-between text-sm text-emerald-600 items-center pt-3 border-t border-gray-100">
+                      <span className="font-semibold">Fully Paid Amount:</span>
+                      <span className="font-bold text-lg">Rs. {formData.grandTotal.toFixed(2)}</span>
+                    </div>
+                  )}
+
                   <div className="flex justify-between text-sm font-medium text-rose-600 pt-1">
                     <span>Balance Due</span>
                     <span>Rs. {formData.dueAmount.toFixed(2)}</span>

@@ -15,13 +15,35 @@ import { useRouter } from "next/router";
 
 const categoryOptions = [
   { value: "all", label: "All Categories" },
-  { value: "Card Design", label: "Card Design" },
-  { value: "Flex Design", label: "Flex Design" },
-  { value: "Banner", label: "Banner" },
-  { value: "Sticker", label: "Sticker" },
-  { value: "Signage Board", label: "Signage Board" },
-  { value: "Other", label: "Other" },
+  { value: "CARD_DESIGN", label: "Card Design" },
+  { value: "FLEX_DESIGN", label: "Flex Design" },
+  { value: "BANNER", label: "Banner" },
+  { value: "STICKER", label: "Sticker" },
+  { value: "SIGNAGE_BOARD", label: "Signage Board" },
+  { value: "OTHER", label: "Other" },
 ];
+
+const sizeOptions = [
+  { value: "STANDARD", label: "Standard" },
+  { value: "EIGHT_BY_FOUR", label: "8x4 ft" },
+  { value: "SIX_BY_FOUR", label: "6x4 ft" },
+  { value: "THREE_BY_TWO", label: "3x2 ft" },
+  { value: "CUSTOM", label: "Custom" },
+];
+
+const unitOptions = [
+  { value: "PER_PIECE", label: "Per Piece" },
+  { value: "PER_SQ_FT", label: "Per Sq Ft" },
+  { value: "PER_SET", label: "Per Set" },
+  { value: "CUSTOM", label: "Custom" },
+];
+
+const formatEnum = (value, options) => {
+  if (!value) return "—";
+  const option = options?.find(o => o.value === value);
+  if (option) return option.label;
+  return value.split('_').map(word => word.charAt(0) + word.slice(1).toLowerCase()).join(' ');
+};
 
 const PriceList = () => {
   const router = useRouter();
@@ -45,11 +67,14 @@ const PriceList = () => {
         id: i.id,
         name: i.name,
         category: i.category,
-        size: i.size || 'Standard',
+        otherLabel: i.otherLabel,
+        size: i.size,
+        sizeOther: i.sizeOther,
         price: i.price,
-        unit: i.unit,
-        notes: i.notes || '',
-        image: i.imageUrl || ''
+        priceUnit: i.priceUnit,
+        unitOther: i.unitOther,
+        note: i.note || '',
+        imageUrl: i.imageUrl || ''
       })));
     } catch (error) {
       toast.error('Failed to load price list');
@@ -79,7 +104,7 @@ const PriceList = () => {
 
   // KPIs
   const totalItems = items.length;
-  const designItems = items.filter(i => i.category.includes("Design")).length;
+  const designItems = items.filter(i => i.category === "CARD_DESIGN" || i.category === "FLEX_DESIGN").length;
   const printItems = totalItems - designItems; // Just as an example metric
 
   return (
@@ -183,22 +208,30 @@ const PriceList = () => {
                         className="border-b border-gray-50 hover:bg-gray-50/50 transition-colors cursor-pointer"
                       >
                         <td className="px-4 py-3">
-                          <div className="font-semibold text-gray-900">{item.name}</div>
-                          <div className="text-[10px] text-gray-500">{item.id}</div>
+                          <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-md overflow-hidden bg-gray-100 flex items-center justify-center border border-gray-200 shrink-0">
+                              {item.imageUrl ? (
+                                <img src={item.imageUrl} alt={item.name} className="w-full h-full object-cover" />
+                              ) : (
+                                <Icons name="Image" size={16} className="text-gray-400" />
+                              )}
+                            </div>
+                            <div className="font-semibold text-gray-900">{item.name}</div>
+                          </div>
                         </td>
                         <td className="px-4 py-3 text-gray-700">
                            <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-800">
-                             {item.category}
+                             {item.category === "OTHER" ? item.otherLabel : formatEnum(item.category, categoryOptions)}
                            </span>
                         </td>
                         <td className="px-4 py-3 text-gray-700">
-                          {item.size}
+                          {item.size === "CUSTOM" ? item.sizeOther : formatEnum(item.size, sizeOptions)}
                         </td>
                         <td className="px-4 py-3 text-right font-medium text-gray-900">
                           Rs. {item.price}
                         </td>
                         <td className="px-4 py-3 text-gray-600">
-                          {item.unit}
+                          {item.priceUnit === "CUSTOM" ? item.unitOther : formatEnum(item.priceUnit, unitOptions)}
                         </td>
                         <td className="px-4 py-3 text-center" onClick={(e) => e.stopPropagation()}>
                           <div className="flex items-center justify-center gap-2">

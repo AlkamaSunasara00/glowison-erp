@@ -104,6 +104,7 @@ enum StockTransactionType {
 enum PurchasePaymentStatus {
   PAID
   PENDING
+  PARTIAL
 }
 
 enum PurchaseDeliveryStatus {

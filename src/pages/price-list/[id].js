@@ -12,7 +12,7 @@ const PriceListDetailPage = () => {
 
   useEffect(() => {
     if (id) {
-      api.get(`/products/${id}`)
+      api.get(`/price-list/${id}`)
         .then(res => {
           setItem(res.data.data);
           setLoading(false);

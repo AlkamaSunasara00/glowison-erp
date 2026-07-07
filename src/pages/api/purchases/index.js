@@ -68,7 +68,7 @@ const handler = async (req, res) => {
         // 1. Create Purchase and PurchaseItems
         const purchase = await tx.purchase.create({
           data: {
-            invoiceNumber,
+            invoiceNumber: invoiceNumber || `PINV-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
             supplierId,
             purchaseDate: new Date(purchaseDate),
             paymentMethod,
