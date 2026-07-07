@@ -117,6 +117,8 @@ enum PaymentMethod {
   UPI
   CHEQUE
   CREDIT
+  CARD
+  OTHER
 }
 
 enum SupplierStatus {
@@ -418,22 +420,55 @@ model Expense {
   @@index([status])
 }
 
+model InvoiceItem {
+  id          String   @id @default(uuid())
+  invoice     Invoice  @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  invoiceId   String
+  product     String
+  description String?
+  quantity    Int
+  unit        String
+  unitPrice   Decimal  @db.Decimal(10, 2)
+  discount    Decimal  @default(0) @db.Decimal(10, 2)
+  taxRate     Decimal  @default(0) @db.Decimal(10, 2)
+  taxAmount   Decimal  @default(0) @db.Decimal(10, 2)
+  lineTotal   Decimal  @db.Decimal(10, 2)
+}
+
 model Invoice {
-  id         String        @id @default(uuid())
-  customer   Customer      @relation(fields: [customerId], references: [id])
-  customerId String
-  order      Order?        @relation(fields: [orderId], references: [id])
-  orderId    String?
-  items      Json          // Storing snapshot of line items
-  total      Decimal       @db.Decimal(10, 2)
-  template   String        @default("default")
-  status     InvoiceStatus @default(DRAFT)
-  pdfUrl     String?       // Cloudinary URL if uploaded
-  createdAt  DateTime      @default(now())
-  updatedAt  DateTime      @updatedAt
+  id              String        @id @default(uuid())
+  invoiceNumber   String        @unique
+  invoiceDate     DateTime      @default(now())
+  dueDate         DateTime?
+  customer        Customer      @relation(fields: [customerId], references: [id])
+  customerId      String
+  order           Order?        @relation(fields: [orderId], references: [id])
+  orderId         String?
+  items           InvoiceItem[]
+  
+  subtotal        Decimal       @default(0) @db.Decimal(10, 2)
+  discount        Decimal       @default(0) @db.Decimal(10, 2)
+  tax             Decimal       @default(0) @db.Decimal(10, 2)
+  shippingCharges Decimal       @default(0) @db.Decimal(10, 2)
+  grandTotal      Decimal       @default(0) @db.Decimal(10, 2)
+  paidAmount      Decimal       @default(0) @db.Decimal(10, 2)
+  dueAmount       Decimal       @default(0) @db.Decimal(10, 2)
+
+  paymentStatus   PaymentStatus @default(UNPAID)
+  paymentMethod   PaymentMethod?
+  
+  template        String        @default("classic")
+  status          InvoiceStatus @default(DRAFT)
+  pdfUrl          String?       // Cloudinary URL if uploaded
+  notes           String?
+  createdBy       String?
+  
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
 
   @@index([customerId])
   @@index([status])
+  @@index([invoiceNumber])
 }
 
 model Quotation {

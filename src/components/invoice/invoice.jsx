@@ -8,15 +8,16 @@ import Icons from "@/common/Icons";
 import Input from "@/common/Input";
 import StatusBadge from "@/common/StatusBadge";
 import AddInvoice from "./invoiceModal/AddInvoice";
+import EditInvoice from "./invoiceModal/EditInvoice";
 import DeleteConfirmModal from "@/common/DeleteConfirmModal";
-
 
 const statusOptions = [
   { value: "all", label: "All Statuses" },
-  { value: "Draft", label: "Draft" },
-  { value: "Sent", label: "Sent" },
-  { value: "Paid", label: "Paid" },
-  { value: "Overdue", label: "Overdue" },
+  { value: "DRAFT", label: "Draft" },
+  { value: "SENT", label: "Sent" },
+  { value: "PAID", label: "Paid" },
+  { value: "OVERDUE", label: "Overdue" },
+  { value: "CANCELLED", label: "Cancelled" },
 ];
 
 export const Invoice = () => {
@@ -26,6 +27,8 @@ export const Invoice = () => {
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [invoices, setInvoices] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [editItem, setEditItem] = useState(null);
+  const [deleteItem, setDeleteItem] = useState(null);
 
   const fetchInvoices = async () => {
     try {
@@ -33,13 +36,13 @@ export const Invoice = () => {
       const res = await api.get('/invoices?limit=200');
       setInvoices(res.data.data.map(i => ({
         id: i.id,
-        orderId: i.orderId || null,
+        invoiceNumber: i.invoiceNumber,
+        orderCode: i.order?.orderNumber ? `ORD-${String(i.order.orderNumber).padStart(6, '0')}` : null,
         customer: i.customer?.name || "Unknown",
-        date: new Date(i.createdAt).toLocaleDateString('en-CA'),
-        dueDate: new Date(i.createdAt).toLocaleDateString('en-CA'), // TODO: add dueDate logic if needed
-        amount: Number(i.total),
-        tax: 0,
-        status: i.status.charAt(0).toUpperCase() + i.status.slice(1).toLowerCase()
+        date: i.invoiceDate ? new Date(i.invoiceDate).toLocaleDateString('en-CA') : new Date(i.createdAt).toLocaleDateString('en-CA'),
+        dueDate: i.dueDate ? new Date(i.dueDate).toLocaleDateString('en-CA') : "-",
+        amount: Number(i.grandTotal),
+        status: i.status
       })));
     } catch (error) {
       toast.error('Failed to load invoices');
@@ -52,13 +55,13 @@ export const Invoice = () => {
     fetchInvoices();
   }, []);
 
-  const [deleteItem, setDeleteItem] = useState(null);
-
   // Filters
   const hasActiveFilters = statusFilter !== "all";
   const filteredInvoices = invoices.filter((invoice) => {
     const query = search.trim().toLowerCase();
-    const matchesSearch = query.length === 0 || invoice.id.toLowerCase().includes(query) || invoice.customer.toLowerCase().includes(query);
+    const matchesSearch = query.length === 0 || 
+      (invoice.invoiceNumber && invoice.invoiceNumber.toLowerCase().includes(query)) || 
+      invoice.customer.toLowerCase().includes(query);
     const matchesStatus = statusFilter === "all" || invoice.status === statusFilter;
 
     return matchesSearch && matchesStatus;
@@ -66,12 +69,25 @@ export const Invoice = () => {
 
   // KPIs
   const totalInvoiced = invoices.reduce((sum, i) => sum + i.amount, 0);
-  const collected = invoices.filter(i => i.status === "Paid").reduce((sum, i) => sum + i.amount, 0);
-  const overdue = invoices.filter(i => i.status === "Overdue").reduce((sum, i) => sum + i.amount, 0);
-  const outstanding = invoices.filter(i => i.status === "Sent" || i.status === "Overdue").reduce((sum, i) => sum + i.amount, 0);
+  const collected = invoices.filter(i => i.status === "PAID").reduce((sum, i) => sum + i.amount, 0);
+  const overdue = invoices.filter(i => i.status === "OVERDUE").reduce((sum, i) => sum + i.amount, 0);
+  const outstanding = invoices.filter(i => i.status === "SENT" || i.status === "OVERDUE" || i.status === "DRAFT").reduce((sum, i) => sum + i.amount, 0);
 
-  const handleRowClick = (invoice) => {
-    router.push(`/invoice/${invoice.id}`);
+  const handleRowClick = (invoiceId) => {
+    router.push(`/invoice/${invoiceId}`);
+  };
+
+  const handleDuplicate = async (invoiceId) => {
+    try {
+      const res = await api.get(`/invoices/${invoiceId}`);
+      const original = res.data.data;
+      const { id, invoiceNumber, createdAt, updatedAt, ...copyData } = original;
+      await api.post('/invoices', { ...copyData, status: 'DRAFT' });
+      toast.success("Invoice duplicated successfully");
+      fetchInvoices();
+    } catch (error) {
+      toast.error("Failed to duplicate invoice");
+    }
   };
 
   return (
@@ -159,37 +175,51 @@ export const Invoice = () => {
                   <tr>
                     <th className="px-4 py-3">Invoice Number</th>
                     <th className="px-4 py-3">Customer</th>
-                    <th className="px-4 py-3">Date</th>
+                    <th className="px-4 py-3">Invoice Date</th>
                     <th className="px-4 py-3">Due Date</th>
-                    <th className="px-4 py-3 text-right">Amount</th>
-                    <th className="px-4 py-3">Status</th>
-                    <th className="px-4 py-3 text-center">Actions</th>
+                    <th className="px-4 py-3 text-right">Grand Total</th>
+                    <th className="px-4 py-3 text-center">Status</th>
+                    <th className="px-4 py-3 text-right">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="text-sm">
                   {filteredInvoices.map(invoice => (
                     <tr 
                       key={invoice.id} 
-                      onClick={() => handleRowClick(invoice)}
+                      onClick={() => handleRowClick(invoice.id)}
                       className="border-b border-gray-50 hover:bg-gray-50/50 cursor-pointer transition-colors"
                     >
                       <td className="px-4 py-3">
-                         <div className="font-semibold text-primary">{invoice.id}</div>
-                         {invoice.orderId && <div className="text-[10px] text-gray-400">Order: {invoice.orderId}</div>}
+                         <div className="font-semibold text-primary">{invoice.invoiceNumber}</div>
+                         {invoice.orderCode && <div className="text-[10px] text-gray-400">Order: {invoice.orderCode}</div>}
                       </td>
                       <td className="px-4 py-3 font-medium text-gray-900">{invoice.customer}</td>
                       <td className="px-4 py-3 text-gray-500">{invoice.date}</td>
                       <td className="px-4 py-3 text-gray-500">{invoice.dueDate}</td>
                       <td className="px-4 py-3 text-right font-medium text-gray-900">
-                        Rs. {invoice.amount.toLocaleString()}
+                        Rs. {invoice.amount.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}
                       </td>
-                      <td className="px-4 py-3">
+                      <td className="px-4 py-3 text-center">
                          <StatusBadge status={invoice.status} />
                       </td>
-                      <td className="px-4 py-3 text-center" onClick={(e) => e.stopPropagation()}>
-                        <Button variant="ghost" size="sm" onClick={() => setDeleteItem(invoice)} className="px-2!">
-                          <Icons name="Trash2" size={16} className="text-gray-400 hover:text-rose-500 transition-colors" />
-                        </Button>
+                      <td className="px-4 py-3 text-right" onClick={(e) => e.stopPropagation()}>
+                        <div className="flex items-center justify-end gap-1">
+                          <Button variant="ghost" size="sm" onClick={() => handleRowClick(invoice.id)} className="px-2!" title="View / Print">
+                            <Icons name="Eye" size={16} className="text-gray-400 hover:text-blue-500 transition-colors" />
+                          </Button>
+                          <Button variant="ghost" size="sm" onClick={async () => {
+                              const res = await api.get(`/invoices/${invoice.id}`);
+                              setEditItem(res.data.data);
+                          }} className="px-2!" title="Edit">
+                            <Icons name="Edit" size={16} className="text-gray-400 hover:text-primary transition-colors" />
+                          </Button>
+                          <Button variant="ghost" size="sm" onClick={() => handleDuplicate(invoice.id)} className="px-2!" title="Duplicate">
+                            <Icons name="Copy" size={16} className="text-gray-400 hover:text-green-500 transition-colors" />
+                          </Button>
+                          <Button variant="ghost" size="sm" onClick={() => setDeleteItem(invoice)} className="px-2!" title="Delete">
+                            <Icons name="Trash2" size={16} className="text-gray-400 hover:text-rose-500 transition-colors" />
+                          </Button>
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -200,17 +230,18 @@ export const Invoice = () => {
         )}
       </div>
 
-      {isAddOpen && <AddInvoice open={isAddOpen} onClose={() => { setIsAddOpen(false); fetchInvoices(); }} />}
+      {isAddOpen && <AddInvoice open={isAddOpen} onClose={() => setIsAddOpen(false)} onSuccess={fetchInvoices} />}
+      {editItem && <EditInvoice open={!!editItem} initialData={editItem} onClose={() => setEditItem(null)} onSuccess={fetchInvoices} />}
       {deleteItem && (
         <DeleteConfirmModal
           open={!!deleteItem}
           onClose={() => setDeleteItem(null)}
-          entityName={deleteItem.id}
+          entityName={deleteItem.invoiceNumber}
           onConfirm={async () => {
             try {
               await api.delete(`/invoices/${deleteItem.id}`);
               toast.success("Invoice deleted");
-              setInvoices(invoices.filter(i => i.id !== deleteItem.id));
+              fetchInvoices();
             } catch (err) {
               toast.error("Failed to delete invoice");
             }

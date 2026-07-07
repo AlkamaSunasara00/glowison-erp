@@ -8,7 +8,9 @@ const handler = async (req, res) => {
       const skip = (page - 1) * limit;
       
       const where = {};
-      // Customize where clause if needed
+      if (search) {
+        where.invoiceNumber = { contains: search, mode: 'insensitive' };
+      }
 
       const [total, items] = await Promise.all([
         prisma.invoice.count({ where }),
@@ -16,7 +18,8 @@ const handler = async (req, res) => {
           where,
           skip: parseInt(skip),
           take: parseInt(limit),
-          orderBy: { createdAt: 'desc' }
+          orderBy: { createdAt: 'desc' },
+          include: { customer: true, order: true }
         })
       ]);
 
@@ -33,15 +36,55 @@ const handler = async (req, res) => {
     }
 
     if (req.method === 'POST') {
-      const item = await prisma.invoice.create({ data: req.body });
-      return res.status(201).json({ success: true, message: 'Created successfully', data: item });
+      const { items, ...invoiceData } = req.body;
+      
+      // Auto-generate Invoice Number
+      const lastInvoice = await prisma.invoice.findFirst({
+        orderBy: { createdAt: 'desc' }
+      });
+      
+      let nextNumber = 1;
+      if (lastInvoice && lastInvoice.invoiceNumber) {
+        const lastNumMatch = lastInvoice.invoiceNumber.match(/\d+$/);
+        if (lastNumMatch) {
+          nextNumber = parseInt(lastNumMatch[0]) + 1;
+        }
+      }
+      
+      const invoiceNumber = `INV-${String(nextNumber).padStart(6, '0')}`;
+      
+      // Prepare invoice data
+      const dataToSave = {
+        ...invoiceData,
+        invoiceNumber,
+        items: items && items.length > 0 ? {
+          create: items.map(item => ({
+            product: item.product,
+            description: item.description || null,
+            quantity: Number(item.quantity) || 1,
+            unit: item.unit || "Piece",
+            unitPrice: Number(item.unitPrice) || 0,
+            discount: Number(item.discount) || 0,
+            taxRate: Number(item.taxRate) || 0,
+            taxAmount: Number(item.taxAmount) || 0,
+            lineTotal: Number(item.lineTotal) || 0
+          }))
+        } : undefined
+      };
+
+      const invoice = await prisma.invoice.create({ 
+        data: dataToSave,
+        include: { items: true, customer: true }
+      });
+      
+      return res.status(201).json({ success: true, message: 'Created successfully', data: invoice });
     }
 
     res.setHeader('Allow', ['GET', 'POST']);
     return res.status(405).end(`Method ${req.method} Not Allowed`);
   } catch (error) {
     console.error(error);
-    return res.status(500).json({ success: false, message: 'Internal Server Error' });
+    return res.status(500).json({ success: false, message: error.message || 'Internal Server Error' });
   }
 };
 
