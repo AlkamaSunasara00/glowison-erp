@@ -206,15 +206,6 @@ const LeadDetail = ({ open, onClose, lead, isPage = false, onLeadUpdated }) => {
                   >
                     Call
                   </Button>
-                  <Button
-                    variant="outline"
-                    size="md"
-                    leftIcon={(props) => <LeadActionIcon name="FileText" {...props} />}
-                    className="w-full justify-start rounded-lg px-3! py-2! text-xs font-medium"
-                    onClick={() => router.push('/quotation')}
-                  >
-                    Quotation
-                  </Button>
                 </div>
               </section>
 

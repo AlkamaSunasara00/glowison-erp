@@ -123,17 +123,17 @@ const AddSupplier = ({ open, onClose }) => {
               
               <div className="space-y-1.5">
                 <label className="label">Mobile Number <span className="required">*</span></label>
-                <Input name="mobile" value={formData.mobile} onChange={handleChange} required placeholder="9876543210" />
+                <Input name="mobile" value={formData.mobile} onChange={handleChange} type="tel" pattern="[0-9]{10}" minLength={10} maxLength={10} title="Phone number must be exactly 10 digits" onKeyPress={(e) => { if (!/[0-9]/.test(e.key)) e.preventDefault(); }} required placeholder="9876543210" />
               </div>
 
               <div className="space-y-1.5">
                 <label className="label">Alternate Mobile</label>
-                <Input name="alternateMobile" value={formData.alternateMobile} onChange={handleChange} placeholder="9876543211" />
+                <Input name="alternateMobile" value={formData.alternateMobile} onChange={handleChange} type="tel" pattern="[0-9]{10}" minLength={10} maxLength={10} title="Phone number must be exactly 10 digits" onKeyPress={(e) => { if (!/[0-9]/.test(e.key)) e.preventDefault(); }} placeholder="9876543211" />
               </div>
 
               <div className="space-y-1.5">
-                <label className="label">Email Address <span className="required">*</span></label>
-                <Input type="email" name="email" value={formData.email} onChange={handleChange} required placeholder="john@acme.com" />
+                <label className="label">Email Address</label>
+                <Input type="email" name="email" value={formData.email} onChange={handleChange} placeholder="john@acme.com" />
               </div>
 
               <div className="space-y-1.5 md:col-span-2 border-b pb-4 mt-2 mb-2">

@@ -70,7 +70,8 @@ const PriceList = () => {
         otherLabel: i.otherLabel,
         size: i.size,
         sizeOther: i.sizeOther,
-        price: i.price,
+        clientPrice: i.clientPrice || i.price,
+        b2bPrice: i.b2bPrice,
         priceUnit: i.priceUnit,
         unitOther: i.unitOther,
         note: i.note || '',
@@ -195,7 +196,8 @@ const PriceList = () => {
                     <th className="px-4 py-3">Item Name</th>
                     <th className="px-4 py-3">Category</th>
                     <th className="px-4 py-3">Size</th>
-                    <th className="px-4 py-3 text-right">Price</th>
+                    <th className="px-4 py-3 text-right">Client Price</th>
+                    <th className="px-4 py-3 text-right">B2B Price</th>
                     <th className="px-4 py-3">Unit</th>
                     <th className="px-4 py-3 text-center">Actions</th>
                   </tr>
@@ -228,7 +230,10 @@ const PriceList = () => {
                           {item.size === "CUSTOM" ? item.sizeOther : formatEnum(item.size, sizeOptions)}
                         </td>
                         <td className="px-4 py-3 text-right font-medium text-gray-900">
-                          Rs. {item.price}
+                          Rs. {item.clientPrice}
+                        </td>
+                        <td className="px-4 py-3 text-right font-medium text-gray-900">
+                          {item.b2bPrice ? `Rs. ${item.b2bPrice}` : "—"}
                         </td>
                         <td className="px-4 py-3 text-gray-600">
                           {item.priceUnit === "CUSTOM" ? item.unitOther : formatEnum(item.priceUnit, unitOptions)}

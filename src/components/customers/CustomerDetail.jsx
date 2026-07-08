@@ -148,7 +148,7 @@ const CustomerDetail = ({ open, onClose, customer, isPage = false, onCustomerUpd
                 
                 {/* Tabs */}
                 <div className="flex border-b border-gray-200 mb-4">
-                  {["Orders", "Invoices", "Quotations"].map(tab => (
+                  {["Orders", "Invoices"].map(tab => (
                     <button
                       key={tab}
                       onClick={() => setActiveTab(tab)}
@@ -215,30 +215,6 @@ const CustomerDetail = ({ open, onClose, customer, isPage = false, onCustomerUpd
                     </table>
                   )}
 
-                  {activeTab === "Quotations" && (
-                     <table className="w-full text-left border-collapse">
-                     <thead className="bg-gray-50 border-b border-gray-100 text-xs font-semibold text-gray-600">
-                       <tr>
-                         <th className="px-4 py-3">Quotation ID</th>
-                         <th className="px-4 py-3">Date</th>
-                         <th className="px-4 py-3">Est. Amount</th>
-                         <th className="px-4 py-3">Status</th>
-                       </tr>
-                     </thead>
-                     <tbody className="text-sm">
-                       {(data.quotations || []).length === 0 ? (
-                          <tr><td colSpan="4" className="text-center py-4 text-gray-500">No quotations found</td></tr>
-                        ) : (data.quotations || []).map(item => (
-                         <tr key={item.id} onClick={() => router.push(`/quotations/${item.id}`)} className="border-b border-gray-50 hover:bg-gray-50/50 cursor-pointer">
-                           <td className="px-4 py-3 font-medium text-primary">{item.id.slice(0, 8)}</td>
-                           <td className="px-4 py-3 text-gray-500">{formatDate(item.createdAt)}</td>
-                           <td className="px-4 py-3 font-medium text-gray-900">Rs. {item.estimatedPrice}</td>
-                           <td className="px-4 py-3"><StatusBadge status={item.status} /></td>
-                         </tr>
-                       ))}
-                     </tbody>
-                   </table>
-                  )}
                 </div>
               </section>
 

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import {
     LayoutDashboard,
     Users,
@@ -21,11 +22,13 @@ import {
     Palette,
     Brush,
     X,
-    Truck
+    Truck,
+    LogOut
 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/router";
+import { useAuth } from "@/context/AuthContext";
 
 const menuItems = [
     { name: "Dashboard", icon: LayoutDashboard, path: "/" },
@@ -34,18 +37,19 @@ const menuItems = [
     { name: "Orders", icon: ListChecks, path: "/orders" },
     { name: "Inventory", icon: Package, path: "/inventory" },
     { name: "Suppliers", icon: Truck, path: "/suppliers" },
-    { name: "Price List", icon: Palette, path: "/price-list" },
     { name: "Purchase", icon: CheckSquare, path: "/purchase" },
     { name: "Expense", icon: Clipboard, path: "/expense" },
+    { name: "Price List", icon: Palette, path: "/price-list" },
     { name: "Invoice", icon: FileText, path: "/invoice" },
-    { name: "Quotation", icon: Layers, path: "/quotation" },
     { name: "Reports", icon: BarChart, path: "/reports" },
     { name: "Appearance", icon: Brush, path: "/appearance" },
 ];
 
 const Sidebar = ({ setMobileOpen, isMobileOpen }) => {
     const router = useRouter();
+    const { user, logout } = useAuth();
     const [openMenus, setOpenMenus] = useState([]); // Default closed
+    const [showLogoutModal, setShowLogoutModal] = useState(false);
 
     useEffect(() => {
         // Find which menu item has active child or segment and add it to openMenus
@@ -200,21 +204,58 @@ const Sidebar = ({ setMobileOpen, isMobileOpen }) => {
 
             {/* Bottom User - Sticky Bottom */}
             <div className="mt-3 pt-3 pr-2 flex-shrink-0 border-t border-white/10">
-                <div className="flex items-center justify-between bg-secondary/10 p-2 rounded-sm border border-secondary/20 cursor-pointer hover:bg-secondary/20 transition-all">
+                <div className="flex items-center justify-between bg-secondary/10 p-2 rounded-sm border border-secondary/20 transition-all">
                     <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 flex-shrink-0 rounded-full bg-secondary/20 text-white flex items-center justify-center text-sm font-semibold border border-white/10">
-                            JD
+                        <div className="w-10 h-10 flex-shrink-0 rounded-full bg-secondary/20 text-white flex items-center justify-center text-sm font-semibold border border-white/10 uppercase">
+                            {user?.name ? user.name.substring(0,2) : "AD"}
                         </div>
                         <div className={`transition-all duration-300 ${isMobileOpen ? "opacity-100 w-auto" : "opacity-0 w-0 lg:opacity-100 lg:w-auto overflow-hidden"}`}>
-                            <p className="text-sm font-medium text-white truncate max-w-[120px]">John Doe..</p>
-                            <p className="text-[10px] text-white/50 tracking-wider">Admin</p>
+                            <p className="text-sm font-medium text-white truncate max-w-[120px] capitalize">{user?.name || "Admin"}</p>
+                            <p className="text-[10px] text-white/50 tracking-wider">Administrator</p>
                         </div>
                     </div>
-                    <div className={`transition-all duration-300 ${isMobileOpen ? "opacity-100" : "opacity-0 lg:opacity-100"}`}>
-                        <ChevronDown size={16} className="text-white/60" />
-                    </div>
+                    <button 
+                        onClick={() => setShowLogoutModal(true)}
+                        title="Logout"
+                        className={`p-2 rounded-md hover:bg-rose-500/20 text-white/60 hover:text-rose-400 transition-all duration-300 ${isMobileOpen ? "opacity-100" : "opacity-0 lg:opacity-100"}`}
+                    >
+                        <LogOut size={16} />
+                    </button>
                 </div>
             </div>
+
+            {/* Logout Confirmation Modal */}
+            {showLogoutModal && typeof window !== 'undefined' && createPortal(
+                <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+                    <div className="bg-white rounded-2xl shadow-xl border border-gray-100 p-6 w-full max-w-sm transform transition-all">
+                        <div className="flex flex-col items-center text-center">
+                            <div className="w-12 h-12 rounded-full bg-rose-100 text-rose-600 flex items-center justify-center mb-4">
+                                <LogOut size={24} />
+                            </div>
+                            <h3 className="text-xl font-bold text-gray-900 mb-2">Confirm Logout</h3>
+                            <p className="text-sm text-gray-500 mb-6">Are you sure you want to log out of your account?</p>
+                            <div className="flex gap-3 w-full">
+                                <button 
+                                    onClick={() => setShowLogoutModal(false)}
+                                    className="flex-1 py-2.5 px-4 rounded-xl font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 transition-colors"
+                                >
+                                    Cancel
+                                </button>
+                                <button 
+                                    onClick={() => {
+                                        setShowLogoutModal(false);
+                                        logout();
+                                    }}
+                                    className="flex-1 py-2.5 px-4 rounded-xl font-medium text-white bg-rose-600 hover:bg-rose-700 transition-colors"
+                                >
+                                    Logout
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>,
+                document.body
+            )}
         </div>
     );
 };

@@ -52,7 +52,8 @@ const PriceListDetail = ({ open, onClose, item, isPage = false }) => {
   const detailInfo = {
     "Category": data.category === "OTHER" ? data.otherLabel : formatEnum(data.category, categoryOptions),
     "Size": data.size === "CUSTOM" ? data.sizeOther : formatEnum(data.size, sizeOptions),
-    "Price": data.price ? `Rs. ${data.price}` : "—",
+    "Client Price": data.clientPrice || data.price ? `Rs. ${data.clientPrice || data.price}` : "—",
+    "B2B Price": data.b2bPrice ? `Rs. ${data.b2bPrice}` : "—",
     "Unit": data.priceUnit === "CUSTOM" ? data.unitOther : formatEnum(data.priceUnit, unitOptions),
     "Notes": data.note || "—",
   };
@@ -162,9 +163,17 @@ const PriceListDetail = ({ open, onClose, item, isPage = false }) => {
                 <h3 className="text-sm font-bold text-gray-800 tracking-wide uppercase mb-4">
                   Pricing Summary
                 </h3>
-                <div className="bg-primary/5 border border-primary/10 rounded-xl p-6 flex flex-col items-center justify-center text-center shadow-sm">
-                   <span className="text-sm font-semibold text-primary/80 mb-2">{data.priceUnit === "CUSTOM" ? data.unitOther : formatEnum(data.priceUnit, unitOptions)}</span>
-                   <span className="text-4xl font-bold text-primary">Rs. {data.price}</span>
+                <div className="bg-primary/5 border border-primary/10 rounded-xl p-6 flex flex-col gap-4 shadow-sm">
+                   <div className="flex flex-col items-center justify-center text-center">
+                     <span className="text-sm font-semibold text-primary/80 mb-1">Client Price ({data.priceUnit === "CUSTOM" ? data.unitOther : formatEnum(data.priceUnit, unitOptions)})</span>
+                     <span className="text-3xl font-bold text-primary">Rs. {data.clientPrice || data.price}</span>
+                   </div>
+                   {data.b2bPrice && (
+                     <div className="flex flex-col items-center justify-center text-center border-t border-primary/10 pt-4">
+                       <span className="text-sm font-semibold text-primary/80 mb-1">B2B Price ({data.priceUnit === "CUSTOM" ? data.unitOther : formatEnum(data.priceUnit, unitOptions)})</span>
+                       <span className="text-3xl font-bold text-primary">Rs. {data.b2bPrice}</span>
+                     </div>
+                   )}
                 </div>
               </section>
             </div>

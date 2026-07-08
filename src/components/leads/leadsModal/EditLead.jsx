@@ -97,8 +97,8 @@ const EditLead = ({ open, onClose, initialData, onSuccess }) => {
       setIsSubmitting(true);
       const payload = {
         name: formData.name,
-        phone: formData.phone || undefined,
-        email: formData.email || undefined,
+        phone: formData.phone || "",
+        email: formData.email || null,
         source: formData.source,
         sourceOther: formData.source === "OTHER" ? formData.otherSource : undefined,
         interest: formData.productInterest,

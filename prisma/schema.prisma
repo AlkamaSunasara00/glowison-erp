@@ -163,17 +163,6 @@ enum InvoiceStatus {
   CANCELLED
 }
 
-enum QuotationStatus {
-  DRAFT
-  SENT
-  ACCEPTED
-  REJECTED
-}
-
-enum QuotationType {
-  CUSTOMER
-  LEAD
-}
 
 // Price List Enums
 enum PriceListCategory {
@@ -236,6 +225,7 @@ model Customer {
   phone      String
   email      String?
   company    String?
+  gstin      String?
   type       CustomerType @default(RETAIL)
   address    String?
   notes      String?
@@ -335,7 +325,7 @@ model Supplier {
   contactPerson   String
   mobile          String
   alternateMobile String?
-  email           String
+  email           String?
   gstNumber       String?
   panNumber       String?
   address         String
@@ -473,23 +463,6 @@ model Invoice {
   @@index([invoiceNumber])
 }
 
-model Quotation {
-  id             String          @id @default(uuid())
-  type           QuotationType   @default(CUSTOMER)
-  entityId       String?         // Relates to either Customer ID or Lead ID
-  entityName     String?         // Used if customer/lead is not saved in DB
-  productName    String
-  items          Json            // Storing line items with specific quotation prices/units
-  estimatedPrice Decimal         @db.Decimal(10, 2)
-  estimatedTime  String?
-  status         QuotationStatus @default(DRAFT)
-  images         String[]        // Cloudinary URLs
-  pdfUrl         String?         // Cloudinary URL
-  createdAt      DateTime        @default(now())
-  updatedAt      DateTime        @updatedAt
-
-  @@index([status])
-}
 
 model PriceListItem {
   id         String            @id @default(uuid())
@@ -498,9 +471,10 @@ model PriceListItem {
   name       String
   size       PriceListSize
   sizeOther  String?           // Used if size is CUSTOM
-  price      Decimal           @db.Decimal(10, 2)
   priceUnit  PriceUnit
   unitOther  String?           // Used if priceUnit is CUSTOM
+  clientPrice Decimal          @map("price") @db.Decimal(10, 2)
+  b2bPrice    Decimal?         @db.Decimal(10, 2)
   note       String?
   imageUrl   String?           // Cloudinary URL
   createdAt  DateTime          @default(now())

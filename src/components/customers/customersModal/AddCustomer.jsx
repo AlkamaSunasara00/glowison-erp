@@ -119,8 +119,8 @@ const AddCustomer = ({ open, onClose }) => {
               </div>
               
               <div className="space-y-1.5">
-                <label className="label">GSTIN {formData.type === 'Retail' ? '(Optional)' : <span className="required">*</span>}</label>
-                <Input name="gstin" value={formData.gstin} onChange={handleChange} placeholder="e.g. 22AAAAA0000A1Z5" required={formData.type !== 'Retail'} />
+                <label className="label">GSTIN (Optional)</label>
+                <Input name="gstin" value={formData.gstin} onChange={handleChange} placeholder="e.g. 22AAAAA0000A1Z5" />
               </div>
 
               <div className="space-y-1.5">

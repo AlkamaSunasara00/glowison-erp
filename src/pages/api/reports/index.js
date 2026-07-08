@@ -65,10 +65,31 @@ const handler = async (req, res) => {
         salesTrend[dateString] += Number(order.total);
     });
 
-    const salesTrendData = Object.keys(salesTrend).sort().map(date => ({
-        date,
-        revenue: salesTrend[date]
-    }));
+    // Aggregate Expenses by Date
+    const expenseTrend = {};
+    const expensesForTrend = await prisma.expense.findMany({
+      where: dateFilter,
+      select: { amount: true, spentOn: true }
+    });
+
+    expensesForTrend.forEach(exp => {
+      const dateString = exp.spentOn.toISOString().split('T')[0];
+      if (!expenseTrend[dateString]) expenseTrend[dateString] = 0;
+      expenseTrend[dateString] += Number(exp.amount);
+    });
+
+    const allDates = new Set([...Object.keys(salesTrend), ...Object.keys(expenseTrend)]);
+
+    const salesTrendData = Array.from(allDates).sort().map(date => {
+        const revenue = salesTrend[date] || 0;
+        const expense = expenseTrend[date] || 0;
+        return {
+          date,
+          revenue,
+          expense,
+          profit: revenue - expense
+        };
+    });
 
     // 2. Leads Data
     const leads = await prisma.lead.findMany({

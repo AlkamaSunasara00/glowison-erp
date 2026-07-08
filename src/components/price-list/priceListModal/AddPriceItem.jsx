@@ -36,7 +36,8 @@ const initialFormData = {
   otherLabel: "",
   size: "STANDARD",
   sizeOther: "",
-  price: "",
+  clientPrice: "",
+  b2bPrice: "",
   priceUnit: "PER_PIECE",
   unitOther: "",
   note: "",
@@ -98,7 +99,8 @@ const AddPriceItem = ({ open, onClose }) => {
         otherLabel: formData.category === "OTHER" ? formData.otherLabel : null,
         size: formData.size,
         sizeOther: formData.size === "CUSTOM" ? formData.sizeOther : null,
-        price: Number(formData.price),
+        clientPrice: Number(formData.clientPrice),
+        b2bPrice: formData.b2bPrice ? Number(formData.b2bPrice) : null,
         priceUnit: formData.priceUnit,
         unitOther: formData.priceUnit === "CUSTOM" ? formData.unitOther : null,
         note: formData.note,
@@ -180,8 +182,13 @@ const AddPriceItem = ({ open, onClose }) => {
               {formData.size !== "CUSTOM" && <div className="hidden md:block"></div>}
 
               <div className="space-y-1.5">
-                <label className="label">Price (Rs.) <span className="required">*</span></label>
-                <Input type="number" name="price" value={formData.price} onChange={handleChange} min="0" step="any" required />
+                <label className="label">Client Price (Rs.) <span className="required">*</span></label>
+                <Input type="number" name="clientPrice" value={formData.clientPrice} onChange={handleChange} min="0" step="any" required />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="label">B2B Price (Rs.) (Optional)</label>
+                <Input type="number" name="b2bPrice" value={formData.b2bPrice} onChange={handleChange} min="0" step="any" />
               </div>
 
               <div className="space-y-1.5">

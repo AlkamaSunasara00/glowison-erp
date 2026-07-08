@@ -79,7 +79,7 @@ const getTagStyles = (tag) => {
   if (t.includes("overdue") || t.includes("urgent") || t.includes("budget") || t.includes("lost")) {
     return "bg-rose-50 text-rose-700 border border-rose-100/80";
   }
-  if (t.includes("won") || t.includes("success") || t.includes("quotation")) {
+  if (t.includes("won") || t.includes("success")) {
     return "bg-emerald-50 text-emerald-700 border border-emerald-100/80";
   }
   if (t.includes("pending") || t.includes("meeting") || t.includes("demo")) {

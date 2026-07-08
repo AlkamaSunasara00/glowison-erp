@@ -7,30 +7,103 @@ const handler = async (req, res) => {
   }
 
   try {
-    const data = [];
-    for (let i = 5; i >= 0; i--) {
-      const d = new Date();
-      d.setMonth(d.getMonth() - i);
-      const monthStr = d.toLocaleString('default', { month: 'short' });
-      
-      const start = new Date(d.getFullYear(), d.getMonth(), 1);
-      const end = new Date(d.getFullYear(), d.getMonth() + 1, 0, 23, 59, 59, 999);
-      
-      const agg = await prisma.order.aggregate({
-        where: {
-          createdAt: { gte: start, lte: end },
-          status: 'COMPLETED'
-        },
-        _sum: { total: true }
-      });
-      
-      data.push({
-        name: monthStr,
-        revenue: parseFloat(agg._sum.total || 0)
+    const { month } = req.query; // Expected format: 'YYYY-MM'
+    
+    let targetYear, targetMonth;
+    if (month) {
+      [targetYear, targetMonth] = month.split('-').map(Number);
+      targetMonth -= 1; // JS months are 0-indexed
+    } else {
+      const now = new Date();
+      targetYear = now.getFullYear();
+      targetMonth = now.getMonth();
+    }
+
+    const startDate = new Date(targetYear, targetMonth, 1);
+    const endDate = new Date(targetYear, targetMonth + 1, 0, 23, 59, 59, 999);
+    const daysInMonth = endDate.getDate();
+
+    // Fetch Orders (Revenue)
+    const orders = await prisma.order.findMany({
+      where: {
+        createdAt: { gte: startDate, lte: endDate },
+        status: 'COMPLETED'
+      },
+      select: { total: true, createdAt: true }
+    });
+
+    // Fetch Expenses
+    const expenses = await prisma.expense.findMany({
+      where: {
+        spentOn: { gte: startDate, lte: endDate }
+      },
+      select: { amount: true, spentOn: true }
+    });
+    
+    // Fetch Order Status for the dynamic pie chart
+    const allOrdersInMonth = await prisma.order.findMany({
+      where: {
+        createdAt: { gte: startDate, lte: endDate }
+      },
+      select: { status: true }
+    });
+
+    // Aggregate daily data
+    const dailyData = {};
+    for (let i = 1; i <= daysInMonth; i++) {
+      dailyData[i] = { revenue: 0, expense: 0, profit: 0 };
+    }
+
+    orders.forEach(order => {
+      const day = order.createdAt.getDate();
+      dailyData[day].revenue += Number(order.total) || 0;
+    });
+
+    expenses.forEach(expense => {
+      const day = expense.spentOn.getDate();
+      dailyData[day].expense += Number(expense.amount) || 0;
+    });
+
+    const chartData = [];
+    for (let i = 1; i <= daysInMonth; i++) {
+      const revenue = dailyData[i].revenue;
+      const expense = dailyData[i].expense;
+      const profit = revenue - expense;
+      chartData.push({
+        name: `${i} ${startDate.toLocaleString('default', { month: 'short' })}`,
+        revenue,
+        expense,
+        profit
       });
     }
-    
-    return res.status(200).json({ success: true, data });
+
+    // Aggregate order status
+    const statusCounts = {
+      PENDING: 0,
+      PROCESSING: 0,
+      COMPLETED: 0,
+      CANCELLED: 0
+    };
+    allOrdersInMonth.forEach(order => {
+      if (statusCounts[order.status] !== undefined) {
+        statusCounts[order.status]++;
+      }
+    });
+
+    const orderStatusData = [
+      { name: 'Pending', value: statusCounts.PENDING },
+      { name: 'Processing', value: statusCounts.PROCESSING },
+      { name: 'Completed', value: statusCounts.COMPLETED },
+      { name: 'Cancelled', value: statusCounts.CANCELLED }
+    ].filter(item => item.value > 0);
+
+    return res.status(200).json({ 
+      success: true, 
+      data: {
+        chartData,
+        orderStatusData
+      } 
+    });
   } catch (error) {
     console.error(error);
     return res.status(500).json({ success: false, message: 'Internal Server Error' });

@@ -65,11 +65,11 @@ export const Reports = () => {
     <div className="flex flex-col min-h-screen w-full relative gap-6 p-4 md:p-6 lg:p-8 bg-gray-50/50">
       
       {/* Header & Filters */}
-      <div className="bg-white p-6 md:p-8 rounded-2xl shadow-sm border border-gray-100 flex flex-col gap-6 transition-all">
-        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
-          <div className="space-y-2">
-            <h1 className="text-3xl font-bold text-gray-900 tracking-tight">Reports & Analytics</h1>
-            <p className="text-sm md:text-base text-gray-500 max-w-xl">
+      <div className="flex flex-col gap-4 bg-white p-5 rounded-xl border border-gray-100 shadow-sm">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div className="space-y-1">
+            <h1 className="page-header text-2xl font-bold text-gray-900">Reports & Analytics</h1>
+            <p className="text-sm text-gray-500 max-w-md lg:max-w-xl">
               Gain comprehensive insights into your business performance.
             </p>
           </div>
@@ -102,8 +102,7 @@ export const Reports = () => {
           </div>
         </div>
 
-        {/* Custom Tabs */}
-        <div className="flex flex-wrap gap-2 pt-2 border-t border-gray-100">
+        <div className="flex flex-wrap gap-2 pt-4 border-t border-gray-100 w-full sm:w-auto">
           {reportTabs.map((tab) => {
             const isActive = activeTab === tab.id;
             return (
@@ -111,13 +110,13 @@ export const Reports = () => {
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
                 className={`
-                  flex items-center gap-2 px-5 py-2.5 rounded-full text-sm font-medium transition-all duration-300
+                  flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all
                   ${isActive 
-                    ? "bg-gray-900 text-white shadow-md hover:bg-gray-800 scale-105" 
-                    : "bg-transparent text-gray-600 hover:bg-gray-100 hover:text-gray-900"}
+                    ? "bg-primary text-white shadow-sm" 
+                    : "bg-gray-50 text-gray-600 hover:bg-gray-100 hover:text-gray-900"}
                 `}
               >
-                <Icons name={tab.icon} size={16} className={isActive ? "text-white" : "text-gray-500"} />
+                <Icons name={tab.icon} size={16} />
                 {tab.label}
               </button>
             );
@@ -126,7 +125,7 @@ export const Reports = () => {
       </div>
 
       {/* Content Area */}
-      <div className="w-full">
+      <div className="w-full min-w-0">
         {loading ? (
             <div className="flex justify-center items-center h-64 bg-white rounded-2xl border border-gray-100 shadow-sm">
               <div className="flex flex-col items-center gap-3">
@@ -163,53 +162,60 @@ const OverviewReport = ({ data }) => {
   const { overview } = data;
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-6">
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
       {/* Revenue Card */}
-      <div className="bg-gradient-to-br from-blue-50 to-white p-6 rounded-2xl border border-blue-100/50 shadow-[0_2px_10px_-3px_rgba(59,130,246,0.1)] hover:shadow-[0_8px_20px_-6px_rgba(59,130,246,0.2)] transition-all duration-300 group flex flex-col justify-between">
-         <div className="flex justify-between items-start mb-4">
-            <div className="w-12 h-12 rounded-xl bg-blue-500 text-white flex items-center justify-center shadow-inner group-hover:scale-110 transition-transform duration-300">
-               <Icons name="IndianRupee" size={24} />
-            </div>
-            <span className="text-xs font-bold text-blue-600 bg-blue-100 px-2.5 py-1 rounded-full uppercase tracking-wider">Revenue</span>
+      <div className="bg-white p-5 rounded-xl border border-gray-100 shadow-sm flex items-center justify-between">
+         <div className="flex flex-col gap-1">
+           <span className="text-sm font-medium text-gray-500">Revenue</span>
+           <span className="text-2xl font-bold text-gray-900">{formatCurrency(overview.totalSales)}</span>
          </div>
-         <span className="text-3xl font-extrabold text-gray-900 tracking-tight">{formatCurrency(overview.totalSales)}</span>
-         <span className="text-sm text-gray-500 mt-2 flex items-center gap-1">Total sales generated</span>
+         <div className="w-12 h-12 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center">
+            <Icons name="IndianRupee" size={24} />
+         </div>
       </div>
 
       {/* Orders Card */}
-      <div className="bg-gradient-to-br from-emerald-50 to-white p-6 rounded-2xl border border-emerald-100/50 shadow-[0_2px_10px_-3px_rgba(16,185,129,0.1)] hover:shadow-[0_8px_20px_-6px_rgba(16,185,129,0.2)] transition-all duration-300 group flex flex-col justify-between">
-         <div className="flex justify-between items-start mb-4">
-            <div className="w-12 h-12 rounded-xl bg-emerald-500 text-white flex items-center justify-center shadow-inner group-hover:scale-110 transition-transform duration-300">
-               <Icons name="ShoppingCart" size={24} />
-            </div>
-            <span className="text-xs font-bold text-emerald-600 bg-emerald-100 px-2.5 py-1 rounded-full uppercase tracking-wider">Orders</span>
+      <div className="bg-white p-5 rounded-xl border border-gray-100 shadow-sm flex items-center justify-between">
+         <div className="flex flex-col gap-1">
+           <span className="text-sm font-medium text-gray-500">Orders</span>
+           <span className="text-2xl font-bold text-gray-900">{overview.totalOrders}</span>
          </div>
-         <span className="text-3xl font-extrabold text-gray-900 tracking-tight">{overview.totalOrders}</span>
-         <span className="text-sm text-gray-500 mt-2 flex items-center gap-1">Orders processed</span>
+         <div className="w-12 h-12 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center">
+            <Icons name="ShoppingCart" size={24} />
+         </div>
       </div>
 
       {/* Leads Card */}
-      <div className="bg-gradient-to-br from-amber-50 to-white p-6 rounded-2xl border border-amber-100/50 shadow-[0_2px_10px_-3px_rgba(245,158,11,0.1)] hover:shadow-[0_8px_20px_-6px_rgba(245,158,11,0.2)] transition-all duration-300 group flex flex-col justify-between">
-         <div className="flex justify-between items-start mb-4">
-            <div className="w-12 h-12 rounded-xl bg-amber-500 text-white flex items-center justify-center shadow-inner group-hover:scale-110 transition-transform duration-300">
-               <Icons name="Users" size={24} />
-            </div>
-            <span className="text-xs font-bold text-amber-600 bg-amber-100 px-2.5 py-1 rounded-full uppercase tracking-wider">Leads</span>
+      <div className="bg-white p-5 rounded-xl border border-gray-100 shadow-sm flex items-center justify-between">
+         <div className="flex flex-col gap-1">
+           <span className="text-sm font-medium text-gray-500">Leads</span>
+           <span className="text-2xl font-bold text-gray-900">{overview.totalLeads}</span>
          </div>
-         <span className="text-3xl font-extrabold text-gray-900 tracking-tight">{overview.totalLeads}</span>
-         <span className="text-sm text-gray-500 mt-2 flex items-center gap-1">New prospects added</span>
+         <div className="w-12 h-12 rounded-full bg-indigo-50 text-indigo-600 flex items-center justify-center">
+            <Icons name="Users" size={24} />
+         </div>
       </div>
 
       {/* Expenses Card */}
-      <div className="bg-gradient-to-br from-rose-50 to-white p-6 rounded-2xl border border-rose-100/50 shadow-[0_2px_10px_-3px_rgba(244,63,94,0.1)] hover:shadow-[0_8px_20px_-6px_rgba(244,63,94,0.2)] transition-all duration-300 group flex flex-col justify-between">
-         <div className="flex justify-between items-start mb-4">
-            <div className="w-12 h-12 rounded-xl bg-rose-500 text-white flex items-center justify-center shadow-inner group-hover:scale-110 transition-transform duration-300">
-               <Icons name="TrendingDown" size={24} />
-            </div>
-            <span className="text-xs font-bold text-rose-600 bg-rose-100 px-2.5 py-1 rounded-full uppercase tracking-wider">Expenses</span>
+      <div className="bg-white p-5 rounded-xl border border-gray-100 shadow-sm flex items-center justify-between">
+         <div className="flex flex-col gap-1">
+           <span className="text-sm font-medium text-gray-500">Expenses</span>
+           <span className="text-2xl font-bold text-gray-900">{formatCurrency(overview.totalExpenses)}</span>
          </div>
-         <span className="text-3xl font-extrabold text-gray-900 tracking-tight">{formatCurrency(overview.totalExpenses)}</span>
-         <span className="text-sm text-gray-500 mt-2 flex items-center gap-1">Total operating costs</span>
+         <div className="w-12 h-12 rounded-full bg-rose-50 text-rose-600 flex items-center justify-center">
+            <Icons name="TrendingDown" size={24} />
+         </div>
+      </div>
+
+      {/* Profit Card */}
+      <div className="bg-white p-5 rounded-xl border border-gray-100 shadow-sm flex items-center justify-between">
+         <div className="flex flex-col gap-1">
+           <span className="text-sm font-medium text-gray-500">Profit</span>
+           <span className="text-2xl font-bold text-gray-900">{formatCurrency(overview.totalSales - overview.totalExpenses)}</span>
+         </div>
+         <div className="w-12 h-12 rounded-full bg-amber-50 text-amber-600 flex items-center justify-center">
+            <Icons name="TrendingUp" size={24} />
+         </div>
       </div>
     </div>
   );
@@ -219,42 +225,53 @@ const SalesReport = ({ data, overview }) => {
   const formatCurrency = (val) => new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(val);
 
   return (
-    <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-        <div className="xl:col-span-2 bg-white p-6 rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition-shadow duration-300">
-           <div className="flex justify-between items-center mb-6">
-             <h3 className="text-lg font-bold text-gray-900 flex items-center gap-2"><Icons name="TrendingUp" size={20} className="text-blue-500"/> Revenue Trend</h3>
-             <span className="text-sm font-medium text-gray-500 bg-gray-100 px-3 py-1 rounded-full">{data.trend.length} days</span>
+    <div className="grid grid-cols-1 gap-6 w-full">
+        <div className="bg-white p-5 rounded-xl border border-gray-100 shadow-sm min-w-0">
+           <div className="flex justify-between items-center mb-4">
+             <h3 className="text-base font-semibold text-gray-900">Revenue & Profit Trend</h3>
+             <span className="text-sm font-medium text-gray-500 bg-gray-50 px-2 py-1 rounded">{data.trend.length} days</span>
            </div>
-           <div className="h-80">
+           <div className="h-[300px] w-full">
               {data.trend.length > 0 ? (
                   <ResponsiveContainer width="100%" height="100%">
                     <LineChart data={data.trend} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
-                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                      <XAxis dataKey="date" tick={{fontSize: 12, fill: '#64748b'}} axisLine={false} tickLine={false} dy={10} />
-                      <YAxis tickFormatter={(val) => `₹${val}`} tick={{fontSize: 12, fill: '#64748b'}} axisLine={false} tickLine={false} dx={-10} />
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f3f4f6" />
+                      <XAxis dataKey="date" tick={{fontSize: 12, fill: '#6b7280'}} axisLine={false} tickLine={false} dy={10} />
+                      <YAxis tickFormatter={(val) => `₹${val}`} tick={{fontSize: 12, fill: '#6b7280'}} axisLine={false} tickLine={false} dx={-10} />
                       <Tooltip 
-                         formatter={(value) => [formatCurrency(value), 'Revenue']}
-                         contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 15px rgba(0,0,0,0.1)' }}
+                         formatter={(value, name) => [formatCurrency(value), name.charAt(0).toUpperCase() + name.slice(1)]}
+                         contentStyle={{ borderRadius: '8px', border: '1px solid #e5e7eb', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)' }}
                       />
+                      <Legend verticalAlign="top" height={36} wrapperStyle={{ fontSize: '12px' }} />
                       <Line 
                          type="monotone" 
                          dataKey="revenue" 
+                         name="Revenue"
+                         stroke="#10b981" 
+                         strokeWidth={3} 
+                         dot={{r: 3, fill: '#ffffff', stroke: '#10b981', strokeWidth: 2}} 
+                         activeDot={{r: 5, fill: '#10b981', stroke: '#ffffff', strokeWidth: 2}} 
+                      />
+                      <Line 
+                         type="monotone" 
+                         dataKey="profit"
+                         name="Profit" 
                          stroke="#3b82f6" 
-                         strokeWidth={4} 
-                         dot={{r: 4, fill: '#ffffff', stroke: '#3b82f6', strokeWidth: 2}} 
-                         activeDot={{r: 6, fill: '#3b82f6', stroke: '#ffffff', strokeWidth: 2}} 
+                         strokeWidth={3} 
+                         dot={{r: 3, fill: '#ffffff', stroke: '#3b82f6', strokeWidth: 2}} 
+                         activeDot={{r: 5, fill: '#3b82f6', stroke: '#ffffff', strokeWidth: 2}} 
                       />
                     </LineChart>
                   </ResponsiveContainer>
               ) : (
-                  <div className="h-full flex items-center justify-center text-gray-400 font-medium bg-gray-50 rounded-xl border border-dashed border-gray-200">No revenue data for this period.</div>
+                  <div className="h-full flex items-center justify-center text-gray-400 font-medium">No revenue data for this period.</div>
               )}
            </div>
         </div>
         
-        <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition-shadow duration-300 flex flex-col">
-           <h3 className="text-lg font-bold text-gray-900 mb-6 flex items-center gap-2"><Icons name="PieChart" size={20} className="text-emerald-500"/> Sales by Source</h3>
-           <div className="flex-1 min-h-[300px]">
+        <div className="bg-white p-5 rounded-xl border border-gray-100 shadow-sm min-w-0">
+           <h3 className="text-base font-semibold text-gray-900 mb-4">Sales by Source</h3>
+           <div className="h-[300px] w-full">
               {data.bySource.length > 0 ? (
                   <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
@@ -262,8 +279,8 @@ const SalesReport = ({ data, overview }) => {
                         data={data.bySource}
                         cx="50%"
                         cy="45%"
-                        innerRadius={70}
-                        outerRadius={90}
+                        innerRadius={80}
+                        outerRadius={110}
                         paddingAngle={5}
                         dataKey="value"
                         stroke="none"
@@ -274,19 +291,19 @@ const SalesReport = ({ data, overview }) => {
                       </Pie>
                       <Tooltip 
                          formatter={(value) => formatCurrency(value)} 
-                         contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 15px rgba(0,0,0,0.1)' }}
+                         contentStyle={{ borderRadius: '8px', border: '1px solid #e5e7eb', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)' }}
                       />
                       <Legend 
                          layout="horizontal" 
                          verticalAlign="bottom" 
                          align="center" 
                          iconType="circle"
-                         wrapperStyle={{ paddingTop: '20px', fontSize: '13px', fontWeight: 500, color: '#475569' }}
+                         wrapperStyle={{ paddingTop: '20px', fontSize: '12px' }}
                       />
                     </PieChart>
                   </ResponsiveContainer>
               ) : (
-                  <div className="h-full flex items-center justify-center text-gray-400 font-medium bg-gray-50 rounded-xl border border-dashed border-gray-200">No source data available.</div>
+                  <div className="h-full flex items-center justify-center text-gray-400 font-medium">No source data available.</div>
               )}
            </div>
         </div>
@@ -296,31 +313,31 @@ const SalesReport = ({ data, overview }) => {
 
 const LeadsReport = ({ data, overview }) => {
   return (
-    <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-        <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition-shadow duration-300">
-           <h3 className="text-lg font-bold text-gray-900 mb-6 flex items-center gap-2"><Icons name="Target" size={20} className="text-amber-500"/> Leads by Source</h3>
-           <div className="h-[350px]">
+    <div className="grid grid-cols-1 gap-6 w-full">
+        <div className="bg-white p-5 rounded-xl border border-gray-100 shadow-sm min-w-0">
+           <h3 className="text-base font-semibold text-gray-900 mb-4">Leads by Source</h3>
+           <div className="h-[300px] w-full">
               {data.bySource.length > 0 ? (
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={data.bySource} layout="vertical" margin={{top: 5, right: 30, left: 40, bottom: 5}}>
-                      <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#f1f5f9" />
-                      <XAxis type="number" tick={{fontSize: 12, fill: '#64748b'}} axisLine={false} tickLine={false} />
-                      <YAxis type="category" dataKey="name" tick={{fontSize: 12, fill: '#475569', fontWeight: 500}} axisLine={false} tickLine={false} dx={-10} />
+                      <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#f3f4f6" />
+                      <XAxis type="number" tick={{fontSize: 12, fill: '#6b7280'}} axisLine={false} tickLine={false} />
+                      <YAxis type="category" dataKey="name" tick={{fontSize: 12, fill: '#6b7280'}} axisLine={false} tickLine={false} dx={-10} width={100} />
                       <Tooltip 
-                         cursor={{fill: '#f8fafc'}}
-                         contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 15px rgba(0,0,0,0.1)' }}
+                         cursor={{fill: '#f9fafb'}}
+                         contentStyle={{ borderRadius: '8px', border: '1px solid #e5e7eb', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)' }}
                       />
-                      <Bar dataKey="value" fill="#f59e0b" radius={[0, 6, 6, 0]} barSize={24} />
+                      <Bar dataKey="value" fill="#3b82f6" radius={[0, 4, 4, 0]} barSize={20} />
                     </BarChart>
                   </ResponsiveContainer>
               ) : (
-                  <div className="h-full flex items-center justify-center text-gray-400 font-medium bg-gray-50 rounded-xl border border-dashed border-gray-200">No leads source data available.</div>
+                  <div className="h-full flex items-center justify-center text-gray-400 font-medium">No leads source data available.</div>
               )}
            </div>
         </div>
-        <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition-shadow duration-300">
-           <h3 className="text-lg font-bold text-gray-900 mb-6 flex items-center gap-2"><Icons name="Filter" size={20} className="text-indigo-500"/> Pipeline Status</h3>
-           <div className="h-[350px]">
+        <div className="bg-white p-5 rounded-xl border border-gray-100 shadow-sm min-w-0">
+           <h3 className="text-base font-semibold text-gray-900 mb-4">Pipeline Status</h3>
+           <div className="h-[300px] w-full">
               {data.byStatus.length > 0 ? (
                   <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
@@ -328,8 +345,8 @@ const LeadsReport = ({ data, overview }) => {
                         data={data.byStatus}
                         cx="50%"
                         cy="50%"
-                        outerRadius={100}
-                        innerRadius={40}
+                        outerRadius={110}
+                        innerRadius={50}
                         paddingAngle={2}
                         dataKey="value"
                         stroke="none"
@@ -341,12 +358,12 @@ const LeadsReport = ({ data, overview }) => {
                         ))}
                       </Pie>
                       <Tooltip 
-                         contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 15px rgba(0,0,0,0.1)' }}
+                         contentStyle={{ borderRadius: '8px', border: '1px solid #e5e7eb', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)' }}
                       />
                     </PieChart>
                   </ResponsiveContainer>
               ) : (
-                  <div className="h-full flex items-center justify-center text-gray-400 font-medium bg-gray-50 rounded-xl border border-dashed border-gray-200">No leads status data available.</div>
+                  <div className="h-full flex items-center justify-center text-gray-400 font-medium">No leads status data available.</div>
               )}
            </div>
         </div>
@@ -358,52 +375,59 @@ const InventoryReport = ({ data }) => {
   const formatCurrency = (val) => new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(val);
 
   return (
-    <div className="flex flex-col gap-6">
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div className="bg-gradient-to-r from-gray-900 to-gray-800 p-8 rounded-2xl shadow-lg flex flex-col justify-center items-center text-center relative overflow-hidden">
-           <div className="absolute top-0 right-0 -mt-4 -mr-4 w-32 h-32 bg-white/10 rounded-full blur-2xl"></div>
-           <span className="text-sm font-semibold text-gray-300 uppercase tracking-widest mb-2 z-10">Total Inventory Value</span>
-           <span className="text-5xl font-black text-white z-10">{formatCurrency(data.totalValue)}</span>
+    <div className="flex flex-col gap-6 w-full">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="bg-white p-5 rounded-xl border border-gray-100 shadow-sm flex items-center justify-between">
+           <div className="flex flex-col gap-1">
+             <span className="text-sm font-medium text-gray-500">Total Inventory Value</span>
+             <span className="text-2xl font-bold text-gray-900">{formatCurrency(data.totalValue)}</span>
+           </div>
+           <div className="w-12 h-12 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center">
+              <Icons name="Package" size={24} />
+           </div>
         </div>
         
-        <div className="bg-gradient-to-r from-rose-500 to-rose-600 p-8 rounded-2xl shadow-lg flex flex-col justify-center items-center text-center relative overflow-hidden group">
-           <div className="absolute top-0 right-0 -mt-4 -mr-4 w-32 h-32 bg-white/20 rounded-full blur-2xl group-hover:scale-150 transition-transform duration-700"></div>
-           <Icons name="AlertTriangle" size={32} className="text-rose-200 mb-2 z-10" />
-           <span className="text-4xl font-black text-white z-10">{data.lowStockCount} <span className="text-2xl font-semibold opacity-90">Items</span></span>
-           <span className="text-sm text-rose-100 font-medium mt-1 z-10">Low stock / Reorder required</span>
+        <div className="bg-white p-5 rounded-xl border border-gray-100 shadow-sm flex items-center justify-between">
+           <div className="flex flex-col gap-1">
+             <span className="text-sm font-medium text-gray-500">Low Stock Alerts</span>
+             <span className="text-2xl font-bold text-rose-600">{data.lowStockCount} Items</span>
+           </div>
+           <div className="w-12 h-12 rounded-full bg-rose-50 text-rose-600 flex items-center justify-center">
+              <Icons name="AlertTriangle" size={24} />
+           </div>
         </div>
       </div>
 
-      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-         <div className="p-6 border-b border-gray-100 flex items-center justify-between">
-            <h3 className="text-lg font-bold text-gray-900 flex items-center gap-2">
-               <Icons name="PackageX" size={20} className="text-rose-500"/> Low Stock Items Details
+      <div className="bg-white rounded-xl border border-rose-100 shadow-sm overflow-hidden min-w-0">
+         <div className="bg-rose-50 border-b border-rose-100 px-6 py-4 flex items-center justify-between">
+            <h3 className="text-base font-semibold text-rose-900 flex items-center gap-2">
+               <Icons name="AlertTriangle" size={20} className="text-rose-500"/> Low Stock Items Details
             </h3>
          </div>
          
          {data.lowStockItems.length > 0 ? (
             <div className="overflow-x-auto">
                 <table className="w-full text-left border-collapse min-w-max">
-                  <thead className="bg-gray-50/80 text-xs font-bold text-gray-500 uppercase tracking-wider">
+                  <thead className="bg-white text-xs font-semibold text-gray-500 border-b border-gray-100">
                     <tr>
-                      <th className="px-6 py-4 border-b border-gray-100">Item Name</th>
-                      <th className="px-6 py-4 border-b border-gray-100 text-right">Current Stock</th>
-                      <th className="px-6 py-4 border-b border-gray-100 text-right">Threshold</th>
-                      <th className="px-6 py-4 border-b border-gray-100 text-center">Status</th>
+                      <th className="px-6 py-3">Item Name</th>
+                      <th className="px-6 py-3 text-right">Current Stock</th>
+                      <th className="px-6 py-3 text-right">Threshold</th>
+                      <th className="px-6 py-3 text-center">Status</th>
                     </tr>
                   </thead>
                   <tbody className="text-sm divide-y divide-gray-50">
                      {data.lowStockItems.map((item, i) => (
                         <tr key={i} className="hover:bg-gray-50/50 transition-colors">
-                           <td className="px-6 py-4 font-semibold text-gray-900">{item.name}</td>
-                           <td className="px-6 py-4 text-right">
-                              <span className="inline-flex items-center gap-1.5 font-bold text-rose-600 bg-rose-50 px-3 py-1 rounded-full">
+                           <td className="px-6 py-3 font-medium text-gray-900">{item.name}</td>
+                           <td className="px-6 py-3 text-right">
+                              <span className="font-bold text-rose-600 bg-rose-50 px-2 py-0.5 rounded">
                                  {item.stockQty}
                               </span>
                            </td>
-                           <td className="px-6 py-4 text-right font-medium text-gray-500">{item.threshold}</td>
-                           <td className="px-6 py-4 text-center">
-                              <span className="text-xs font-bold text-rose-600 bg-rose-100 px-2.5 py-1 rounded-full border border-rose-200">
+                           <td className="px-6 py-3 text-right text-gray-500">{item.threshold}</td>
+                           <td className="px-6 py-3 text-center">
+                              <span className="text-xs font-semibold text-rose-600 bg-rose-100 px-2.5 py-1 rounded-full">
                                  Action Needed
                               </span>
                            </td>
@@ -413,12 +437,12 @@ const InventoryReport = ({ data }) => {
                 </table>
             </div>
          ) : (
-            <div className="flex flex-col items-center justify-center py-16 text-center">
-                <div className="w-16 h-16 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mb-4">
-                   <Icons name="Check" size={32} />
+            <div className="p-8 text-center flex flex-col items-center justify-center">
+                <div className="w-12 h-12 bg-emerald-50 text-emerald-500 rounded-full flex items-center justify-center mb-3">
+                   <Icons name="Check" size={24} />
                 </div>
-                <p className="text-lg font-bold text-gray-900">Inventory is healthy!</p>
-                <p className="text-sm text-gray-500 mt-1">No items are below the reorder threshold.</p>
+                <p className="text-gray-900 font-medium">Inventory is healthy!</p>
+                <p className="text-gray-500 text-sm mt-1">No items are currently below their reorder threshold.</p>
             </div>
          )}
       </div>
@@ -430,37 +454,36 @@ const ExpenseReport = ({ data }) => {
   const formatCurrency = (val) => new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(val);
 
   return (
-    <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-        <div className="xl:col-span-1 bg-gradient-to-br from-purple-600 to-indigo-700 p-8 rounded-2xl shadow-xl flex flex-col justify-center items-center text-center relative overflow-hidden group">
-           <div className="absolute -bottom-10 -left-10 w-40 h-40 bg-white/10 rounded-full blur-3xl group-hover:scale-150 transition-transform duration-1000"></div>
-           <div className="absolute top-10 right-10 w-20 h-20 bg-white/10 rounded-full blur-xl group-hover:scale-150 transition-transform duration-1000 delay-100"></div>
-           
-           <div className="w-16 h-16 bg-white/20 backdrop-blur-md rounded-2xl flex items-center justify-center text-white mb-6 shadow-inner z-10 border border-white/20">
-              <Icons name="CreditCard" size={32} />
+    <div className="grid grid-cols-1 gap-6 w-full">
+        <div className="bg-white p-5 rounded-xl border border-gray-100 shadow-sm flex items-center justify-between">
+           <div className="flex flex-col gap-1">
+             <span className="text-sm font-medium text-gray-500">Total Expenses</span>
+             <span className="text-2xl font-bold text-gray-900">{formatCurrency(data.total)}</span>
            </div>
-           <span className="text-sm font-semibold text-purple-200 uppercase tracking-widest mb-2 z-10">Total Expenses</span>
-           <span className="text-5xl lg:text-6xl font-black text-white tracking-tight z-10">{formatCurrency(data.total)}</span>
+           <div className="w-12 h-12 rounded-full bg-rose-50 text-rose-600 flex items-center justify-center">
+              <Icons name="CreditCard" size={24} />
+           </div>
         </div>
         
-        <div className="xl:col-span-2 bg-white p-6 md:p-8 rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition-shadow duration-300">
-           <h3 className="text-lg font-bold text-gray-900 mb-8 flex items-center gap-2"><Icons name="BarChart3" size={20} className="text-purple-600"/> Expenses Breakdown</h3>
-           <div className="h-[350px]">
+        <div className="bg-white p-5 rounded-xl border border-gray-100 shadow-sm min-w-0">
+           <h3 className="text-base font-semibold text-gray-900 mb-4">Expenses Breakdown</h3>
+           <div className="h-[300px] w-full">
               {data.byCategory.length > 0 ? (
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={data.byCategory} margin={{top: 20, right: 0, left: 0, bottom: 0}}>
-                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                      <XAxis dataKey="name" tick={{fontSize: 12, fill: '#64748b', fontWeight: 500}} axisLine={false} tickLine={false} dy={10} />
-                      <YAxis tickFormatter={(val) => `₹${val}`} tick={{fontSize: 12, fill: '#64748b'}} axisLine={false} tickLine={false} dx={-10} />
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f3f4f6" />
+                      <XAxis dataKey="name" tick={{fontSize: 12, fill: '#6b7280'}} axisLine={false} tickLine={false} dy={10} width={100} />
+                      <YAxis tickFormatter={(val) => `₹${val}`} tick={{fontSize: 12, fill: '#6b7280'}} axisLine={false} tickLine={false} dx={-10} />
                       <Tooltip 
                          formatter={(value) => formatCurrency(value)} 
-                         cursor={{fill: '#f8fafc'}} 
-                         contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 15px rgba(0,0,0,0.1)' }}
+                         cursor={{fill: '#f9fafb'}} 
+                         contentStyle={{ borderRadius: '8px', border: '1px solid #e5e7eb', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)' }}
                       />
                       <Bar 
                          dataKey="value" 
-                         fill="#8b5cf6" 
-                         radius={[6, 6, 0, 0]} 
-                         barSize={50}
+                         fill="#f43f5e" 
+                         radius={[4, 4, 0, 0]} 
+                         barSize={40}
                       >
                          {data.byCategory.map((entry, index) => (
                            <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
@@ -469,7 +492,7 @@ const ExpenseReport = ({ data }) => {
                     </BarChart>
                   </ResponsiveContainer>
               ) : (
-                  <div className="h-full flex items-center justify-center text-gray-400 font-medium bg-gray-50 rounded-xl border border-dashed border-gray-200">No expense data available.</div>
+                  <div className="h-full flex items-center justify-center text-gray-400 font-medium">No expense data available.</div>
               )}
            </div>
         </div>
