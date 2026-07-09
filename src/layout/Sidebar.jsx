@@ -43,6 +43,7 @@ const menuItems = [
     { name: "Invoice", icon: FileText, path: "/invoice" },
     { name: "Reports", icon: BarChart, path: "/reports" },
     { name: "Appearance", icon: Brush, path: "/appearance" },
+    { name: "Settings", icon: Settings, path: "/settings" },
 ];
 
 const Sidebar = ({ setMobileOpen, isMobileOpen }) => {

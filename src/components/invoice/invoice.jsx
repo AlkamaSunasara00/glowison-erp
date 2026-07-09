@@ -55,6 +55,14 @@ export const Invoice = () => {
     fetchInvoices();
   }, []);
 
+  useEffect(() => {
+    if (router.isReady && router.query.create === 'true') {
+      setIsAddOpen(true);
+      const { create, ...rest } = router.query;
+      router.replace({ pathname: router.pathname, query: rest }, undefined, { shallow: true });
+    }
+  }, [router.isReady, router.query.create]);
+
   // Filters
   const hasActiveFilters = statusFilter !== "all";
   const filteredInvoices = invoices.filter((invoice) => {

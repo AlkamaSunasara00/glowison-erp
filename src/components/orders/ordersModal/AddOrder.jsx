@@ -240,7 +240,7 @@ const AddOrder = ({ open, onClose }) => {
                        <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
                          <div className="space-y-1.5">
                            <label className="text-xs font-semibold text-gray-600">Pricing Unit</label>
-                           <Input type="select" options={[{label: "Inch", value: "inch"}, {label: "Sq Ft", value: "sqft"}, {label: "Piece", value: "piece"}]} value={item.unit} onChange={(e) => handleLineItemChange(item.id, 'unit', e.target.value)} />
+                           <Input type="select" options={[{label: "Inch", value: "inch"}, {label: "Sq Ft", value: "sqft"}, {label: "Piece", value: "piece"}, {label: "Feet", value: "feet"}]} value={item.unit} onChange={(e) => handleLineItemChange(item.id, 'unit', e.target.value)} />
                          </div>
                          <div className="space-y-1.5">
                            <label className="text-xs font-semibold text-gray-600">Price / {item.unit === 'sqft' ? 'Sq Ft' : item.unit === 'piece' ? 'Piece' : 'Inch'} (Info)</label>

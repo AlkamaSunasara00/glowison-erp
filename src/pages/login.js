@@ -38,19 +38,16 @@ export default function Login() {
         {/* Left Side: Graphic */}
         <div className="hidden lg:flex w-1/2 relative bg-primary-900 items-center justify-center overflow-hidden">
           <div className="absolute inset-0 z-0">
-            <Image 
-              src="/login-bg.png" 
-              alt="Glowison ERP" 
-              layout="fill" 
-              objectFit="cover" 
-              className="opacity-90"
-              priority
+            <img 
+              src="/login-bg.jpg" 
+              alt="Glowison ERP"
+              className="opacity-90 w-full h-full object-cover object-center"
             />
           </div>
           <div className="relative z-10 p-12 text-white text-center">
-            <h1 className="text-5xl font-bold mb-4 tracking-tight">Glowison ERP</h1>
-            <p className="text-lg text-white/80 max-w-md mx-auto">
-              Streamlining business operations with modern aesthetics and robust data management.
+            <h1 className="text-5xl font-serif font-bold mb-4 tracking-tight">Welcome to Glowison ERP</h1>
+            <p className="text-lg font-serif font-light text-white/80 max-w-md mx-auto">
+              Streamline your business operations.
             </p>
           </div>
           {/* Glassmorphism overlay gradient */}
@@ -102,11 +99,6 @@ export default function Login() {
                     Remember me
                   </label>
                 </div>
-                <div className="text-sm">
-                  <a href="#" className="font-medium text-primary-600 hover:text-primary-500 transition-colors">
-                    Forgot password?
-                  </a>
-                </div>
               </div>
 
               <Button
@@ -119,17 +111,6 @@ export default function Login() {
                 Sign in
               </Button>
             </form>
-
-            <div className="mt-8 text-center text-sm text-gray-500">
-              By signing in, you agree to our{' '}
-              <a href="#" className="font-medium text-primary-600 hover:text-primary-500">
-                Terms of Service
-              </a>{' '}
-              and{' '}
-              <a href="#" className="font-medium text-primary-600 hover:text-primary-500">
-                Privacy Policy
-              </a>.
-            </div>
           </div>
         </div>
       </div>

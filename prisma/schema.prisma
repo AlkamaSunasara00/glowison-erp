@@ -482,3 +482,18 @@ model PriceListItem {
 
   @@index([category])
 }
+
+model CompanySettings {
+  id            String   @id @default("1")
+  companyName   String
+  email         String?
+  phone         String?
+  address       String?
+  website       String?
+  gstin         String?
+  logoUrl       String?
+  signatureUrl  String?
+  accountNo     String?
+  upiId         String?
+  updatedAt     DateTime @updatedAt
+}

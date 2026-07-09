@@ -204,10 +204,10 @@ const CustomerDetail = ({ open, onClose, customer, isPage = false, onCustomerUpd
                         {(data.invoices || []).length === 0 ? (
                           <tr><td colSpan="4" className="text-center py-4 text-gray-500">No invoices found</td></tr>
                         ) : (data.invoices || []).map(item => (
-                          <tr key={item.id} onClick={() => router.push(`/invoices/${item.id}`)} className="border-b border-gray-50 hover:bg-gray-50/50 cursor-pointer">
-                            <td className="px-4 py-3 font-medium text-primary">{item.id.slice(0, 8)}</td>
+                          <tr key={item.id} onClick={() => router.push(`/invoice/${item.id}`)} className="border-b border-gray-50 hover:bg-gray-50/50 cursor-pointer">
+                            <td className="px-4 py-3 font-medium text-primary">{item.invoiceNumber || item.id.slice(0, 8)}</td>
                             <td className="px-4 py-3 text-gray-500">{formatDate(item.createdAt)}</td>
-                            <td className="px-4 py-3 font-medium text-gray-900">Rs. {item.total}</td>
+                            <td className="px-4 py-3 font-medium text-gray-900">Rs. {item.grandTotal || item.total || 0}</td>
                             <td className="px-4 py-3"><StatusBadge status={item.status} /></td>
                           </tr>
                         ))}

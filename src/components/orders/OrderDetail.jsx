@@ -100,6 +100,7 @@ const OrderDetail = ({ open, onClose, order, isPage = false, onOrderUpdated }) =
             <Button
               variant="solid"
               size="md"
+              onClick={() => router.push(`/invoice?orderId=${data.id}&create=true`)}
               leftIcon={(props) => <ActionIcon name="FileText" color="white" {...props} />}
               className="rounded-lg px-3! py-1.5! text-xs font-semibold"
             >
