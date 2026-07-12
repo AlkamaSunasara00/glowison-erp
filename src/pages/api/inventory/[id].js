@@ -19,7 +19,23 @@ const handler = async (req, res) => {
     }
 
     if (req.method === 'PUT') {
-      const { stockQty, openingStock, ...updateData } = req.body;
+      const { 
+        currentPurchaseStock, currentUsageStock, openingPurchaseStock, openingUsageStock, ...updateData 
+      } = req.body;
+      
+      if (updateData.conversionFactor) {
+        updateData.conversionFactor = parseFloat(updateData.conversionFactor);
+      }
+      if (updateData.minimumStock) updateData.minimumStock = parseFloat(updateData.minimumStock);
+      if (updateData.maximumStock) updateData.maximumStock = parseFloat(updateData.maximumStock);
+      if (updateData.reorderLevel) updateData.reorderLevel = parseFloat(updateData.reorderLevel);
+      if (updateData.lastPurchasePrice) {
+        const lastPurchasePrice = updateData.lastPurchasePrice;
+        const conversionFactor = updateData.conversionFactor;
+        updateData.lastPurchasePrice = parseFloat(lastPurchasePrice || 0);
+        updateData.averageCost = lastPurchasePrice ? parseFloat(lastPurchasePrice) / parseFloat(conversionFactor || 1) : 0;
+      }
+
       const item = await prisma.inventoryItem.update({
         where: { id },
         data: updateData

@@ -141,8 +141,8 @@ const EditSupplier = ({ open, onClose, initialData }) => {
               </div>
 
               <div className="space-y-1.5">
-                <label className="label">Contact Person <span className="required">*</span></label>
-                <Input name="contactPerson" value={formData.contactPerson} onChange={handleChange} required placeholder="John Doe" />
+                <label className="label">Contact Person</label>
+                <Input name="contactPerson" value={formData.contactPerson} onChange={handleChange} placeholder="John Doe" />
               </div>
               
               <div className="space-y-1.5">

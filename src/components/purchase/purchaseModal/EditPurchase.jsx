@@ -21,9 +21,17 @@ const paymentStatuses = [
   { value: "PAID", label: "Paid" }
 ];
 
-const deliveryStatuses = [
+const purchaseTypes = [
+  { value: "CASH", label: "Walk-in / Cash" },
+  { value: "SUPPLIER", label: "Supplier (Credit)" },
+  { value: "MARKET", label: "Local Market" },
+  { value: "ONLINE", label: "Online" }
+];
+
+const statuses = [
   { value: "PENDING", label: "Pending" },
-  { value: "DELIVERED", label: "Delivered" }
+  { value: "RECEIVED", label: "Received (Update Stock)" },
+  { value: "CANCELLED", label: "Cancelled" }
 ];
 
 const EditPurchase = ({ open, onClose, initialData }) => {
@@ -32,12 +40,14 @@ const EditPurchase = ({ open, onClose, initialData }) => {
   const [loadingInitial, setLoadingInitial] = useState(true);
   
   const [formData, setFormData] = useState({
-    invoiceNumber: "",
+    purchaseNumber: "",
+    referenceNumber: "",
+    purchaseType: "LOCAL",
     supplierId: "",
     purchaseDate: new Date().toISOString().slice(0, 10),
     paymentMethod: "CASH",
     paymentStatus: "PENDING",
-    deliveryStatus: "PENDING",
+    status: "RECEIVED",
     notes: "",
     subtotal: 0,
     discount: 0,
@@ -46,6 +56,8 @@ const EditPurchase = ({ open, onClose, initialData }) => {
     grandTotal: 0,
     paidAmount: 0,
     dueAmount: 0,
+    paidBy: "Company",
+    paymentMethodOther: "",
   });
 
   const [items, setItems] = useState([]);
@@ -66,12 +78,14 @@ const EditPurchase = ({ open, onClose, initialData }) => {
           
           if (initialData) {
             setFormData({
-              invoiceNumber: initialData.invoiceNumber || initialData.id || "",
+              purchaseNumber: initialData.purchaseNumber || "",
+              referenceNumber: initialData.referenceNumber || "",
+              purchaseType: initialData.purchaseType || "LOCAL",
               supplierId: initialData.supplierId || "",
               purchaseDate: initialData.purchaseDate ? new Date(initialData.purchaseDate).toISOString().slice(0, 10) : new Date().toISOString().slice(0, 10),
               paymentMethod: initialData.paymentMethod || "CASH",
               paymentStatus: initialData.paymentStatus || "PENDING",
-              deliveryStatus: initialData.deliveryStatus || "PENDING",
+              status: initialData.status || "PENDING",
               notes: initialData.notes || "",
               subtotal: parseFloat(initialData.subtotal || 0),
               discount: parseFloat(initialData.discount || 0),
@@ -80,16 +94,23 @@ const EditPurchase = ({ open, onClose, initialData }) => {
               grandTotal: parseFloat(initialData.grandTotal || 0),
               paidAmount: parseFloat(initialData.paidAmount || 0),
               dueAmount: parseFloat(initialData.dueAmount || 0),
+              paidBy: initialData.paidBy || "Company",
+              paymentMethodOther: initialData.paymentMethodOther || "",
             });
             setInvoiceUrl(initialData.invoiceUrl || "");
             
-            if (initialData.itemsData && Array.isArray(initialData.itemsData)) {
-              setItems(initialData.itemsData.map(item => ({
+            if (initialData.items && Array.isArray(initialData.items)) {
+              setItems(initialData.items.map(item => ({
                 id: item.id || Date.now() + Math.random(),
-                inventoryItemId: item.inventoryItemId,
+                inventoryItemId: item.inventoryItemId || 'MANUAL',
+                itemName: item.itemName || "",
                 purchaseUnit: item.purchaseUnit,
-                quantity: parseFloat(item.quantity),
-                unitPrice: parseFloat(item.unitPrice),
+                usageUnit: item.usageUnit || item.purchaseUnit,
+                conversionFactor: item.inventoryItem?.conversionFactor || 1,
+                purchaseQuantity: parseFloat(item.quantity || item.purchaseQuantity),
+                usageQuantity: parseFloat(item.usageQuantity || item.quantity),
+                purchasePrice: parseFloat(item.unitPrice || item.purchasePrice),
+                unitCost: parseFloat(item.unitCost || item.unitPrice),
                 discount: parseFloat(item.discount || 0),
                 tax: parseFloat(item.tax || 0),
                 total: parseFloat(item.total)
@@ -126,18 +147,33 @@ const EditPurchase = ({ open, onClose, initialData }) => {
     item[field] = value;
 
     if (field === 'inventoryItemId') {
-      const inv = inventoryItems.find(i => i.id === value);
-      if (inv) {
-        item.purchaseUnit = inv.purchaseUnit;
-        item.unitPrice = inv.lastPurchasePrice || 0;
+      if (value === 'MANUAL') {
+        item.purchaseUnit = "Nos";
+        item.usageUnit = "Nos";
+        item.conversionFactor = 1;
+        item.purchasePrice = 0;
+        item.unitCost = 0;
+      } else {
+        const inv = inventoryItems.find(i => i.id === value);
+        if (inv) {
+          item.purchaseUnit = inv.purchaseUnit;
+          item.usageUnit = inv.usageUnit;
+          item.conversionFactor = inv.conversionFactor || 1;
+          item.purchasePrice = inv.lastPurchasePrice || 0;
+          item.unitCost = item.purchasePrice / item.conversionFactor;
+          item.usageQuantity = item.purchaseQuantity * item.conversionFactor;
+        }
       }
     }
 
-    if (['quantity', 'unitPrice', 'discount', 'tax', 'inventoryItemId'].includes(field)) {
-      const q = parseFloat(item.quantity) || 0;
-      const up = parseFloat(item.unitPrice) || 0;
+    if (['purchaseQuantity', 'purchasePrice', 'discount', 'tax', 'inventoryItemId'].includes(field)) {
+      const q = parseFloat(item.purchaseQuantity) || 0;
+      const up = parseFloat(item.purchasePrice) || 0;
       const d = parseFloat(item.discount) || 0;
       const t = parseFloat(item.tax) || 0;
+      
+      item.usageQuantity = q * (item.conversionFactor || 1);
+      item.unitCost = q > 0 ? (up / (item.conversionFactor || 1)) : 0;
       
       const baseTotal = q * up;
       const afterDiscount = baseTotal - d;
@@ -149,7 +185,7 @@ const EditPurchase = ({ open, onClose, initialData }) => {
   };
 
   const addItem = () => {
-    setItems([...items, { id: Date.now(), inventoryItemId: "", purchaseUnit: "", quantity: 1, unitPrice: 0, discount: 0, tax: 0, total: 0 }]);
+    setItems([...items, { id: Date.now(), inventoryItemId: "", itemName: "", purchaseUnit: "Nos", usageUnit: "Nos", conversionFactor: 1, purchaseQuantity: 1, usageQuantity: 1, purchasePrice: 0, unitCost: 0, discount: 0, tax: 0, total: 0 }]);
   };
 
   const removeItem = (index) => {
@@ -183,26 +219,31 @@ const EditPurchase = ({ open, onClose, initialData }) => {
 
   const handleSubmit = async (event) => {
     event.preventDefault();
-    if (!formData.supplierId) return toast.error("Please select a supplier");
     if (items.some(i => !i.inventoryItemId)) return toast.error("Please select an inventory item for all rows");
 
     try {
       setIsSubmitting(true);
       const payload = {
         ...formData,
+        supplierId: formData.supplierId || undefined,
+        paymentMethodOther: formData.paymentMethod === 'OTHER' ? formData.paymentMethodOther : undefined,
         invoiceUrl,
         items: items.map(i => ({
-          inventoryItemId: i.inventoryItemId,
+          inventoryItemId: i.inventoryItemId === 'MANUAL' ? null : i.inventoryItemId,
+          itemName: i.inventoryItemId === 'MANUAL' ? i.itemName : null,
+          purchaseQuantity: i.purchaseQuantity,
           purchaseUnit: i.purchaseUnit,
-          quantity: i.quantity,
-          unitPrice: i.unitPrice,
+          usageQuantity: i.usageQuantity,
+          usageUnit: i.usageUnit,
+          purchasePrice: i.purchasePrice,
+          unitCost: i.unitCost,
           discount: i.discount,
           tax: i.tax,
           total: i.total
         }))
       };
 
-      await api.put(`/purchases/${initialData.originalId}`, payload);
+      await api.put(`/purchases/${initialData.id}`, payload);
       toast.success('Purchase updated successfully');
       onClose();
     } catch (error) {
@@ -253,16 +294,20 @@ const EditPurchase = ({ open, onClose, initialData }) => {
               {/* Top Section */}
               <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                 <div className="space-y-1.5 md:col-span-2">
-                  <label className="label">Supplier <span className="required">*</span></label>
-                  <Input type="select" name="supplierId" value={formData.supplierId} onChange={handleChange} options={[{value: "", label: "Select Supplier"}, ...suppliers]} required />
+                  <label className="label">Supplier</label>
+                  <Input type="select" name="supplierId" value={formData.supplierId} onChange={handleChange} label="No Supplier (Cash/Walk-in)" options={suppliers} />
                 </div>
                 <div className="space-y-1.5">
-                  <label className="label">Invoice Number</label>
-                  <Input name="invoiceNumber" value={formData.invoiceNumber} onChange={handleChange} disabled />
+                  <label className="label">Purchase Type <span className="required">*</span></label>
+                  <Input type="select" name="purchaseType" value={formData.purchaseType} onChange={handleChange} options={purchaseTypes} required />
                 </div>
                 <div className="space-y-1.5">
                   <label className="label">Purchase Date <span className="required">*</span></label>
                   <Input type="date" name="purchaseDate" value={formData.purchaseDate} onChange={handleChange} required />
+                </div>
+                <div className="space-y-1.5 md:col-span-2">
+                  <label className="label">Purchase Order # (Auto if empty)</label>
+                  <Input name="purchaseNumber" value={formData.purchaseNumber} onChange={handleChange} placeholder="e.g. PO-1001" disabled />
                 </div>
               </div>
 
@@ -287,26 +332,48 @@ const EditPurchase = ({ open, onClose, initialData }) => {
                       {items.map((item, index) => (
                         <tr key={item.id} className="border-b border-gray-100 last:border-0">
                           <td className="p-2">
-                            <select 
-                              className="input text-sm py-1.5 px-2"
-                              value={item.inventoryItemId}
-                              onChange={(e) => handleItemChange(index, 'inventoryItemId', e.target.value)}
-                              required
-                            >
-                              <option value="">Select Item</option>
-                              {inventoryItems.map(i => (
-                                <option key={i.id} value={i.id}>{i.name} ({i.category})</option>
-                              ))}
-                            </select>
+                            <div className="flex flex-col gap-1">
+                              <select 
+                                className="input text-sm py-1.5 px-2 w-full"
+                                value={item.inventoryItemId}
+                                onChange={(e) => handleItemChange(index, 'inventoryItemId', e.target.value)}
+                                required
+                              >
+                                <option value="">Select Item</option>
+                                <option value="MANUAL" className="font-semibold text-primary">+ Create New Inventory Item</option>
+                                {inventoryItems.map(i => (
+                                  <option key={i.id} value={i.id}>{i.name} ({i.category})</option>
+                                ))}
+                              </select>
+                              {item.inventoryItemId === 'MANUAL' && (
+                                <Input 
+                                  value={item.itemName}
+                                  onChange={(e) => handleItemChange(index, 'itemName', e.target.value)}
+                                  placeholder="Enter item name..."
+                                  required
+                                  className="text-sm py-1.5 px-2 bg-blue-50/50"
+                                />
+                              )}
+                            </div>
                           </td>
                           <td className="p-2">
-                            <Input value={item.purchaseUnit} disabled className="bg-gray-50 text-sm py-1.5 px-2" />
+                            <Input value={item.purchaseUnit} onChange={(e) => handleItemChange(index, 'purchaseUnit', e.target.value)} disabled={item.inventoryItemId !== 'MANUAL'} className={`text-sm py-1.5 px-2 ${item.inventoryItemId !== 'MANUAL' ? 'bg-gray-50' : ''}`} />
                           </td>
                           <td className="p-2">
-                            <Input type="number" step="0.01" min="0.01" value={item.quantity} onChange={(e) => handleItemChange(index, 'quantity', e.target.value)} required className="text-sm py-1.5 px-2" />
+                            <Input type="number" step="0.01" min="0.01" value={item.purchaseQuantity} onChange={(e) => handleItemChange(index, 'purchaseQuantity', e.target.value)} required className="text-sm py-1.5 px-2" />
+                            {item.inventoryItemId === 'MANUAL' ? (
+                              <div className="flex items-center gap-1 mt-1">
+                                <span className="text-[10px] text-gray-500">x</span>
+                                <Input type="number" step="0.01" min="0.01" value={item.conversionFactor || 1} onChange={(e) => handleItemChange(index, 'conversionFactor', e.target.value)} className="w-12 h-6 text-xs px-1" />
+                                <Input value={item.usageUnit} onChange={(e) => handleItemChange(index, 'usageUnit', e.target.value)} placeholder="Usage Unit" className="w-16 h-6 text-xs px-1" />
+                              </div>
+                            ) : (
+                              <div className="text-[10px] text-gray-500 mt-1 whitespace-nowrap">= {item.usageQuantity} {item.usageUnit}</div>
+                            )}
                           </td>
                           <td className="p-2">
-                            <Input type="number" step="0.01" min="0" value={item.unitPrice} onChange={(e) => handleItemChange(index, 'unitPrice', e.target.value)} required className="text-sm py-1.5 px-2" />
+                            <Input type="number" step="0.01" min="0" value={item.purchasePrice} onChange={(e) => handleItemChange(index, 'purchasePrice', e.target.value)} required className="text-sm py-1.5 px-2" />
+                            <div className="text-[10px] text-gray-500 mt-1 whitespace-nowrap">Rs. {item.unitCost?.toFixed(2)} / {item.usageUnit}</div>
                           </td>
                           <td className="p-2">
                             <Input type="number" step="0.01" min="0" value={item.discount} onChange={(e) => handleItemChange(index, 'discount', e.target.value)} className="text-sm py-1.5 px-2" />
@@ -317,9 +384,9 @@ const EditPurchase = ({ open, onClose, initialData }) => {
                           <td className="p-2 text-right font-medium text-gray-800">
                             {item.total.toFixed(2)}
                           </td>
-                          <td className="p-2">
-                            <button type="button" onClick={() => removeItem(index)} className="p-2 text-red-500 hover:bg-red-50 rounded-lg">
-                              <Icons name="Trash2" size={16} />
+                          <td className="p-2 text-center">
+                            <button type="button" onClick={() => removeItem(index)} className="p-1 text-gray-400 hover:text-rose-500 rounded transition-colors" disabled={items.length === 1}>
+                              <X size={16} />
                             </button>
                           </td>
                         </tr>
@@ -340,21 +407,31 @@ const EditPurchase = ({ open, onClose, initialData }) => {
                       <label className="label">Payment Method</label>
                       <Input type="select" name="paymentMethod" value={formData.paymentMethod} onChange={handleChange} options={paymentMethods} />
                     </div>
+                    {formData.paymentMethod === 'OTHER' && (
+                      <div className="space-y-1.5 animate-in fade-in slide-in-from-top-1">
+                        <label className="label">Specify Other Method</label>
+                        <Input name="paymentMethodOther" value={formData.paymentMethodOther} onChange={handleChange} required />
+                      </div>
+                    )}
                     <div className="space-y-1.5">
                       <label className="label">Payment Status</label>
                       <Input type="select" name="paymentStatus" value={formData.paymentStatus} onChange={handleChange} options={paymentStatuses} />
                     </div>
                     <div className="space-y-1.5">
-                      <label className="label">Delivery Status</label>
+                      <label className="label">Status (Receiving)</label>
                       <Input 
                         type="select" 
-                        name="deliveryStatus" 
-                        value={formData.deliveryStatus} 
+                        name="status" 
+                        value={formData.status} 
                         onChange={handleChange} 
-                        options={deliveryStatuses}
+                        options={statuses}
                       />
                     </div>
-                    <div className="space-y-1.5 md:col-span-2 mt-4">
+                    <div className="space-y-1.5">
+                      <label className="label">Paid By</label>
+                      <Input name="paidBy" value={formData.paidBy} onChange={handleChange} placeholder="e.g. Company, Owner Name" />
+                    </div>
+                    <div className="space-y-1.5 md:col-span-2 mt-2">
                       <label className="label">Invoice Attachment</label>
                       <ImageUpload 
                         value={invoiceUrl}

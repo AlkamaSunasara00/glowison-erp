@@ -19,17 +19,18 @@ const paymentOptions = [
   { value: "PENDING", label: "Pending" },
 ];
 
-const deliveryOptions = [
-  { value: "all", label: "All Deliveries" },
-  { value: "DELIVERED", label: "Delivered" },
+const statusOptions = [
+  { value: "all", label: "All Statuses" },
+  { value: "RECEIVED", label: "Received" },
   { value: "PENDING", label: "Pending" },
+  { value: "CANCELLED", label: "Cancelled" },
 ];
 
 export const Purchase = () => {
   const router = useRouter();
   const [search, setSearch] = useState("");
   const [paymentFilter, setPaymentFilter] = useState("all");
-  const [deliveryFilter, setDeliveryFilter] = useState("all");
+  const [statusFilter, setStatusFilter] = useState("all");
   const [monthFilter, setMonthFilter] = useState("");
   
   const [isAddOpen, setIsAddOpen] = useState(false);
@@ -45,15 +46,16 @@ export const Purchase = () => {
       const res = await api.get('/purchases?limit=200');
       setPurchases(res.data.data.map(p => ({
         ...p,
-        id: p.invoiceNumber,
+        id: p.purchaseNumber,
         originalId: p.id,
-        vendor: p.supplier?.name || "Unknown",
+        vendor: p.supplier?.name || "-",
+        type: p.purchaseType,
         date: new Date(p.purchaseDate).toLocaleDateString('en-CA'),
         items: p.items?.map(i => i.inventoryItem?.name).join(', ') || "",
         itemsData: p.items,
         total: p.grandTotal,
         paymentStatus: p.paymentStatus,
-        deliveryStatus: p.deliveryStatus
+        status: p.status
       })));
     } catch (error) {
       toast.error('Failed to load purchases');
@@ -67,22 +69,22 @@ export const Purchase = () => {
   }, []);
 
   // Filters
-  const hasActiveFilters = paymentFilter !== "all" || deliveryFilter !== "all";
+  const hasActiveFilters = paymentFilter !== "all" || statusFilter !== "all";
   const filteredPurchases = purchases.filter((purchase) => {
     const query = search.trim().toLowerCase();
-    const matchesSearch = query.length === 0 || purchase.id.toLowerCase().includes(query) || purchase.vendor.toLowerCase().includes(query);
+    const matchesSearch = query.length === 0 || purchase.id.toLowerCase().includes(query) || (purchase.vendor && purchase.vendor.toLowerCase().includes(query));
     const matchesPayment = paymentFilter === "all" || purchase.paymentStatus === paymentFilter;
-    const matchesDelivery = deliveryFilter === "all" || purchase.deliveryStatus === deliveryFilter;
+    const matchesStatus = statusFilter === "all" || purchase.status === statusFilter;
     const matchesMonth = !monthFilter || purchase.date.startsWith(monthFilter);
 
-    return matchesSearch && matchesPayment && matchesDelivery && matchesMonth;
+    return matchesSearch && matchesPayment && matchesStatus && matchesMonth;
   });
 
   // KPIs
   const totalPurchases = purchases.length;
   const totalPaid = purchases.filter(p => p.paymentStatus === "PAID").reduce((sum, p) => sum + parseFloat(p.total), 0);
   const totalOutstanding = purchases.filter(p => p.paymentStatus === "PENDING").reduce((sum, p) => sum + parseFloat(p.total), 0);
-  const pendingDeliveries = purchases.filter(p => p.deliveryStatus === "PENDING").length;
+  const pendingDeliveries = purchases.filter(p => p.status === "PENDING").length;
 
   return (
     <div className="flex flex-col min-h-screen w-full relative gap-4">
@@ -147,14 +149,12 @@ export const Purchase = () => {
               options={paymentOptions}
             />
           </div>
-          <div className="w-full md:w-48">
              <Input
               type="select"
-              value={deliveryFilter}
-              onChange={(e) => setDeliveryFilter(e.target.value)}
-              options={deliveryOptions}
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+              options={statusOptions}
             />
-          </div>
           <div className="w-full md:w-48">
              <Input
               type="month"
@@ -173,7 +173,7 @@ export const Purchase = () => {
             onClearSearch={() => {
               setSearch("");
               setPaymentFilter("all");
-              setDeliveryFilter("all");
+              setStatusFilter("all");
               setMonthFilter("");
             }}
             addLabel="Record Purchase"
@@ -184,13 +184,14 @@ export const Purchase = () => {
               <table className="w-full text-left border-collapse min-w-[900px]">
                 <thead className="bg-gray-50 border-b border-gray-100 text-xs font-semibold text-gray-600">
                   <tr>
-                    <th className="px-4 py-3">Invoice Number</th>
-                    <th className="px-4 py-3">Vendor</th>
+                    <th className="px-4 py-3">Purchase Number</th>
+                    <th className="px-4 py-3">Supplier</th>
+                    <th className="px-4 py-3">Type</th>
                     <th className="px-4 py-3">Items Summary</th>
                     <th className="px-4 py-3">Date</th>
                     <th className="px-4 py-3 text-right">Amount</th>
                     <th className="px-4 py-3">Payment</th>
-                    <th className="px-4 py-3">Delivery</th>
+                    <th className="px-4 py-3">Status</th>
                     <th className="px-4 py-3 text-center">Actions</th>
                   </tr>
                 </thead>
@@ -204,6 +205,7 @@ export const Purchase = () => {
                       >
                         <td className="px-4 py-3 font-semibold text-primary">{purchase.id}</td>
                         <td className="px-4 py-3 font-medium text-gray-900">{purchase.vendor}</td>
+                        <td className="px-4 py-3 text-gray-600"><StatusBadge status={purchase.type} /></td>
                         <td className="px-4 py-3 text-gray-600 text-xs truncate max-w-[200px]" title={purchase.items}>
                           {purchase.items}
                         </td>
@@ -215,7 +217,7 @@ export const Purchase = () => {
                            <StatusBadge status={purchase.paymentStatus} />
                         </td>
                         <td className="px-4 py-3">
-                           <StatusBadge status={purchase.deliveryStatus} />
+                           <StatusBadge status={purchase.status} />
                         </td>
                         <td className="px-4 py-3 text-center" onClick={(e) => e.stopPropagation()}>
                           <Button variant="ghost" size="sm" onClick={() => setEditItem(purchase)} className="px-2!">

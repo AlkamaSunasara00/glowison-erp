@@ -6,19 +6,12 @@ import Icons from "@/common/Icons";
 import Input from "@/common/Input";
 import ImageUpload from "@/common/ImageUpload";
 
-const typeOptions = [
-  { label: "Raw Material", value: "Raw Material" },
-  { label: "Finished Good", value: "Finished Good" },
-];
-
 const categoryOptions = [
-  { label: "Board", value: "BOARD" },
-  { label: "Vinyl", value: "VINYL" },
-  { label: "Acrylic", value: "ACRYLIC" },
-  { label: "Flex", value: "FLEX" },
-  { label: "LED", value: "LED" },
-  { label: "Ink", value: "INK" },
-  { label: "Other", value: "OTHERS" },
+  { label: "Raw Material", value: "RAW_MATERIAL" },
+  { label: "Consumables", value: "CONSUMABLES" },
+  { label: "Hardware", value: "HARDWARE" },
+  { label: "Packaging", value: "PACKAGING" },
+  { label: "Finished Goods", value: "FINISHED_GOODS" },
 ];
 
 const unitOptions = [
@@ -26,22 +19,41 @@ const unitOptions = [
   { label: "Sq Ft", value: "Sq Ft" },
   { label: "Roll", value: "Roll" },
   { label: "Liters", value: "Liters" },
-  { label: "Other", value: "Other" },
+  { label: "Other", value: "OTHER" },
 ];
 
 const AddInventory = ({ open, onClose }) => {
   const [formData, setFormData] = useState({
-    sku: "",
     name: "",
-    type: "Raw Material",
-    category: "BOARD",
-    otherCategory: "",
-    baseUnit: "Piece",
+    sku: "",
+    barcode: "",
+    category: "RAW_MATERIAL",
+    subCategory: "",
+    brand: "",
+    description: "",
+    
+    // Material Details
+    material: "",
+    color: "",
+    thickness: "",
+    length: "",
+    width: "",
+    size: "",
+    finish: "",
+    
+    // Units
     purchaseUnit: "Piece",
-    unitsPerPurchase: "1",
-    openingStock: "0",
-    minStock: "0",
-    lastPurchasePrice: "0",
+    purchaseUnitOther: "",
+    usageUnit: "Piece",
+    usageUnitOther: "",
+    conversionFactor: 1,
+    lastPurchasePrice: 0,
+    
+    openingStock: 0,
+    minimumStock: 0,
+    maximumStock: 0,
+    reorderLevel: 0,
+    
     images: [],
   });
   
@@ -71,15 +83,31 @@ const AddInventory = ({ open, onClose }) => {
       const payload = {
         name: formData.name,
         sku: formData.sku || undefined,
-        type: formData.type === "Raw Material" ? "RAW_MATERIAL" : "FINISHED_GOOD",
-        category: formData.category === "OTHERS" ? "OTHERS" : formData.category,
-        categoryOther: formData.category === "OTHERS" ? formData.otherCategory : undefined,
-        baseUnit: formData.baseUnit,
-        purchaseUnit: formData.purchaseUnit,
-        unitsPerPurchase: formData.unitsPerPurchase ? Number(formData.unitsPerPurchase) : 1,
-        openingStock: formData.openingStock ? Number(formData.openingStock) : 0,
+        barcode: formData.barcode || undefined,
+        category: formData.category,
+        subCategory: formData.subCategory || undefined,
+        brand: formData.brand || undefined,
+        description: formData.description || undefined,
+        
+        material: formData.material || undefined,
+        color: formData.color || undefined,
+        thickness: formData.thickness || undefined,
+        length: formData.length || undefined,
+        width: formData.width || undefined,
+        size: formData.size || undefined,
+        finish: formData.finish || undefined,
+
+        purchaseUnit: formData.purchaseUnit === "OTHER" ? formData.purchaseUnitOther : formData.purchaseUnit,
+        usageUnit: formData.usageUnit === "OTHER" ? formData.usageUnitOther : formData.usageUnit,
+        conversionFactor: formData.conversionFactor ? Number(formData.conversionFactor) : 1,
         lastPurchasePrice: formData.lastPurchasePrice ? Number(formData.lastPurchasePrice) : 0,
-        reorderThreshold: formData.minStock ? Number(formData.minStock) : 0,
+        
+        openingPurchaseStock: formData.openingStock ? Number(formData.openingStock) / (Number(formData.conversionFactor) || 1) : 0,
+        openingUsageStock: formData.openingStock ? Number(formData.openingStock) : 0,
+        minimumStock: formData.minimumStock ? Number(formData.minimumStock) : 0,
+        maximumStock: formData.maximumStock ? Number(formData.maximumStock) : 0,
+        reorderLevel: formData.reorderLevel ? Number(formData.reorderLevel) : 0,
+        
         images: formData.images || [],
       };
 
@@ -126,63 +154,97 @@ const AddInventory = ({ open, onClose }) => {
 
           <div className="min-h-0 flex-1 overflow-y-auto px-6 py-5 custom-scrollbar">
             <div className="grid grid-cols-1 gap-x-6 gap-y-5 md:grid-cols-2">
+              {/* Basic Info */}
+              <div className="col-span-1 md:col-span-2 text-sm font-semibold text-gray-900 border-b pb-2 mt-2">Basic Information</div>
               <div className="space-y-1.5 md:col-span-2">
                 <label className="label">Item Name <span className="required">*</span></label>
                 <Input name="name" value={formData.name} onChange={handleChange} required />
               </div>
-              
-              <div className="space-y-1.5">
-                <label className="label">SKU / Code (Optional)</label>
-                <Input name="sku" value={formData.sku} onChange={handleChange} />
-              </div>
-
-              <div className="space-y-1.5">
-                <label className="label">Item Type <span className="required">*</span></label>
-                <Input type="select" name="type" value={formData.type} onChange={handleChange} options={typeOptions} required />
-              </div>
-
               <div className="space-y-1.5">
                 <label className="label">Category <span className="required">*</span></label>
                 <Input type="select" name="category" value={formData.category} onChange={handleChange} options={categoryOptions} required />
               </div>
-
-              {formData.category === "OTHERS" && (
-                <div className="space-y-1.5 animate-fade-in">
-                  <label className="label">Specify Category <span className="required">*</span></label>
-                  <Input name="otherCategory" value={formData.otherCategory} onChange={handleChange} required />
-                </div>
-              )}
-
               <div className="space-y-1.5">
-                <label className="label">Base Unit (Display Unit) <span className="required">*</span></label>
-                <Input type="select" name="baseUnit" value={formData.baseUnit} onChange={handleChange} options={unitOptions} required />
+                <label className="label">Sub Category</label>
+                <Input name="subCategory" value={formData.subCategory} onChange={handleChange} placeholder="e.g. MDF, Acrylic" />
+              </div>
+              <div className="space-y-1.5">
+                <label className="label">SKU</label>
+                <Input name="sku" value={formData.sku} onChange={handleChange} />
+              </div>
+              <div className="space-y-1.5">
+                <label className="label">Brand</label>
+                <Input name="brand" value={formData.brand} onChange={handleChange} />
+              </div>
+              
+              {/* Dynamic Material Details based on Subcategory (Simplified example) */}
+              <div className="col-span-1 md:col-span-2 text-sm font-semibold text-gray-900 border-b pb-2 mt-4">Material Details</div>
+              <div className="space-y-1.5">
+                <label className="label">Material</label>
+                <Input name="material" value={formData.material} onChange={handleChange} />
+              </div>
+              <div className="space-y-1.5">
+                <label className="label">Thickness</label>
+                <Input name="thickness" value={formData.thickness} onChange={handleChange} placeholder="e.g. 2mm, 5mm" />
+              </div>
+              <div className="space-y-1.5">
+                <label className="label">Size / Dimensions</label>
+                <Input name="size" value={formData.size} onChange={handleChange} placeholder="e.g. 8x4 ft" />
+              </div>
+              <div className="space-y-1.5">
+                <label className="label">Color / Finish</label>
+                <Input name="color" value={formData.color} onChange={handleChange} />
               </div>
 
+              {/* Unit Conversions */}
+              <div className="col-span-1 md:col-span-2 text-sm font-semibold text-gray-900 border-b pb-2 mt-4">Units & Costing</div>
               <div className="space-y-1.5">
                 <label className="label">Purchase Unit <span className="required">*</span></label>
                 <Input type="select" name="purchaseUnit" value={formData.purchaseUnit} onChange={handleChange} options={unitOptions} required />
               </div>
-
+              {formData.purchaseUnit === "OTHER" && (
+                <div className="space-y-1.5 animate-in fade-in slide-in-from-top-1">
+                  <label className="label">Specify Purchase Unit <span className="required">*</span></label>
+                  <Input name="purchaseUnitOther" value={formData.purchaseUnitOther} onChange={handleChange} required />
+                </div>
+              )}
               <div className="space-y-1.5">
-                <label className="label">Units Per Purchase</label>
-                <Input type="number" name="unitsPerPurchase" value={formData.unitsPerPurchase} onChange={handleChange} min="1" step="0.01" />
+                <label className="label">Usage Unit <span className="required">*</span></label>
+                <Input type="select" name="usageUnit" value={formData.usageUnit} onChange={handleChange} options={unitOptions} required />
+              </div>
+              {formData.usageUnit === "OTHER" && (
+                <div className="space-y-1.5 animate-in fade-in slide-in-from-top-1">
+                  <label className="label">Specify Usage Unit <span className="required">*</span></label>
+                  <Input name="usageUnitOther" value={formData.usageUnitOther} onChange={handleChange} required />
+                </div>
+              )}
+              <div className="space-y-1.5">
+                <label className="label">Conversion Factor <span className="required">*</span></label>
+                <div className="flex flex-col gap-1">
+                  <Input type="number" name="conversionFactor" value={formData.conversionFactor} onChange={handleChange} min="0.01" step="0.01" required />
+                  <span className="text-[10px] text-gray-500">1 {formData.purchaseUnit === "OTHER" ? (formData.purchaseUnitOther || "Unit") : formData.purchaseUnit} = {formData.conversionFactor || 1} {formData.usageUnit === "OTHER" ? (formData.usageUnitOther || "Unit") : formData.usageUnit}</span>
+                </div>
+              </div>
+              <div className="space-y-1.5">
+                <label className="label">Purchase Price (per {formData.purchaseUnit === "OTHER" ? (formData.purchaseUnitOther || "Unit") : formData.purchaseUnit})</label>
+                <div className="flex flex-col gap-1">
+                  <Input type="number" name="lastPurchasePrice" value={formData.lastPurchasePrice} onChange={handleChange} min="0" step="0.01" />
+                </div>
               </div>
 
+              {/* Stock Tracking */}
+              <div className="col-span-1 md:col-span-2 text-sm font-semibold text-gray-900 border-b pb-2 mt-4">Stock Levels</div>
               <div className="space-y-1.5">
-                <label className="label">Opening Stock (in Base Units)</label>
+                <label className="label">Opening Stock (in {formData.usageUnit})</label>
                 <Input type="number" name="openingStock" value={formData.openingStock} onChange={handleChange} min="0" step="0.01" />
               </div>
-
-              <div className="space-y-1.5">
-                <label className="label">Last Purchase Price (Per Base Unit)</label>
-                <Input type="number" name="lastPurchasePrice" value={formData.lastPurchasePrice} onChange={handleChange} min="0" step="0.01" />
-              </div>
-
               <div className="space-y-1.5">
                 <label className="label">Minimum Stock Alert Level</label>
-                <Input type="number" name="minStock" value={formData.minStock} onChange={handleChange} min="0" step="0.01" />
+                <Input type="number" name="minimumStock" value={formData.minimumStock} onChange={handleChange} min="0" step="0.01" />
               </div>
-              
+
+              {/* Image Upload */}
+              <div className="col-span-1 md:col-span-2 text-sm font-semibold text-gray-900 border-b pb-2 mt-4">Media</div>
               <div className="space-y-1.5 md:col-span-2">
                 <label className="label">Images</label>
                 <ImageUpload 

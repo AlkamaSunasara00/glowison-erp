@@ -33,12 +33,14 @@ const handler = async (req, res) => {
       if (!existing) return res.status(404).json({ success: false, message: 'Not found' });
 
       const {
-        invoiceNumber,
+        purchaseNumber,
+        referenceNumber,
+        purchaseType,
         supplierId,
         purchaseDate,
         paymentMethod,
         paymentStatus,
-        deliveryStatus,
+        status, // replaces deliveryStatus
         invoiceUrl,
         notes,
         subtotal,
@@ -48,38 +50,48 @@ const handler = async (req, res) => {
         grandTotal,
         paidAmount,
         dueAmount,
+        paidBy,
+        paymentMethodOther,
         items
       } = req.body;
 
-      if (existing.deliveryStatus === 'DELIVERED' && deliveryStatus === 'PENDING') {
-        return res.status(400).json({ success: false, message: 'Cannot revert a DELIVERED purchase to PENDING.' });
+      if (existing.status === 'RECEIVED' && status === 'PENDING') {
+        return res.status(400).json({ success: false, message: 'Cannot revert a RECEIVED purchase to PENDING.' });
       }
 
       const result = await prisma.$transaction(async (tx) => {
-        // Reverse old stock if it was previously DELIVERED
-        if (existing.deliveryStatus === 'DELIVERED') {
+        // Reverse old stock if it was previously RECEIVED
+        if (existing.status === 'RECEIVED') {
           for (const pItem of existing.items) {
+            if (!pItem.inventoryItemId) continue;
             const invItem = await tx.inventoryItem.findUnique({ where: { id: pItem.inventoryItemId } });
             if (!invItem) continue;
 
-            const baseQtyToDeduct = parseFloat(pItem.quantity) * parseFloat(invItem.unitsPerPurchase);
-            const newStockQty = parseFloat(invItem.stockQty) - baseQtyToDeduct;
+            const newPurchaseStock = parseFloat(invItem.currentPurchaseStock) - parseFloat(pItem.purchaseQuantity);
+            const newUsageStock = parseFloat(invItem.currentUsageStock) - parseFloat(pItem.usageQuantity);
 
             await tx.inventoryItem.update({
               where: { id: invItem.id },
               data: {
-                stockQty: Math.max(0, newStockQty)
+                currentPurchaseStock: Math.max(0, newPurchaseStock),
+                currentUsageStock: Math.max(0, newUsageStock)
               }
             });
 
             await tx.stockTransaction.create({
               data: {
                 inventoryItemId: invItem.id,
-                type: 'ADJUSTMENT',
-                quantity: -baseQtyToDeduct,
-                unitPrice: 0,
+                type: 'OUT',
+                reason: 'CORRECTION',
+                referenceType: 'PURCHASE',
                 referenceId: existing.id,
-                note: `Purchase Invoice Edited (Reversal): ${existing.invoiceNumber}`
+                purchaseQuantity: -parseFloat(pItem.purchaseQuantity),
+                purchaseUnit: pItem.purchaseUnit,
+                usageQuantity: -parseFloat(pItem.usageQuantity),
+                usageUnit: pItem.usageUnit,
+                unitCost: 0,
+                totalCost: 0,
+                note: `Purchase Edited (Reversal): ${existing.purchaseNumber}`
               }
             });
           }
@@ -88,15 +100,40 @@ const handler = async (req, res) => {
         // Delete old items and recreate
         await tx.purchaseItem.deleteMany({ where: { purchaseId: id } });
 
+        // 0. Auto-create Inventory Items for manual entries
+        const processedItems = [];
+        for (const item of items) {
+          if (!item.inventoryItemId && item.itemName) {
+            const newItem = await tx.inventoryItem.create({
+              data: {
+                name: item.itemName,
+                category: 'RAW_MATERIAL',
+                purchaseUnit: item.purchaseUnit || 'Piece',
+                usageUnit: item.usageUnit || 'Piece',
+                conversionFactor: (parseFloat(item.usageQuantity) / parseFloat(item.purchaseQuantity)) || 1,
+                lastPurchasePrice: parseFloat(item.purchasePrice || 0),
+                averageCost: parseFloat(item.unitCost || 0),
+                currentPurchaseStock: 0,
+                currentUsageStock: 0
+              }
+            });
+            item.inventoryItemId = newItem.id;
+            item.itemName = null;
+          }
+          processedItems.push(item);
+        }
+
         const purchase = await tx.purchase.update({
           where: { id },
           data: {
-            invoiceNumber,
-            supplierId,
+            purchaseNumber,
+            referenceNumber,
+            purchaseType,
+            supplierId: supplierId || null,
             purchaseDate: new Date(purchaseDate),
             paymentMethod,
             paymentStatus,
-            deliveryStatus,
+            status,
             invoiceUrl,
             notes,
             subtotal: parseFloat(subtotal || 0),
@@ -106,12 +143,18 @@ const handler = async (req, res) => {
             grandTotal: parseFloat(grandTotal || 0),
             paidAmount: parseFloat(paidAmount || 0),
             dueAmount: parseFloat(dueAmount || 0),
+            paidBy: paidBy || 'Company',
+            paymentMethodOther: paymentMethod === 'OTHER' ? paymentMethodOther : null,
             items: {
-              create: items.map(item => ({
-                inventoryItemId: item.inventoryItemId,
+              create: processedItems.map(item => ({
+                inventoryItemId: item.inventoryItemId || null,
+                itemName: item.inventoryItemId ? null : item.itemName,
+                purchaseQuantity: parseFloat(item.purchaseQuantity),
                 purchaseUnit: item.purchaseUnit,
-                quantity: parseFloat(item.quantity),
-                unitPrice: parseFloat(item.unitPrice),
+                usageQuantity: parseFloat(item.usageQuantity),
+                usageUnit: item.usageUnit,
+                purchasePrice: parseFloat(item.purchasePrice),
+                unitCost: parseFloat(item.unitCost),
                 discount: parseFloat(item.discount || 0),
                 tax: parseFloat(item.tax || 0),
                 total: parseFloat(item.total)
@@ -121,30 +164,31 @@ const handler = async (req, res) => {
           include: { items: true }
         });
 
-        // If the new status is DELIVERED, apply the new items to stock
-        if (deliveryStatus === 'DELIVERED') {
+        // If the new status is RECEIVED, apply the new items to stock
+        if (status === 'RECEIVED') {
           for (const pItem of purchase.items) {
+            if (!pItem.inventoryItemId) continue;
             const invItem = await tx.inventoryItem.findUnique({ where: { id: pItem.inventoryItemId } });
             if (!invItem) continue;
 
-            const newBaseQty = parseFloat(pItem.quantity) * parseFloat(invItem.unitsPerPurchase);
-            const currentStock = parseFloat(invItem.stockQty);
+            const newPurchaseStock = parseFloat(invItem.currentPurchaseStock) + parseFloat(pItem.purchaseQuantity);
+            const newUsageStock = parseFloat(invItem.currentUsageStock) + parseFloat(pItem.usageQuantity);
             const currentAvgCost = parseFloat(invItem.averageCost);
             
             const lineCost = parseFloat(pItem.total);
-            const newStockQty = currentStock + newBaseQty;
-            const newLastPurchasePrice = newBaseQty > 0 ? (lineCost / newBaseQty) : 0;
+            const newLastPurchasePrice = parseFloat(pItem.purchasePrice);
             
             let newAvgCost = currentAvgCost;
-            if (newStockQty > 0) {
-              const currentTotalValue = currentStock * currentAvgCost;
-              newAvgCost = (currentTotalValue + lineCost) / newStockQty;
+            if (newUsageStock > 0) {
+              const currentTotalValue = parseFloat(invItem.currentUsageStock) * currentAvgCost;
+              newAvgCost = (currentTotalValue + lineCost) / newUsageStock;
             }
 
             await tx.inventoryItem.update({
               where: { id: invItem.id },
               data: {
-                stockQty: newStockQty,
+                currentPurchaseStock: newPurchaseStock,
+                currentUsageStock: newUsageStock,
                 lastPurchasePrice: newLastPurchasePrice,
                 averageCost: newAvgCost
               }
@@ -153,11 +197,17 @@ const handler = async (req, res) => {
             await tx.stockTransaction.create({
               data: {
                 inventoryItemId: invItem.id,
-                type: 'PURCHASE',
-                quantity: newBaseQty,
-                unitPrice: newLastPurchasePrice,
+                type: 'IN',
+                reason: 'PURCHASE',
+                referenceType: 'PURCHASE',
                 referenceId: purchase.id,
-                note: `Purchase Invoice Edited (New Qty): ${invoiceNumber}`
+                purchaseQuantity: parseFloat(pItem.purchaseQuantity),
+                purchaseUnit: pItem.purchaseUnit,
+                usageQuantity: parseFloat(pItem.usageQuantity),
+                usageUnit: pItem.usageUnit,
+                unitCost: parseFloat(pItem.unitCost),
+                totalCost: lineCost,
+                note: `Purchase Edited (New Qty): ${purchaseNumber}`
               }
             });
           }
@@ -180,19 +230,20 @@ const handler = async (req, res) => {
       if (!existing) return res.status(404).json({ success: false, message: 'Not found' });
 
       await prisma.$transaction(async (tx) => {
-        if (existing.deliveryStatus === 'DELIVERED') {
+        if (existing.status === 'RECEIVED') {
           // Reverse stock
           for (const pItem of existing.items) {
             const invItem = await tx.inventoryItem.findUnique({ where: { id: pItem.inventoryItemId } });
             if (!invItem) continue;
 
-            const baseQtyToDeduct = parseFloat(pItem.quantity) * parseFloat(invItem.unitsPerPurchase);
-            const newStockQty = parseFloat(invItem.stockQty) - baseQtyToDeduct;
+            const newPurchaseStock = parseFloat(invItem.currentPurchaseStock) - parseFloat(pItem.purchaseQuantity);
+            const newUsageStock = parseFloat(invItem.currentUsageStock) - parseFloat(pItem.usageQuantity);
 
             await tx.inventoryItem.update({
               where: { id: invItem.id },
               data: {
-                stockQty: Math.max(0, newStockQty) // Prevent negative for simplicity
+                currentPurchaseStock: Math.max(0, newPurchaseStock),
+                currentUsageStock: Math.max(0, newUsageStock)
               }
             });
 
@@ -200,11 +251,17 @@ const handler = async (req, res) => {
             await tx.stockTransaction.create({
               data: {
                 inventoryItemId: invItem.id,
-                type: 'ADJUSTMENT',
-                quantity: -baseQtyToDeduct,
-                unitPrice: 0,
+                type: 'OUT',
+                reason: 'CORRECTION',
+                referenceType: 'PURCHASE',
                 referenceId: existing.id,
-                note: `Purchase Invoice Deleted: ${existing.invoiceNumber}`
+                purchaseQuantity: -parseFloat(pItem.purchaseQuantity),
+                purchaseUnit: pItem.purchaseUnit,
+                usageQuantity: -parseFloat(pItem.usageQuantity),
+                usageUnit: pItem.usageUnit,
+                unitCost: 0,
+                totalCost: 0,
+                note: `Purchase Deleted: ${existing.purchaseNumber}`
               }
             });
           }

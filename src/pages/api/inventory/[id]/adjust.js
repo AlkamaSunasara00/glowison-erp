@@ -17,12 +17,24 @@ const handler = async (req, res) => {
         return res.status(404).json({ success: false, message: 'Item not found' });
       }
 
+      const conversion = parseFloat(item.conversionFactor) || 1;
+      const usageQuantity = quantity;
+      const purchaseQuantity = usageQuantity / conversion;
+      const unitCost = parseFloat(item.averageCost || item.lastPurchasePrice || 0);
+
+      const type = usageQuantity > 0 ? 'IN' : 'OUT';
+
       await prisma.stockTransaction.create({
         data: {
           inventoryItemId: id,
-          type: 'ADJUSTMENT',
-          quantity: quantity,
-          unitPrice: item.averageCost || item.lastPurchasePrice || 0,
+          type: type,
+          reason: 'MANUAL_ADJUSTMENT',
+          purchaseQuantity: Math.abs(purchaseQuantity),
+          purchaseUnit: item.purchaseUnit,
+          usageQuantity: Math.abs(usageQuantity),
+          usageUnit: item.usageUnit,
+          unitCost: unitCost,
+          totalCost: unitCost * Math.abs(usageQuantity),
           note: note || 'Manual adjustment'
         }
       });
@@ -30,9 +42,8 @@ const handler = async (req, res) => {
       const updatedItem = await prisma.inventoryItem.update({
         where: { id },
         data: {
-          stockQty: {
-            increment: quantity
-          }
+          currentUsageStock: { increment: usageQuantity },
+          currentPurchaseStock: { increment: purchaseQuantity }
         }
       });
 

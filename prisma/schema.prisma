@@ -83,24 +83,45 @@ enum InventoryType {
 }
 
 enum InventoryCategory {
-  FLEX
-  VINYL
-  ACRYLIC
-  BOARD
-  LED
-  INK
-  OTHERS
+  RAW_MATERIAL
+  CONSUMABLES
+  HARDWARE
+  PACKAGING
+  FINISHED_GOODS
 }
 
 enum StockTransactionType {
-  OPENING_STOCK
-  PURCHASE
-  SALE
+  IN
+  OUT
   ADJUSTMENT
+  TRANSFER
+}
+
+enum StockTransactionReason {
+  PURCHASE
+  MANUAL_ADJUSTMENT
   PRODUCTION_USAGE
+  RETURN
+  CORRECTION
+  DAMAGED
+  LOST
+}
+
+enum ReferenceType {
+  PURCHASE
+  MANUAL
+  INVOICE
+  ADJUSTMENT
 }
 
 // Purchases & Expenses Enums
+enum PurchaseType {
+  CASH
+  SUPPLIER
+  MARKET
+  ONLINE
+}
+
 enum PurchasePaymentStatus {
   PAID
   PENDING
@@ -108,8 +129,9 @@ enum PurchasePaymentStatus {
 }
 
 enum PurchaseDeliveryStatus {
-  DELIVERED
+  RECEIVED
   PENDING
+  CANCELLED
 }
 
 enum PaymentMethod {
@@ -281,21 +303,45 @@ model OrderItem {
 model InventoryItem {
   id               String            @id @default(uuid())
   name             String
-  type             InventoryType     @default(RAW_MATERIAL)
-  category         InventoryCategory
-  categoryOther    String?
-  size             String?
-  color            String?
   sku              String?
-  baseUnit         String
-  purchaseUnit     String            @default("Piece")
-  unitsPerPurchase Decimal           @default(1) @db.Decimal(10, 2)
-  openingStock     Decimal           @default(0) @db.Decimal(10, 2)
-  stockQty         Decimal           @default(0) @db.Decimal(10, 2)
-  reorderThreshold Decimal           @default(10) @db.Decimal(10, 2)
+  barcode          String?
+  category         InventoryCategory @default(RAW_MATERIAL)
+  subCategory      String?
+  brand            String?
+  description      String?
+  
+  // Material Details
+  material         String?
+  color            String?
+  thickness        String?
+  length           String?
+  width            String?
+  size             String?
+  finish           String?
+  
+  // Units
+  purchaseUnit     String
+  usageUnit        String
+  conversionFactor Decimal           @default(1) @db.Decimal(10, 2)
+  
+  // Costing
   lastPurchasePrice Decimal          @default(0) @db.Decimal(10, 2)
   averageCost      Decimal           @default(0) @db.Decimal(10, 2)
-  images           String[]          // Cloudinary URLs
+  
+  // Inventory Tracking
+  currentPurchaseStock Decimal       @default(0) @db.Decimal(10, 2)
+  currentUsageStock    Decimal       @default(0) @db.Decimal(10, 2)
+  minimumStock         Decimal       @default(0) @db.Decimal(10, 2)
+  maximumStock         Decimal       @default(0) @db.Decimal(10, 2)
+  reorderLevel         Decimal       @default(0) @db.Decimal(10, 2)
+  
+  // Storage Location
+  warehouse        String?
+  rack             String?
+  shelf            String?
+  bin              String?
+  
+  images           String[]
   createdAt        DateTime          @default(now())
   updatedAt        DateTime          @updatedAt
   transactions     StockTransaction[]
@@ -309,10 +355,20 @@ model StockTransaction {
   inventoryItem   InventoryItem        @relation(fields: [inventoryItemId], references: [id], onDelete: Cascade)
   inventoryItemId String
   type            StockTransactionType
-  quantity        Decimal              @db.Decimal(10, 2) // Positive or negative
-  unitPrice       Decimal              @default(0) @db.Decimal(10, 2)
-  referenceId     String?              // e.g., Purchase ID, Order ID
+  
+  purchaseQuantity Decimal             @default(0) @db.Decimal(10, 2)
+  purchaseUnit     String?
+  usageQuantity    Decimal             @default(0) @db.Decimal(10, 2) // Positive or negative
+  usageUnit        String?
+  
+  unitCost         Decimal             @default(0) @db.Decimal(10, 2)
+  totalCost        Decimal             @default(0) @db.Decimal(10, 2)
+  
+  reason          StockTransactionReason @default(MANUAL_ADJUSTMENT)
+  referenceType   ReferenceType?
+  referenceId     String?
   note            String?
+  createdBy       String?
   createdAt       DateTime             @default(now())
 
   @@index([inventoryItemId])
@@ -324,7 +380,7 @@ model Supplier {
   id              String         @id @default(uuid())
   name            String
   companyName     String?
-  contactPerson   String
+  contactPerson   String?
   mobile          String
   alternateMobile String?
   email           String?
@@ -349,11 +405,18 @@ model PurchaseItem {
   id              String        @id @default(uuid())
   purchase        Purchase      @relation(fields: [purchaseId], references: [id], onDelete: Cascade)
   purchaseId      String
-  inventoryItem   InventoryItem @relation(fields: [inventoryItemId], references: [id])
-  inventoryItemId String
-  purchaseUnit    String
-  quantity        Decimal       @db.Decimal(10, 2)
-  unitPrice       Decimal       @db.Decimal(10, 2)
+  inventoryItem   InventoryItem? @relation(fields: [inventoryItemId], references: [id])
+  inventoryItemId String?
+  itemName        String?
+  
+  purchaseQuantity Decimal      @db.Decimal(10, 2)
+  purchaseUnit     String
+  usageQuantity    Decimal      @db.Decimal(10, 2)
+  usageUnit        String
+  
+  purchasePrice    Decimal      @db.Decimal(10, 2)
+  unitCost         Decimal      @db.Decimal(10, 2)
+  
   discount        Decimal       @default(0) @db.Decimal(10, 2)
   tax             Decimal       @default(0) @db.Decimal(10, 2)
   total           Decimal       @db.Decimal(10, 2)
@@ -361,13 +424,19 @@ model PurchaseItem {
 
 model Purchase {
   id              String                 @id @default(uuid())
-  invoiceNumber   String                 @unique
-  supplier        Supplier               @relation(fields: [supplierId], references: [id])
-  supplierId      String
+  purchaseNumber  String                 @unique
+  referenceNumber String?
+  
+  purchaseType    PurchaseType           @default(CASH)
+  supplier        Supplier?              @relation(fields: [supplierId], references: [id])
+  supplierId      String?
+  
   purchaseDate    DateTime
   paymentMethod   PaymentMethod          @default(CASH)
+  paymentMethodOther String?
+  paidBy          String?                @default("Company")
   paymentStatus   PurchasePaymentStatus  @default(PENDING)
-  deliveryStatus  PurchaseDeliveryStatus @default(PENDING)
+  status          PurchaseDeliveryStatus @default(PENDING)
   invoiceUrl      String?
   notes           String?
   items           PurchaseItem[]
@@ -400,6 +469,7 @@ model Expense {
   paidAmount      Decimal              @default(0) @db.Decimal(10, 2)
   dueAmount       Decimal              @default(0) @db.Decimal(10, 2)
   paymentMethod   PaymentMethod        @default(CASH)
+  paymentMethodOther String?
   status          ExpensePaymentStatus @default(PAID)
   referenceNumber String?
   receiptUrl      String?

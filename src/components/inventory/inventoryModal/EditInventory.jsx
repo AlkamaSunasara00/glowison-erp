@@ -6,19 +6,12 @@ import api from "@/lib/api";
 import toast from "react-hot-toast";
 import ImageUpload from "@/common/ImageUpload";
 
-const typeOptions = [
-  { label: "Raw Material", value: "Raw Material" },
-  { label: "Finished Good", value: "Finished Good" },
-];
-
 const categoryOptions = [
-  { label: "Board", value: "BOARD" },
-  { label: "Vinyl", value: "VINYL" },
-  { label: "Acrylic", value: "ACRYLIC" },
-  { label: "Flex", value: "FLEX" },
-  { label: "LED", value: "LED" },
-  { label: "Ink", value: "INK" },
-  { label: "Other", value: "OTHERS" },
+  { label: "Raw Material", value: "RAW_MATERIAL" },
+  { label: "Consumables", value: "CONSUMABLES" },
+  { label: "Hardware", value: "HARDWARE" },
+  { label: "Packaging", value: "PACKAGING" },
+  { label: "Finished Goods", value: "FINISHED_GOODS" },
 ];
 
 const unitOptions = [
@@ -26,24 +19,41 @@ const unitOptions = [
   { label: "Sq Ft", value: "Sq Ft" },
   { label: "Roll", value: "Roll" },
   { label: "Liters", value: "Liters" },
-  { label: "Other", value: "Other" },
+  { label: "Other", value: "OTHER" },
 ];
 
 const EditInventory = ({ open, onClose, initialData }) => {
   const [formData, setFormData] = useState({
-    sku: "",
     name: "",
-    type: "Raw Material",
-    category: "BOARD",
-    otherCategory: "",
-    baseUnit: "Piece",
+    sku: "",
+    barcode: "",
+    category: "RAW_MATERIAL",
+    subCategory: "",
+    brand: "",
+    description: "",
+    
+    // Material Details
+    material: "",
+    color: "",
+    thickness: "",
+    length: "",
+    width: "",
+    size: "",
+    finish: "",
+    
+    // Units
     purchaseUnit: "Piece",
-    unitsPerPurchase: "1",
-    minStock: "0",
-    lastPurchasePrice: "0",
-    stockQty: "0",
-    stockQty: "0",
-    averageCost: "0",
+    purchaseUnitOther: "",
+    usageUnit: "Piece",
+    usageUnitOther: "",
+    conversionFactor: 1,
+    lastPurchasePrice: 0,
+    
+    openingStock: 0,
+    minimumStock: 0,
+    maximumStock: 0,
+    reorderLevel: 0,
+    
     images: [],
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -51,26 +61,35 @@ const EditInventory = ({ open, onClose, initialData }) => {
 
   useEffect(() => {
     if (initialData) {
-      let category = initialData.category || "BOARD";
-      let otherCategory = "";
-      if (category && !categoryOptions.find(o => o.value === category)) {
-        category = "OTHERS";
-        otherCategory = initialData.category;
-      }
-
       setFormData({
-        sku: initialData.sku || "",
         name: initialData.name || "",
-        type: initialData.type || "Raw Material",
-        category: category,
-        otherCategory: otherCategory,
-        baseUnit: initialData.baseUnit || "Piece",
-        purchaseUnit: initialData.purchaseUnit || "Piece",
-        unitsPerPurchase: initialData.unitsPerPurchase || "1",
-        minStock: initialData.minStock || "0",
-        lastPurchasePrice: initialData.lastPurchasePrice || "0",
-        stockQty: initialData.stockQty || initialData.stock || "0",
-        averageCost: initialData.averageCost || "0",
+        sku: initialData.sku || "",
+        barcode: initialData.barcode || "",
+        category: initialData.category || "RAW_MATERIAL",
+        subCategory: initialData.subCategory || "",
+        brand: initialData.brand || "",
+        description: initialData.description || "",
+        
+        material: initialData.material || "",
+        color: initialData.color || "",
+        thickness: initialData.thickness || "",
+        length: initialData.length || "",
+        width: initialData.width || "",
+        size: initialData.size || "",
+        finish: initialData.finish || "",
+        
+        purchaseUnit: unitOptions.some(o => o.value === initialData.purchaseUnit) ? (initialData.purchaseUnit || "Piece") : "OTHER",
+        purchaseUnitOther: !unitOptions.some(o => o.value === initialData.purchaseUnit) ? initialData.purchaseUnit : "",
+        usageUnit: unitOptions.some(o => o.value === initialData.usageUnit) ? (initialData.usageUnit || "Piece") : "OTHER",
+        usageUnitOther: !unitOptions.some(o => o.value === initialData.usageUnit) ? initialData.usageUnit : "",
+        conversionFactor: initialData.conversionFactor || 1,
+        lastPurchasePrice: initialData.lastPurchasePrice || 0,
+        
+        openingStock: initialData.currentUsageStock || 0,
+        minimumStock: initialData.minimumStock || 0,
+        maximumStock: initialData.maximumStock || 0,
+        reorderLevel: initialData.reorderLevel || 0,
+        
         images: initialData.images || [],
       });
     }
@@ -97,15 +116,39 @@ const EditInventory = ({ open, onClose, initialData }) => {
 
       const payload = {
         name: formData.name,
-        sku: formData.sku || undefined,
-        type: formData.type === "Raw Material" ? "RAW_MATERIAL" : "FINISHED_GOOD",
-        category: formData.category === "OTHERS" ? "OTHERS" : formData.category,
-        categoryOther: formData.category === "OTHERS" ? formData.otherCategory : undefined,
-        baseUnit: formData.baseUnit,
-        purchaseUnit: formData.purchaseUnit,
-        unitsPerPurchase: formData.unitsPerPurchase ? Number(formData.unitsPerPurchase) : 1,
+        sku: formData.sku || null,
+        barcode: formData.barcode || null,
+        category: formData.category,
+        subCategory: formData.subCategory || null,
+        brand: formData.brand || null,
+        description: formData.description || null,
+        
+        material: formData.material || null,
+        color: formData.color || null,
+        thickness: formData.thickness || null,
+        length: formData.length || null,
+        width: formData.width || null,
+        size: formData.size || null,
+        finish: formData.finish || null,
+
+        purchaseUnit: formData.purchaseUnit === "OTHER" ? formData.purchaseUnitOther : formData.purchaseUnit,
+        usageUnit: formData.usageUnit === "OTHER" ? formData.usageUnitOther : formData.usageUnit,
+        conversionFactor: formData.conversionFactor ? Number(formData.conversionFactor) : 1,
         lastPurchasePrice: formData.lastPurchasePrice ? Number(formData.lastPurchasePrice) : 0,
-        reorderThreshold: formData.minStock ? Number(formData.minStock) : 0,
+        
+        currentPurchaseStock: formData.openingStock ? Number(formData.openingStock) / (Number(formData.conversionFactor) || 1) : 0,
+        currentUsageStock: formData.openingStock ? Number(formData.openingStock) : 0,
+        minimumStock: formData.minimumStock ? Number(formData.minimumStock) : 0,
+        maximumStock: formData.maximumStock ? Number(formData.maximumStock) : 0,
+        reorderLevel: formData.reorderLevel ? Number(formData.reorderLevel) : 0,
+        
+        lastPurchasePrice: formData.lastPurchasePrice ? Number(formData.lastPurchasePrice) : 0,
+        
+        warehouse: formData.warehouse || null,
+        rack: formData.rack || null,
+        shelf: formData.shelf || null,
+        bin: formData.bin || null,
+        
         images: formData.images || [],
       };
 
@@ -152,63 +195,97 @@ const EditInventory = ({ open, onClose, initialData }) => {
 
           <div className="min-h-0 flex-1 overflow-y-auto px-6 py-5 custom-scrollbar">
             <div className="grid grid-cols-1 gap-x-6 gap-y-5 md:grid-cols-2">
+              {/* Basic Info */}
+              <div className="col-span-1 md:col-span-2 text-sm font-semibold text-gray-900 border-b pb-2 mt-2">Basic Information</div>
               <div className="space-y-1.5 md:col-span-2">
                 <label className="label">Item Name <span className="required">*</span></label>
                 <Input name="name" value={formData.name} onChange={handleChange} required />
               </div>
-              
-              <div className="space-y-1.5">
-                <label className="label">SKU / Code (Optional)</label>
-                <Input name="sku" value={formData.sku} onChange={handleChange} />
-              </div>
-
-              <div className="space-y-1.5">
-                <label className="label">Item Type <span className="required">*</span></label>
-                <Input type="select" name="type" value={formData.type} onChange={handleChange} options={typeOptions} required />
-              </div>
-
               <div className="space-y-1.5">
                 <label className="label">Category <span className="required">*</span></label>
                 <Input type="select" name="category" value={formData.category} onChange={handleChange} options={categoryOptions} required />
               </div>
-
-              {formData.category === "OTHERS" && (
-                <div className="space-y-1.5 animate-fade-in">
-                  <label className="label">Specify Category <span className="required">*</span></label>
-                  <Input name="otherCategory" value={formData.otherCategory} onChange={handleChange} required />
-                </div>
-              )}
-
               <div className="space-y-1.5">
-                <label className="label">Base Unit (Display Unit) <span className="required">*</span></label>
-                <Input type="select" name="baseUnit" value={formData.baseUnit} onChange={handleChange} options={unitOptions} required />
+                <label className="label">Sub Category</label>
+                <Input name="subCategory" value={formData.subCategory} onChange={handleChange} placeholder="e.g. MDF, Acrylic" />
+              </div>
+              <div className="space-y-1.5">
+                <label className="label">SKU</label>
+                <Input name="sku" value={formData.sku} onChange={handleChange} />
+              </div>
+              <div className="space-y-1.5">
+                <label className="label">Brand</label>
+                <Input name="brand" value={formData.brand} onChange={handleChange} />
+              </div>
+              
+              {/* Dynamic Material Details based on Subcategory (Simplified example) */}
+              <div className="col-span-1 md:col-span-2 text-sm font-semibold text-gray-900 border-b pb-2 mt-4">Material Details</div>
+              <div className="space-y-1.5">
+                <label className="label">Material</label>
+                <Input name="material" value={formData.material} onChange={handleChange} />
+              </div>
+              <div className="space-y-1.5">
+                <label className="label">Thickness</label>
+                <Input name="thickness" value={formData.thickness} onChange={handleChange} placeholder="e.g. 2mm, 5mm" />
+              </div>
+              <div className="space-y-1.5">
+                <label className="label">Size / Dimensions</label>
+                <Input name="size" value={formData.size} onChange={handleChange} placeholder="e.g. 8x4 ft" />
+              </div>
+              <div className="space-y-1.5">
+                <label className="label">Color / Finish</label>
+                <Input name="color" value={formData.color} onChange={handleChange} />
               </div>
 
+              {/* Unit Conversions */}
+              <div className="col-span-1 md:col-span-2 text-sm font-semibold text-gray-900 border-b pb-2 mt-4">Units & Costing</div>
               <div className="space-y-1.5">
                 <label className="label">Purchase Unit <span className="required">*</span></label>
                 <Input type="select" name="purchaseUnit" value={formData.purchaseUnit} onChange={handleChange} options={unitOptions} required />
               </div>
-
+              {formData.purchaseUnit === "OTHER" && (
+                <div className="space-y-1.5 animate-in fade-in slide-in-from-top-1">
+                  <label className="label">Specify Purchase Unit <span className="required">*</span></label>
+                  <Input name="purchaseUnitOther" value={formData.purchaseUnitOther} onChange={handleChange} required />
+                </div>
+              )}
               <div className="space-y-1.5">
-                <label className="label">Units Per Purchase</label>
-                <Input type="number" name="unitsPerPurchase" value={formData.unitsPerPurchase} onChange={handleChange} min="1" step="0.01" />
+                <label className="label">Usage Unit <span className="required">*</span></label>
+                <Input type="select" name="usageUnit" value={formData.usageUnit} onChange={handleChange} options={unitOptions} required />
+              </div>
+              {formData.usageUnit === "OTHER" && (
+                <div className="space-y-1.5 animate-in fade-in slide-in-from-top-1">
+                  <label className="label">Specify Usage Unit <span className="required">*</span></label>
+                  <Input name="usageUnitOther" value={formData.usageUnitOther} onChange={handleChange} required />
+                </div>
+              )}
+              <div className="space-y-1.5">
+                <label className="label">Conversion Factor <span className="required">*</span></label>
+                <div className="flex flex-col gap-1">
+                  <Input type="number" name="conversionFactor" value={formData.conversionFactor} onChange={handleChange} min="0.01" step="0.01" required />
+                  <span className="text-[10px] text-gray-500">1 {formData.purchaseUnit === "OTHER" ? (formData.purchaseUnitOther || "Unit") : formData.purchaseUnit} = {formData.conversionFactor || 1} {formData.usageUnit === "OTHER" ? (formData.usageUnitOther || "Unit") : formData.usageUnit}</span>
+                </div>
+              </div>
+              <div className="space-y-1.5">
+                <label className="label">Purchase Price (per {formData.purchaseUnit === "OTHER" ? (formData.purchaseUnitOther || "Unit") : formData.purchaseUnit})</label>
+                <div className="flex flex-col gap-1">
+                  <Input type="number" name="lastPurchasePrice" value={formData.lastPurchasePrice} onChange={handleChange} min="0" step="0.01" />
+                </div>
               </div>
 
+              {/* Stock Tracking */}
+              <div className="col-span-1 md:col-span-2 text-sm font-semibold text-gray-900 border-b pb-2 mt-4">Stock Levels</div>
               <div className="space-y-1.5">
-                <label className="label">Current Stock (Read Only)</label>
-                <Input type="number" name="stockQty" value={formData.stockQty} readOnly disabled className="bg-gray-50" />
+                <label className="label">Opening Stock (in {formData.usageUnit})</label>
+                <Input type="number" name="openingStock" value={formData.openingStock} onChange={handleChange} min="0" step="0.01" />
               </div>
-
-              <div className="space-y-1.5">
-                <label className="label">Last Purchase Price (Per Base Unit)</label>
-                <Input type="number" name="lastPurchasePrice" value={formData.lastPurchasePrice} onChange={handleChange} min="0" step="0.01" />
-              </div>
-
               <div className="space-y-1.5">
                 <label className="label">Minimum Stock Alert Level</label>
-                <Input type="number" name="minStock" value={formData.minStock} onChange={handleChange} min="0" step="0.01" />
+                <Input type="number" name="minimumStock" value={formData.minimumStock} onChange={handleChange} min="0" step="0.01" />
               </div>
-              
+
+              {/* Media */}
+              <div className="col-span-1 md:col-span-2 text-sm font-semibold text-gray-900 border-b pb-2 mt-4">Media</div>
               <div className="space-y-1.5 md:col-span-2">
                 <label className="label">Images</label>
                 <ImageUpload 

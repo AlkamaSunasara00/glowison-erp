@@ -48,6 +48,7 @@ const AddExpense = ({ open, onClose }) => {
     paidToName: "",
     supplierId: "",
     paymentMethod: "CASH",
+    paymentMethodOther: "",
     status: "PAID",
     referenceNumber: "",
     notes: "",
@@ -89,7 +90,9 @@ const AddExpense = ({ open, onClose }) => {
 
       const payload = {
         ...formData,
+        paymentMethodOther: formData.paymentMethod === 'OTHER' ? formData.paymentMethodOther : undefined,
         amount: Number(formData.amount),
+        spentOn: new Date(formData.spentOn),
         receiptUrl
       };
       
@@ -187,6 +190,13 @@ const AddExpense = ({ open, onClose }) => {
                 <label className="label">Payment Method <span className="required">*</span></label>
                 <Input type="select" name="paymentMethod" value={formData.paymentMethod} onChange={handleChange} options={paymentMethodOptions} required />
               </div>
+
+              {formData.paymentMethod === 'OTHER' && (
+                <div className="space-y-1.5 animate-in fade-in slide-in-from-top-1">
+                  <label className="label">Specify Other Method <span className="required">*</span></label>
+                  <Input name="paymentMethodOther" value={formData.paymentMethodOther} onChange={handleChange} required />
+                </div>
+              )}
 
               <div className="space-y-1.5">
                 <label className="label">Status <span className="required">*</span></label>

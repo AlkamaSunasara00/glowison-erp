@@ -88,7 +88,7 @@ const AdjustStock = ({ open, onClose, item }) => {
             
             <div className="mb-5 flex justify-between items-center p-3 rounded-lg bg-gray-50 border border-gray-100">
               <span className="text-sm font-medium text-gray-700">Current Stock</span>
-              <span className="text-lg font-bold text-gray-900">{item.stock}</span>
+              <span className="text-lg font-bold text-gray-900">{item.stock} <span className="text-sm text-gray-500 font-normal">{item.usageUnit}</span></span>
             </div>
 
             <div className="space-y-4">
@@ -104,8 +104,8 @@ const AdjustStock = ({ open, onClose, item }) => {
               </div>
 
               <div className="space-y-1.5">
-                <label className="label">Quantity <span className="required">*</span></label>
-                <Input type="number" name="qty" value={formData.qty} onChange={handleChange} min="1" required />
+                <label className="label">Quantity (in {item.usageUnit}) <span className="required">*</span></label>
+                <Input type="number" name="qty" value={formData.qty} onChange={handleChange} min="0.01" step="0.01" required />
               </div>
 
               <div className="space-y-1.5">

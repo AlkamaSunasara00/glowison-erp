@@ -14,21 +14,13 @@ import InventoryDetail from "./InventoryDetail";
 
 
 
-const typeOptions = [
-  { value: "all", label: "All Types" },
-  { value: "Raw Material", label: "Raw Material" },
-  { value: "Finished Good", label: "Finished Good" },
-];
-
 const categoryOptions = [
   { value: "all", label: "All Categories" },
-  { value: "BOARD", label: "Board" },
-  { value: "VINYL", label: "Vinyl" },
-  { value: "ACRYLIC", label: "Acrylic" },
-  { value: "FLEX", label: "Flex" },
-  { value: "LED", label: "LED" },
-  { value: "INK", label: "Ink" },
-  { value: "OTHERS", label: "Other" },
+  { value: "RAW_MATERIAL", label: "Raw Material" },
+  { value: "CONSUMABLES", label: "Consumables" },
+  { value: "HARDWARE", label: "Hardware" },
+  { value: "PACKAGING", label: "Packaging" },
+  { value: "FINISHED_GOODS", label: "Finished Goods" },
 ];
 
 export const Inventory = () => {
@@ -50,17 +42,23 @@ export const Inventory = () => {
       setLoading(true);
       const res = await api.get('/inventory?limit=200');
       setItems(res.data.data.map(i => ({
+        ...i,
         id: i.id,
-        sku: i.sku,
+        sku: i.sku || '-',
         name: i.name,
-        type: i.type === 'RAW_MATERIAL' ? 'Raw Material' : 'Finished Good',
-        category: i.category === 'OTHERS' ? (i.categoryOther || 'Other') : (categoryOptions.find(o => o.value === i.category)?.label || i.category),
-        stock: i.stockQty,
-        minStock: i.reorderThreshold || 0,
-        price: i.averageCost || i.lastPurchasePrice || 0,
-        baseUnit: i.baseUnit || "Piece",
-        purchaseUnit: i.purchaseUnit || "Piece",
-        unitsPerPurchase: i.unitsPerPurchase || 1,
+        type: i.category === 'FINISHED_GOODS' ? 'Finished Good' : 'Raw Material',
+        displayCategory: categoryOptions.find(o => o.value === i.category)?.label || i.category,
+        subCategory: i.subCategory || '-',
+        purchaseStock: i.currentPurchaseStock || 0,
+        usageStock: i.currentUsageStock || 0,
+        minStock: i.minimumStock || 0,
+        averageCost: i.averageCost || 0,
+        price: i.lastPurchasePrice || 0,
+        purchaseUnit: i.purchaseUnit || "-",
+        usageUnit: i.usageUnit || "-",
+        warehouse: i.warehouse || "-",
+        rack: i.rack || "-",
+        bin: i.bin || "-",
         images: i.images || [],
       })));
     } catch (error) {
@@ -78,17 +76,16 @@ export const Inventory = () => {
   const hasActiveFilters = typeFilter !== "all" || categoryFilter !== "all";
   const filteredItems = items.filter((item) => {
     const query = search.trim().toLowerCase();
-    const matchesSearch = query.length === 0 || item.sku.toLowerCase().includes(query) || item.name.toLowerCase().includes(query);
-    const matchesType = typeFilter === "all" || item.type === typeFilter;
+    const matchesSearch = query.length === 0 || (item.sku && item.sku.toLowerCase().includes(query)) || item.name.toLowerCase().includes(query);
     const matchesCategory = categoryFilter === "all" || item.category === categoryFilter;
 
-    return matchesSearch && matchesType && matchesCategory;
+    return matchesSearch && matchesCategory;
   });
 
   // KPIs
   const totalItems = items.length;
-  const lowStockCount = items.filter(item => Number(item.stock) <= Number(item.minStock)).length;
-  const totalValue = items.reduce((sum, item) => sum + (Number(item.stock) * Number(item.price)), 0);
+  const lowStockCount = items.filter(item => Number(item.usageStock) <= Number(item.minStock)).length;
+  const totalValue = items.reduce((sum, item) => sum + (Number(item.usageStock) * Number(item.averageCost)), 0);
 
   return (
     <div className="flex flex-col min-h-screen w-full relative gap-4">
@@ -142,14 +139,6 @@ export const Inventory = () => {
             />
           </div>
           <div className="w-full md:w-48">
-            <Input
-              type="select"
-              value={typeFilter}
-              onChange={(e) => setTypeFilter(e.target.value)}
-              options={typeOptions}
-            />
-          </div>
-          <div className="w-full md:w-48">
              <Input
               type="select"
               value={categoryFilter}
@@ -167,7 +156,6 @@ export const Inventory = () => {
             entityIcon="Package"
             onClearSearch={() => {
               setSearch("");
-              setTypeFilter("all");
               setCategoryFilter("all");
             }}
             addLabel="Add Item"
@@ -179,16 +167,16 @@ export const Inventory = () => {
                 <thead className="bg-gray-50 border-b border-gray-100 text-xs font-semibold text-gray-600">
                   <tr>
                     <th className="px-4 py-3">SKU & Name</th>
-                    <th className="px-4 py-3">Type</th>
                     <th className="px-4 py-3">Category</th>
-                    <th className="px-4 py-3 text-right">Stock Level</th>
-                    <th className="px-4 py-3 text-right">Average Cost</th>
+                    <th className="px-4 py-3">Purchase Stock</th>
+                    <th className="px-4 py-3">Usage Stock</th>
+                    <th className="px-4 py-3">Purchase Price</th>
                     <th className="px-4 py-3 text-center">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="text-sm">
                   {filteredItems.map(item => {
-                     const isLowStock = Number(item.stock) <= Number(item.minStock);
+                    const isLowStock = Number(item.usageStock) <= Number(item.minStock);
                      return (
                       <tr 
                         key={item.id} 
@@ -206,22 +194,23 @@ export const Inventory = () => {
                             </div>
                             <div>
                               <div className="font-semibold text-gray-900">{item.name}</div>
-                              <div className="text-xs text-gray-500">{item.sku}</div>
+                              <div className="text-xs text-gray-500">{item.sku || 'No SKU'}</div>
                             </div>
                           </div>
                         </td>
                         <td className="px-4 py-3">
-                           <StatusBadge status={item.type} />
+                          <div className="font-medium text-gray-900">{item.displayCategory}</div>
+                          <div className="text-xs text-gray-500">{item.subCategory}</div>
                         </td>
-                        <td className="px-4 py-3 text-gray-700">
-                          {item.category}
+                        <td className="px-4 py-3">
+                          <div className="font-medium text-gray-900">{item.purchaseStock} <span className="text-xs text-gray-500 font-normal">{item.purchaseUnit}</span></div>
                         </td>
-                        <td className="px-4 py-3 text-right">
-                          <div className="font-medium text-gray-900">{item.stock} <span className="text-xs text-gray-500 font-normal">{item.baseUnit}</span></div>
+                        <td className="px-4 py-3">
+                          <div className="font-medium text-gray-900">{item.usageStock} <span className="text-xs text-gray-500 font-normal">{item.usageUnit}</span></div>
                           {isLowStock && <div className="text-[10px] text-rose-500 font-semibold mt-0.5">Low Stock (Min {item.minStock})</div>}
                         </td>
-                        <td className="px-4 py-3 text-right font-medium text-gray-900">
-                          Rs. {item.price}
+                        <td className="px-4 py-3 font-medium text-gray-900">
+                          Rs. {Number(item.price).toLocaleString()}
                         </td>
                         <td className="px-4 py-3 text-center" onClick={(e) => e.stopPropagation()}>
                           <div className="flex items-center justify-center gap-2">

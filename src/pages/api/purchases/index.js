@@ -9,7 +9,7 @@ const handler = async (req, res) => {
       
       const where = search ? {
         OR: [
-          { invoiceNumber: { contains: search, mode: 'insensitive' } },
+          { purchaseNumber: { contains: search, mode: 'insensitive' } },
           { supplier: { name: { contains: search, mode: 'insensitive' } } },
         ]
       } : {};
@@ -46,12 +46,14 @@ const handler = async (req, res) => {
 
     if (req.method === 'POST') {
       const {
-        invoiceNumber,
+        purchaseNumber,
+        referenceNumber,
+        purchaseType,
         supplierId,
         purchaseDate,
         paymentMethod,
         paymentStatus,
-        deliveryStatus,
+        status, // replaces deliveryStatus
         invoiceUrl,
         notes,
         subtotal,
@@ -61,19 +63,46 @@ const handler = async (req, res) => {
         grandTotal,
         paidAmount,
         dueAmount,
+        paidBy,
+        paymentMethodOther,
         items // Array of items
       } = req.body;
 
       const result = await prisma.$transaction(async (tx) => {
+        // 0. Auto-create Inventory Items for manual entries
+        const processedItems = [];
+        for (const item of items) {
+          if (!item.inventoryItemId && item.itemName) {
+            const newItem = await tx.inventoryItem.create({
+              data: {
+                name: item.itemName,
+                category: 'RAW_MATERIAL',
+                purchaseUnit: item.purchaseUnit || 'Piece',
+                usageUnit: item.usageUnit || 'Piece',
+                conversionFactor: (parseFloat(item.usageQuantity) / parseFloat(item.purchaseQuantity)) || 1,
+                lastPurchasePrice: parseFloat(item.purchasePrice || 0),
+                averageCost: parseFloat(item.unitCost || 0),
+                currentPurchaseStock: 0,
+                currentUsageStock: 0
+              }
+            });
+            item.inventoryItemId = newItem.id;
+            item.itemName = null;
+          }
+          processedItems.push(item);
+        }
+
         // 1. Create Purchase and PurchaseItems
         const purchase = await tx.purchase.create({
           data: {
-            invoiceNumber: invoiceNumber || `PINV-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
-            supplierId,
+            purchaseNumber: purchaseNumber || `PUR-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+            referenceNumber,
+            purchaseType: purchaseType || 'CASH',
+            supplierId: supplierId || null,
             purchaseDate: new Date(purchaseDate),
-            paymentMethod,
-            paymentStatus,
-            deliveryStatus,
+            paymentMethod: paymentMethod || 'CASH',
+            paymentStatus: paymentStatus || 'PENDING',
+            status: status || 'PENDING',
             invoiceUrl,
             notes,
             subtotal: parseFloat(subtotal || 0),
@@ -83,12 +112,18 @@ const handler = async (req, res) => {
             grandTotal: parseFloat(grandTotal || 0),
             paidAmount: parseFloat(paidAmount || 0),
             dueAmount: parseFloat(dueAmount || 0),
+            paidBy: paidBy || 'Company',
+            paymentMethodOther: paymentMethod === 'OTHER' ? paymentMethodOther : null,
             items: {
-              create: items.map(item => ({
-                inventoryItemId: item.inventoryItemId,
+              create: processedItems.map(item => ({
+                inventoryItemId: item.inventoryItemId || null,
+                itemName: item.inventoryItemId ? null : item.itemName,
+                purchaseQuantity: parseFloat(item.purchaseQuantity),
                 purchaseUnit: item.purchaseUnit,
-                quantity: parseFloat(item.quantity),
-                unitPrice: parseFloat(item.unitPrice),
+                usageQuantity: parseFloat(item.usageQuantity),
+                usageUnit: item.usageUnit,
+                purchasePrice: parseFloat(item.purchasePrice),
+                unitCost: parseFloat(item.unitCost),
                 discount: parseFloat(item.discount || 0),
                 tax: parseFloat(item.tax || 0),
                 total: parseFloat(item.total)
@@ -98,30 +133,33 @@ const handler = async (req, res) => {
           include: { items: true }
         });
 
-        // 2. If DELIVERED, update Inventory
-        if (deliveryStatus === 'DELIVERED') {
+        // 2. If RECEIVED, update Inventory
+        if (status === 'RECEIVED') {
           for (const pItem of purchase.items) {
+            if (!pItem.inventoryItemId) continue;
+            
             const invItem = await tx.inventoryItem.findUnique({ where: { id: pItem.inventoryItemId } });
             if (!invItem) continue;
 
-            const newBaseQty = parseFloat(pItem.quantity) * parseFloat(invItem.unitsPerPurchase);
-            const currentStock = parseFloat(invItem.stockQty);
+            const newPurchaseStock = parseFloat(invItem.currentPurchaseStock) + parseFloat(pItem.purchaseQuantity);
+            const newUsageStock = parseFloat(invItem.currentUsageStock) + parseFloat(pItem.usageQuantity);
             const currentAvgCost = parseFloat(invItem.averageCost);
             
             const lineCost = parseFloat(pItem.total);
-            const newStockQty = currentStock + newBaseQty;
-            const newLastPurchasePrice = newBaseQty > 0 ? (lineCost / newBaseQty) : 0;
+            const newLastPurchasePrice = parseFloat(pItem.purchasePrice);
             
             let newAvgCost = currentAvgCost;
-            if (newStockQty > 0) {
-              const currentTotalValue = currentStock * currentAvgCost;
-              newAvgCost = (currentTotalValue + lineCost) / newStockQty;
+            if (newUsageStock > 0) {
+              // Calculate avg cost based on usage stock
+              const currentTotalValue = parseFloat(invItem.currentUsageStock) * currentAvgCost;
+              newAvgCost = (currentTotalValue + lineCost) / newUsageStock;
             }
 
             await tx.inventoryItem.update({
               where: { id: invItem.id },
               data: {
-                stockQty: newStockQty,
+                currentPurchaseStock: newPurchaseStock,
+                currentUsageStock: newUsageStock,
                 lastPurchasePrice: newLastPurchasePrice,
                 averageCost: newAvgCost
               }
@@ -130,11 +168,17 @@ const handler = async (req, res) => {
             await tx.stockTransaction.create({
               data: {
                 inventoryItemId: invItem.id,
-                type: 'PURCHASE',
-                quantity: newBaseQty,
-                unitPrice: newLastPurchasePrice,
+                type: 'IN',
+                reason: 'PURCHASE',
+                referenceType: 'PURCHASE',
                 referenceId: purchase.id,
-                note: `Purchase Invoice: ${invoiceNumber}`
+                purchaseQuantity: parseFloat(pItem.purchaseQuantity),
+                purchaseUnit: pItem.purchaseUnit,
+                usageQuantity: parseFloat(pItem.usageQuantity),
+                usageUnit: pItem.usageUnit,
+                unitCost: parseFloat(pItem.unitCost),
+                totalCost: lineCost,
+                note: `Purchase Number: ${purchase.purchaseNumber}`
               }
             });
           }

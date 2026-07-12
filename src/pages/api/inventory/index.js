@@ -33,25 +33,31 @@ const handler = async (req, res) => {
     }
 
     if (req.method === 'POST') {
-      const { openingStock, lastPurchasePrice, ...rest } = req.body;
+      const { openingPurchaseStock, openingUsageStock, conversionFactor, lastPurchasePrice, ...rest } = req.body;
       
       const item = await prisma.inventoryItem.create({ 
         data: {
           ...rest,
-          openingStock: openingStock || 0,
-          stockQty: openingStock || 0,
-          lastPurchasePrice: lastPurchasePrice || 0,
-          averageCost: lastPurchasePrice || 0
+          conversionFactor: parseFloat(conversionFactor || 1),
+          currentPurchaseStock: parseFloat(openingPurchaseStock || 0),
+          currentUsageStock: parseFloat(openingUsageStock || 0),
+          lastPurchasePrice: parseFloat(lastPurchasePrice || 0),
+          averageCost: lastPurchasePrice ? parseFloat(lastPurchasePrice) / parseFloat(conversionFactor || 1) : 0
         }
       });
       
-      if (openingStock && Number(openingStock) > 0) {
+      if ((openingPurchaseStock && Number(openingPurchaseStock) > 0) || (openingUsageStock && Number(openingUsageStock) > 0)) {
         await prisma.stockTransaction.create({
           data: {
             inventoryItemId: item.id,
-            type: 'OPENING_STOCK',
-            quantity: Number(openingStock),
-            unitPrice: lastPurchasePrice ? Number(lastPurchasePrice) : 0,
+            type: 'IN',
+            reason: 'MANUAL_ADJUSTMENT',
+            referenceType: 'MANUAL',
+            purchaseQuantity: Number(openingPurchaseStock || 0),
+            purchaseUnit: rest.purchaseUnit,
+            usageQuantity: Number(openingUsageStock || 0),
+            usageUnit: rest.usageUnit,
+            unitCost: lastPurchasePrice ? Number(lastPurchasePrice) / parseFloat(conversionFactor || 1) : 0,
             note: 'Initial opening stock'
           }
         });

@@ -58,8 +58,8 @@ const PurchaseDetail = ({ itemId }) => {
           </button>
           <div>
             <h2 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
-              Invoice #{data.invoiceNumber}
-              <StatusBadge status={data.deliveryStatus} />
+              Purchase {data.purchaseNumber ? `#${data.purchaseNumber}` : ''}
+              <StatusBadge status={data.status} />
               <StatusBadge status={data.paymentStatus} />
             </h2>
             <p className="text-sm text-gray-500 mt-0.5">Purchased on {formatDate(data.purchaseDate)}</p>
@@ -91,16 +91,35 @@ const PurchaseDetail = ({ itemId }) => {
                 <span className="text-[11px] font-semibold uppercase tracking-wider text-gray-400">Supplier</span>
                 <span 
                   className="text-base text-primary font-medium cursor-pointer hover:underline truncate"
-                  title={data.supplier?.name}
-                  onClick={() => router.push(`/suppliers/${data.supplierId}`)}
+                  title={data.supplier?.name || "No Supplier (Cash/Walk-in)"}
+                  onClick={() => data.supplierId && router.push(`/suppliers/${data.supplierId}`)}
                 >
-                  {data.supplier?.name}
+                  {data.supplier?.name || "Walk-in / Cash"}
                 </span>
               </div>
               <div className="flex flex-col gap-1 min-w-0">
-                <span className="text-[11px] font-semibold uppercase tracking-wider text-gray-400">Payment Method</span>
-                <span className="text-base text-gray-800 font-medium truncate" title={data.paymentMethod}>{data.paymentMethod}</span>
+                <span className="text-[11px] font-semibold uppercase tracking-wider text-gray-400">Purchase Type</span>
+                <span className="text-base text-gray-800 font-medium truncate">{data.purchaseType}</span>
               </div>
+              <div className="flex flex-col gap-1 min-w-0">
+                <span className="text-[11px] font-semibold uppercase tracking-wider text-gray-400">Payment Method</span>
+                <span className="text-base text-gray-800 font-medium truncate" title={data.paymentMethod === 'OTHER' ? data.paymentMethodOther : data.paymentMethod}>
+                  {data.paymentMethod === 'OTHER' ? data.paymentMethodOther : data.paymentMethod}
+                </span>
+              </div>
+              <div className="flex flex-col gap-1 min-w-0">
+                <span className="text-[11px] font-semibold uppercase tracking-wider text-gray-400">Paid By</span>
+                <span className="text-base text-gray-800 font-medium truncate" title={data.paidBy || 'Company'}>{data.paidBy || 'Company'}</span>
+              </div>
+            </div>
+            
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-6 mt-6">
+              {data.referenceNumber && (
+                <div className="flex flex-col gap-1 min-w-0">
+                  <span className="text-[11px] font-semibold uppercase tracking-wider text-gray-400">Reference / Bill #</span>
+                  <span className="text-base text-gray-800 font-medium truncate" title={data.referenceNumber}>{data.referenceNumber}</span>
+                </div>
+              )}
             </div>
           </section>
 
@@ -123,10 +142,22 @@ const PurchaseDetail = ({ itemId }) => {
                 <tbody className="divide-y divide-gray-100 bg-white">
                   {data.items?.map((item) => (
                     <tr key={item.id} className="hover:bg-gray-50/50 transition-colors">
-                      <td className="px-4 py-4 font-medium text-gray-900">{item.inventoryItem?.name}</td>
-                      <td className="px-4 py-4 text-right text-gray-700">{Number(item.quantity)}</td>
+                      <td className="px-4 py-4 font-medium text-gray-900">
+                        {item.inventoryItem ? item.inventoryItem.name : (
+                          <span className="flex items-center gap-1">
+                            {item.itemName} <span className="text-[10px] bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded">Manual</span>
+                          </span>
+                        )}
+                      </td>
+                      <td className="px-4 py-4 text-right">
+                        <div className="text-gray-900 font-medium">{Number(item.purchaseQuantity)} {item.purchaseUnit}</div>
+                        <div className="text-xs text-gray-500">= {Number(item.usageQuantity)} {item.usageUnit}</div>
+                      </td>
                       <td className="px-4 py-4 text-gray-500">{item.purchaseUnit}</td>
-                      <td className="px-4 py-4 text-right text-gray-700">Rs. {Number(item.unitPrice).toLocaleString()}</td>
+                      <td className="px-4 py-4 text-right">
+                        <div className="text-gray-900 font-medium">Rs. {Number(item.purchasePrice).toLocaleString()}</div>
+                        <div className="text-[10px] text-gray-500">Rs. {Number(item.unitCost).toLocaleString()} / {item.usageUnit}</div>
+                      </td>
                       <td className="px-4 py-4 text-right font-medium text-gray-900">Rs. {Number(item.total).toLocaleString()}</td>
                     </tr>
                   ))}

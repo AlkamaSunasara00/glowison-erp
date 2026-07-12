@@ -69,9 +69,9 @@ const InventoryDetail = ({ open, onClose, itemId, onUpdated }) => {
               <div>
                 <h2 className="page-header flex items-center gap-2">
                   {data.name || "Unknown Item"}
-                  <StatusBadge status={Number(data.stockQty) <= Number(data.reorderThreshold) ? "Low Stock" : "In Stock"} />
+                  <StatusBadge status={Number(data.currentUsageStock) <= Number(data.minimumStock) ? "Low Stock" : "In Stock"} />
                 </h2>
-                <p className="text-xs text-gray-400 mt-0.5">{data.sku || "No SKU"}</p>
+                <p className="text-xs text-gray-400 mt-0.5">{data.sku || "No SKU"} {data.barcode ? `| ${data.barcode}` : ""}</p>
               </div>
             </div>
 
@@ -111,29 +111,42 @@ const InventoryDetail = ({ open, onClose, itemId, onUpdated }) => {
                   
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-5">
                     <div className="flex flex-col gap-0.5">
-                      <span className="text-[11px] font-semibold uppercase tracking-wider text-gray-400">Type</span>
-                      <span className="text-sm text-gray-800 font-medium">{data.type === 'RAW_MATERIAL' ? 'Raw Material' : 'Finished Good'}</span>
-                    </div>
-                    <div className="flex flex-col gap-0.5">
                       <span className="text-[11px] font-semibold uppercase tracking-wider text-gray-400">Category</span>
-                      <span className="text-sm text-gray-800 font-medium">{data.category === 'OTHERS' ? data.categoryOther : data.category}</span>
+                      <span className="text-sm text-gray-800 font-medium">{data.category}</span>
                     </div>
                     <div className="flex flex-col gap-0.5">
-                      <span className="text-[11px] font-semibold uppercase tracking-wider text-gray-400">Opening Stock</span>
-                      <span className="text-sm text-gray-800 font-medium">{data.openingStock} {data.baseUnit}</span>
+                      <span className="text-[11px] font-semibold uppercase tracking-wider text-gray-400">Sub Category</span>
+                      <span className="text-sm text-gray-800 font-medium">{data.subCategory || "-"}</span>
+                    </div>
+                    <div className="flex flex-col gap-0.5">
+                      <span className="text-[11px] font-semibold uppercase tracking-wider text-gray-400">Brand</span>
+                      <span className="text-sm text-gray-800 font-medium">{data.brand || "-"}</span>
                     </div>
                     
+                    {data.material && (
+                      <div className="flex flex-col gap-0.5">
+                        <span className="text-[11px] font-semibold uppercase tracking-wider text-gray-400">Material</span>
+                        <span className="text-sm text-gray-800 font-medium">{data.material} {data.thickness ? `(${data.thickness})` : ""}</span>
+                      </div>
+                    )}
+                    {data.size && (
+                      <div className="flex flex-col gap-0.5">
+                        <span className="text-[11px] font-semibold uppercase tracking-wider text-gray-400">Size</span>
+                        <span className="text-sm text-gray-800 font-medium">{data.size}</span>
+                      </div>
+                    )}
+                    
                     <div className="flex flex-col gap-0.5">
-                      <span className="text-[11px] font-semibold uppercase tracking-wider text-gray-400">Base Unit</span>
-                      <span className="text-sm text-gray-800 font-medium">{data.baseUnit}</span>
+                      <span className="text-[11px] font-semibold uppercase tracking-wider text-gray-400">Usage Unit</span>
+                      <span className="text-sm text-gray-800 font-medium">{data.usageUnit}</span>
                     </div>
                     <div className="flex flex-col gap-0.5">
                       <span className="text-[11px] font-semibold uppercase tracking-wider text-gray-400">Purchase Unit</span>
                       <span className="text-sm text-gray-800 font-medium">{data.purchaseUnit}</span>
                     </div>
                     <div className="flex flex-col gap-0.5">
-                      <span className="text-[11px] font-semibold uppercase tracking-wider text-gray-400">Units Per Purchase</span>
-                      <span className="text-sm text-gray-800 font-medium">{data.unitsPerPurchase}</span>
+                      <span className="text-[11px] font-semibold uppercase tracking-wider text-gray-400">Conversion</span>
+                      <span className="text-sm text-gray-800 font-medium">1 {data.purchaseUnit} = {data.conversionFactor} {data.usageUnit}</span>
                     </div>
                   </div>
                 </section>
@@ -147,8 +160,12 @@ const InventoryDetail = ({ open, onClose, itemId, onUpdated }) => {
                   
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                     <div className="bg-gray-50/80 rounded-xl p-4 border border-gray-100">
-                      <p className="text-xs font-medium text-gray-500 mb-1">Current Stock</p>
-                      <p className="text-2xl font-bold text-gray-900">{data.stockQty} <span className="text-sm font-normal text-gray-500">{data.baseUnit}</span></p>
+                      <p className="text-xs font-medium text-gray-500 mb-1">Usage Stock</p>
+                      <p className="text-2xl font-bold text-gray-900">{data.currentUsageStock} <span className="text-sm font-normal text-gray-500">{data.usageUnit}</span></p>
+                    </div>
+                    <div className="bg-gray-50/80 rounded-xl p-4 border border-gray-100">
+                      <p className="text-xs font-medium text-gray-500 mb-1">Purchase Stock</p>
+                      <p className="text-2xl font-bold text-gray-900">{data.currentPurchaseStock} <span className="text-sm font-normal text-gray-500">{data.purchaseUnit}</span></p>
                     </div>
                     <div className="bg-gray-50/80 rounded-xl p-4 border border-gray-100">
                       <p className="text-xs font-medium text-gray-500 mb-1">Avg Cost</p>
@@ -156,11 +173,7 @@ const InventoryDetail = ({ open, onClose, itemId, onUpdated }) => {
                     </div>
                     <div className="bg-indigo-50/50 rounded-xl p-4 border border-indigo-100">
                       <p className="text-xs font-medium text-indigo-500 mb-1">Total Value</p>
-                      <p className="text-2xl font-bold text-indigo-700"><span className="text-sm font-normal text-indigo-500 mr-1">Rs.</span>{(data.stockQty * data.averageCost).toLocaleString()}</p>
-                    </div>
-                    <div className="bg-gray-50/80 rounded-xl p-4 border border-gray-100">
-                      <p className="text-xs font-medium text-gray-500 mb-1">Last Purchase Price</p>
-                      <p className="text-2xl font-bold text-gray-900"><span className="text-sm font-normal text-gray-500 mr-1">Rs.</span>{Number(data.lastPurchasePrice).toLocaleString()}</p>
+                      <p className="text-2xl font-bold text-indigo-700"><span className="text-sm font-normal text-indigo-500 mr-1">Rs.</span>{(data.currentUsageStock * data.averageCost).toLocaleString()}</p>
                     </div>
                   </div>
                 </section>
@@ -196,19 +209,24 @@ const InventoryDetail = ({ open, onClose, itemId, onUpdated }) => {
                       <p className="text-sm text-gray-500">No transactions yet.</p>
                     ) : (
                       data.transactions?.map((tx) => {
-                        const isPositive = Number(tx.quantity) > 0;
+                        const isPositive = tx.type === 'IN';
                         return (
                           <div key={tx.id} className="bg-white border border-gray-100 rounded-lg p-3 shadow-sm flex items-start justify-between">
                             <div>
                               <p className="text-xs font-semibold text-gray-900 flex items-center gap-2">
-                                {tx.type.replace('_', ' ')}
+                                {tx.reason.replace('_', ' ')}
                                 {tx.referenceId && <span className="text-[10px] bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded">Ref: {tx.referenceId}</span>}
                               </p>
                               <p className="text-[11px] text-gray-500 mt-1">{formatDateTime(tx.createdAt)}</p>
                               {tx.note && <p className="text-xs text-gray-600 mt-2 bg-gray-50 p-1.5 rounded inline-block">{tx.note}</p>}
                             </div>
-                            <div className={`text-sm font-bold ${isPositive ? 'text-emerald-600' : 'text-rose-600'}`}>
-                              {isPositive ? '+' : ''}{tx.quantity} <span className="text-[10px] font-medium opacity-70">{data.baseUnit}</span>
+                            <div className="flex flex-col items-end">
+                              <div className={`text-sm font-bold ${isPositive ? 'text-emerald-600' : 'text-rose-600'}`}>
+                                {isPositive ? '+' : '-'}{Math.abs(tx.usageQuantity)} <span className="text-[10px] font-medium opacity-70">{tx.usageUnit}</span>
+                              </div>
+                              <div className="text-[10px] text-gray-400">
+                                {isPositive ? '+' : '-'}{Math.abs(tx.purchaseQuantity)} {tx.purchaseUnit}
+                              </div>
                             </div>
                           </div>
                         )
@@ -254,7 +272,7 @@ const InventoryDetail = ({ open, onClose, itemId, onUpdated }) => {
         <AdjustStock 
           open={isAdjustOpen} 
           onClose={() => { setIsAdjustOpen(false); handleActionComplete(); }} 
-          item={{...data, stock: Number(data.stockQty)}} 
+          item={{...data, stock: Number(data.currentUsageStock)}} 
         />
       )}
     </>
