@@ -4,7 +4,7 @@ import toast from "react-hot-toast";
 import Button from "@/common/Button";
 import Icons from "@/common/Icons";
 import Input from "@/common/Input";
-import { UploadCloud, X } from "lucide-react";
+import ImageUpload from "@/common/ImageUpload";
 
 const categoryOptions = [
   { label: "Card Design", value: "CARD_DESIGN" },
@@ -79,31 +79,6 @@ const EditPriceItem = ({ open, onClose, initialData }) => {
   const handleChange = (event) => {
     const { name, value } = event.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
-  };
-
-  const handleImageUpload = async (e) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    const fd = new FormData();
-    fd.append('images', file);
-    fd.append('folder', 'erp/price-list');
-
-    try {
-      setUploadingImage(true);
-      const res = await api.post('/upload', fd, { headers: { 'Content-Type': 'multipart/form-data' } });
-      setFormData(prev => ({ ...prev, imageUrl: res.data.urls[0] }));
-      toast.success("Image uploaded successfully");
-    } catch (error) {
-      toast.error("Failed to upload image");
-    } finally {
-      setUploadingImage(false);
-    }
-  };
-
-  const removeImage = () => {
-    setFormData(prev => ({ ...prev, imageUrl: "" }));
-    if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
   const handleSubmit = async (event) => {
@@ -227,43 +202,12 @@ const EditPriceItem = ({ open, onClose, initialData }) => {
 
               <div className="space-y-1.5 md:col-span-2">
                  <label className="label">Reference Image (Optional)</label>
-                 
-                 {formData.imageUrl ? (
-                    <div className="relative w-full max-w-sm rounded-lg overflow-hidden border border-gray-200">
-                      <img src={formData.imageUrl} alt="Reference Preview" className="w-full h-auto object-cover" />
-                      <button 
-                        type="button" 
-                        onClick={removeImage} 
-                        className="absolute top-2 right-2 p-1.5 bg-red-500 text-white rounded-full hover:bg-red-600 shadow-md transition-colors"
-                        title="Remove Image"
-                      >
-                        <X size={16} />
-                      </button>
-                    </div>
-                 ) : (
-                    <div className="relative border-2 border-dashed border-gray-200 rounded-lg p-6 flex flex-col items-center justify-center bg-gray-50/50 hover:bg-gray-50 transition-colors cursor-pointer text-gray-500 hover:text-primary overflow-hidden group">
-                      <input 
-                        type="file" 
-                        ref={fileInputRef}
-                        accept="image/*"
-                        onChange={handleImageUpload}
-                        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
-                        disabled={uploadingImage}
-                      />
-                      {uploadingImage ? (
-                        <div className="flex flex-col items-center">
-                          <div className="h-6 w-6 animate-spin rounded-full border-b-2 border-primary mb-2"></div>
-                          <span className="text-sm font-medium text-primary">Uploading...</span>
-                        </div>
-                      ) : (
-                        <>
-                          <UploadCloud size={24} className="mb-2 text-gray-400 group-hover:text-primary transition-colors" />
-                          <span className="text-sm font-medium">Click to upload or drag and drop</span>
-                          <span className="text-xs mt-1 text-gray-400">PNG, JPG, JPEG up to 5MB</span>
-                        </>
-                      )}
-                    </div>
-                 )}
+                 <ImageUpload 
+                   value={formData.imageUrl} 
+                   onChange={(url) => setFormData(prev => ({ ...prev, imageUrl: url }))} 
+                   onUploadStateChange={setUploadingImage}
+                   folder="erp/price-list"
+                 />
               </div>
             </div>
           </div>

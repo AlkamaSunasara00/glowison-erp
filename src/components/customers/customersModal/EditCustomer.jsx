@@ -4,6 +4,7 @@ import toast from "react-hot-toast";
 import Button from "@/common/Button";
 import Icons from "@/common/Icons";
 import Input from "@/common/Input";
+import ImageUpload from "@/common/ImageUpload";
 
 const customerTypeOptions = [
   { label: "Retail", value: "Retail" },
@@ -25,6 +26,7 @@ const EditCustomer = ({ open, onClose, initialData, onSuccess }) => {
     pincode: "",
     notes: "",
   });
+  const [imageUrl, setImageUrl] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
@@ -44,6 +46,7 @@ const EditCustomer = ({ open, onClose, initialData, onSuccess }) => {
         pincode: parsedAddress.pincode || initialData.pincode || "",
         notes: initialData.notes || "",
       });
+      setImageUrl(initialData.imageUrl || "");
     }
   }, [initialData]);
 
@@ -79,6 +82,7 @@ const EditCustomer = ({ open, onClose, initialData, onSuccess }) => {
           pincode: formData.pincode
         }),
         notes: formData.notes || undefined,
+        imageUrl: imageUrl || null,
       };
 
       await api.put(`/customers/${initialData.id}`, payload);
@@ -124,6 +128,17 @@ const EditCustomer = ({ open, onClose, initialData, onSuccess }) => {
 
           <div className="min-h-0 flex-1 overflow-y-auto px-6 py-5 custom-scrollbar">
             <div className="grid grid-cols-1 gap-x-6 gap-y-5 md:grid-cols-2">
+              <div className="space-y-1.5 md:col-span-2">
+                <label className="label">Customer Profile Image</label>
+                <div className="w-32 h-32 rounded-full overflow-hidden border border-gray-200 bg-gray-50 mx-auto md:mx-0">
+                   <ImageUpload 
+                      value={imageUrl}
+                      onChange={setImageUrl}
+                      folder="erp/customers"
+                   />
+                </div>
+              </div>
+
               <div className="space-y-1.5 md:col-span-2">
                 <label className="label">Customer Name <span className="required">*</span></label>
                 <Input name="name" value={formData.name} onChange={handleChange} placeholder="e.g. Acme Corporation or John Doe" required />

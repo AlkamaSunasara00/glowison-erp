@@ -5,6 +5,8 @@ import Button from "@/common/Button";
 import Icons from "@/common/Icons";
 import Input from "@/common/Input";
 import CustomerPicker from "@/common/CustomerPicker";
+import CatalogPicker from "@/common/CatalogPicker";
+import ImageUpload from "@/common/ImageUpload";
 
 const orderTypeOptions = [
   { label: "Retail/Dealer", value: "Retail/Dealer" },
@@ -12,6 +14,7 @@ const orderTypeOptions = [
 ];
 
 const sourceOptions = [
+  { label: "Walkin", value: "Walkin" },
   { label: "Website", value: "Website" },
   { label: "Meesho", value: "Meesho" },
   { label: "Amazon", value: "Amazon" },
@@ -23,7 +26,7 @@ const AddOrder = ({ open, onClose }) => {
   const [orderType, setOrderType] = useState("Retail/Dealer");
   const [customerId, setCustomerId] = useState("");
   const [onlineData, setOnlineData] = useState({ source: "Website", otherSource: "", name: "", phone: "" });
-  const [lineItems, setLineItems] = useState([{ id: Date.now(), name: "", qty: 1, price: 0, pricePerUnit: "", size: "", color: "", unit: "inch", taxPercent: "", imageUrl: "" }]);
+  const [lineItems, setLineItems] = useState([{ id: Date.now(), name: "", sku: "", qty: 1, price: 0, pricePerUnit: "", size: "", color: "", unit: "inch", taxPercent: "", imageUrl: "", priceType: "Custom", retailPrice: 0, dealerPrice: 0 }]);
   const [paymentStatus, setPaymentStatus] = useState("UNPAID");
   const [amountPaid, setAmountPaid] = useState("");
   const [notes, setNotes] = useState("");
@@ -59,6 +62,7 @@ const AddOrder = ({ open, onClose }) => {
         buyerContact: orderType === "Online" ? onlineData.phone : undefined,
         items: lineItems.map(item => ({
           product: item.name,
+          sku: item.sku || null,
           qty: Number(item.qty),
           unitPrice: Number(item.price),
           pricePerInch: item.pricePerUnit ? Number(item.pricePerUnit) : null,
@@ -84,7 +88,7 @@ const AddOrder = ({ open, onClose }) => {
   const handleAddLineItem = () => {
     setLineItems([
       ...lineItems,
-      { id: Date.now(), name: "", size: "", color: "", qty: 1, price: 0, pricePerUnit: "", unit: "inch", taxPercent: "" }
+      { id: Date.now(), name: "", sku: "", size: "", color: "", qty: 1, price: 0, pricePerUnit: "", unit: "inch", taxPercent: "", priceType: "Custom", retailPrice: 0, dealerPrice: 0 }
     ]);
   };
 
@@ -93,27 +97,40 @@ const AddOrder = ({ open, onClose }) => {
   };
 
   const handleLineItemChange = (id, field, value) => {
-    setLineItems(prev => prev.map(item => item.id === id ? { ...item, [field]: value } : item));
+    setLineItems(prev => prev.map(item => {
+      if (item.id !== id) return item;
+      
+      const updated = { ...item, [field]: value };
+      
+      // Auto-update price if priceType changes
+      if (field === 'priceType') {
+         if (value === 'Retail' && updated.retailPrice) updated.price = updated.retailPrice;
+         if (value === 'Dealer' && updated.dealerPrice) updated.price = updated.dealerPrice;
+      }
+      return updated;
+    }));
   };
 
-  const handleImageUpload = async (id, file) => {
-    if (!file) return;
-    try {
-      const formData = new FormData();
-      formData.append('images', file);
-      
-      const res = await api.post('/upload', formData, {
-        headers: { 'Content-Type': 'multipart/form-data' }
-      });
-      
-      if (res.data.success && res.data.urls.length > 0) {
-        handleLineItemChange(id, 'imageUrl', res.data.urls[0]);
-        toast.success('Image uploaded successfully');
-      }
-    } catch (error) {
-      toast.error('Failed to upload image');
-      console.error(error);
-    }
+  const handleCatalogSelect = (id, value, data) => {
+     if (!data || data.__isNew__) {
+        setLineItems(prev => prev.map(item => item.id === id ? { ...item, name: value, priceType: "Custom", retailPrice: 0, dealerPrice: 0 } : item));
+        return;
+     }
+     
+     setLineItems(prev => prev.map(item => item.id === id ? { 
+        ...item, 
+        name: data.name,
+        sku: data.sku || "",
+        size: data.size || "",
+        color: data.color || "",
+        unit: data.unit || "piece",
+        taxPercent: data.taxPercent || "",
+        imageUrl: data.imageUrl || "",
+        retailPrice: data.retailPrice || 0,
+        dealerPrice: data.dealerPrice || 0,
+        priceType: "Retail", // Default to retail when selected from catalog
+        price: data.retailPrice || 0
+     } : item));
   };
 
   const calculateSubtotal = () => {
@@ -222,10 +239,14 @@ const AddOrder = ({ open, onClose }) => {
                          <Icons name="X" size={16} />
                        </button>
 
-                       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4 pr-6">
+                       <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4 pr-6">
                          <div className="space-y-1.5">
                            <label className="text-xs font-semibold text-gray-600">Product Name <span className="text-red-500">*</span></label>
-                           <Input placeholder="E.g. MDF Sheet" value={item.name} onChange={(e) => handleLineItemChange(item.id, 'name', e.target.value)} required />
+                           <CatalogPicker value={item.name} onChange={(val, data) => handleCatalogSelect(item.id, val, data)} />
+                         </div>
+                         <div className="space-y-1.5">
+                           <label className="text-xs font-semibold text-gray-600">SKU (Optional)</label>
+                           <Input placeholder="E.g. SK-123" value={item.sku} onChange={(e) => handleLineItemChange(item.id, 'sku', e.target.value)} />
                          </div>
                          <div className="space-y-1.5">
                            <label className="text-xs font-semibold text-gray-600">Size</label>
@@ -237,10 +258,14 @@ const AddOrder = ({ open, onClose }) => {
                          </div>
                        </div>
 
-                       <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+                       <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
                          <div className="space-y-1.5">
                            <label className="text-xs font-semibold text-gray-600">Pricing Unit</label>
                            <Input type="select" options={[{label: "Inch", value: "inch"}, {label: "Sq Ft", value: "sqft"}, {label: "Piece", value: "piece"}, {label: "Feet", value: "feet"}]} value={item.unit} onChange={(e) => handleLineItemChange(item.id, 'unit', e.target.value)} />
+                         </div>
+                         <div className="space-y-1.5">
+                           <label className="text-xs font-semibold text-gray-600">Price Type</label>
+                           <Input type="select" options={[{label: "Retail", value: "Retail"}, {label: "Dealer", value: "Dealer"}, {label: "Custom", value: "Custom"}]} value={item.priceType} onChange={(e) => handleLineItemChange(item.id, 'priceType', e.target.value)} />
                          </div>
                          <div className="space-y-1.5">
                            <label className="text-xs font-semibold text-gray-600">Price / {item.unit === 'sqft' ? 'Sq Ft' : item.unit === 'piece' ? 'Piece' : 'Inch'} (Info)</label>
@@ -252,36 +277,21 @@ const AddOrder = ({ open, onClose }) => {
                          </div>
                          <div className="space-y-1.5">
                            <label className="text-xs font-semibold text-gray-600">Unit Price <span className="text-red-500">*</span></label>
-                           <Input type="number" min="0" placeholder="0.00" value={item.price} onChange={(e) => handleLineItemChange(item.id, 'price', e.target.value)} required />
+                           <Input type="number" min="0" placeholder="0.00" value={item.price} onChange={(e) => { handleLineItemChange(item.id, 'priceType', 'Custom'); handleLineItemChange(item.id, 'price', e.target.value); }} required />
                          </div>
-                         <div className="w-full md:w-20 space-y-1.5">
-                           {index === 0 && <label className="text-xs font-semibold text-gray-600">Tax %</label>}
+                         <div className="w-full space-y-1.5">
+                           <label className="text-xs font-semibold text-gray-600">Tax %</label>
                            <Input type="number" min="0" placeholder="e.g. 18" value={item.taxPercent} onChange={(e) => handleLineItemChange(item.id, 'taxPercent', e.target.value)} />
                          </div>
                        </div>
                        
-                       <div className="mt-3 flex items-center gap-3">
-                         <div className="relative">
-                            <input 
-                              type="file" 
-                              accept="image/*" 
-                              onChange={(e) => handleImageUpload(item.id, e.target.files[0])}
-                              className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                              title="Upload reference image"
-                            />
-                            <Button type="button" size="sm" variant="outline" className="text-xs">
-                               <Icons name="ImagePlus" size={14} className="mr-1.5" /> Upload Image
-                            </Button>
-                         </div>
-                         {item.imageUrl && (
-                            <div className="flex items-center gap-2">
-                               <a href={item.imageUrl} target="_blank" rel="noreferrer" className="block w-8 h-8 rounded border border-gray-200 overflow-hidden hover:opacity-80 transition-opacity">
-                                  <img src={item.imageUrl} alt="Reference" className="w-full h-full object-cover" />
-                               </a>
-                               <button type="button" onClick={() => handleLineItemChange(item.id, 'imageUrl', '')} className="text-xs text-red-500 hover:underline">Remove</button>
-                            </div>
-                         )}
-                       </div>
+                        <div className="mt-3 w-full">
+                          <ImageUpload 
+                            value={item.imageUrl} 
+                            onChange={(url) => handleLineItemChange(item.id, 'imageUrl', url)} 
+                            folder="erp/orders" 
+                          />
+                        </div>
                     </div>
                   ))}
                </div>

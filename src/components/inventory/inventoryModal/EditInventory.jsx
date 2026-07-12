@@ -4,6 +4,7 @@ import Icons from "@/common/Icons";
 import Input from "@/common/Input";
 import api from "@/lib/api";
 import toast from "react-hot-toast";
+import ImageUpload from "@/common/ImageUpload";
 
 const typeOptions = [
   { label: "Raw Material", value: "Raw Material" },
@@ -43,33 +44,10 @@ const EditInventory = ({ open, onClose, initialData }) => {
     stockQty: "0",
     stockQty: "0",
     averageCost: "0",
+    images: [],
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
-  
-  const [existingImages, setExistingImages] = useState([]);
-  const [selectedFiles, setSelectedFiles] = useState([]);
-  const [previewUrls, setPreviewUrls] = useState([]);
-
-  const handleFileChange = (e) => {
-    const files = Array.from(e.target.files);
-    if (files.length > 0) {
-      setSelectedFiles(prev => [...prev, ...files]);
-      const newUrls = files.map(f => URL.createObjectURL(f));
-      setPreviewUrls(prev => [...prev, ...newUrls]);
-    }
-  };
-
-  const removeNewFile = (index) => {
-    setSelectedFiles(prev => prev.filter((_, i) => i !== index));
-    setPreviewUrls(prev => {
-      URL.revokeObjectURL(prev[index]);
-      return prev.filter((_, i) => i !== index);
-    });
-  };
-
-  const removeExistingImage = (index) => {
-    setExistingImages(prev => prev.filter((_, i) => i !== index));
-  };
+  const [uploadingImage, setUploadingImage] = useState(false);
 
   useEffect(() => {
     if (initialData) {
@@ -93,8 +71,8 @@ const EditInventory = ({ open, onClose, initialData }) => {
         lastPurchasePrice: initialData.lastPurchasePrice || "0",
         stockQty: initialData.stockQty || initialData.stock || "0",
         averageCost: initialData.averageCost || "0",
+        images: initialData.images || [],
       });
-      setExistingImages(initialData.images || []);
     }
   }, [initialData]);
 
@@ -116,21 +94,6 @@ const EditInventory = ({ open, onClose, initialData }) => {
     event.preventDefault();
     try {
       setIsSubmitting(true);
-      
-      let uploadedImageUrls = [];
-      if (selectedFiles.length > 0) {
-        const formData = new FormData();
-        selectedFiles.forEach(file => {
-          formData.append('images', file);
-        });
-        
-        const uploadRes = await api.post('/upload', formData, {
-          headers: { 'Content-Type': 'multipart/form-data' }
-        });
-        uploadedImageUrls = uploadRes.data.urls;
-      }
-      
-      const combinedImages = [...existingImages, ...uploadedImageUrls];
 
       const payload = {
         name: formData.name,
@@ -143,7 +106,7 @@ const EditInventory = ({ open, onClose, initialData }) => {
         unitsPerPurchase: formData.unitsPerPurchase ? Number(formData.unitsPerPurchase) : 1,
         lastPurchasePrice: formData.lastPurchasePrice ? Number(formData.lastPurchasePrice) : 0,
         reorderThreshold: formData.minStock ? Number(formData.minStock) : 0,
-        images: combinedImages,
+        images: formData.images || [],
       };
 
       await api.put(`/inventory/${initialData.id}`, payload);
@@ -248,44 +211,21 @@ const EditInventory = ({ open, onClose, initialData }) => {
               
               <div className="space-y-1.5 md:col-span-2">
                 <label className="label">Images</label>
-                <div className="flex items-center justify-center w-full">
-                    <label htmlFor="dropzone-file-edit" className="flex flex-col items-center justify-center w-full h-32 border-2 border-gray-300 border-dashed rounded-lg cursor-pointer bg-gray-50 hover:bg-gray-100 transition-colors">
-                        <div className="flex flex-col items-center justify-center pt-5 pb-6 text-gray-500">
-                            <Icons name="UploadCloud" size={24} className="mb-2" />
-                            <p className="mb-1 text-sm"><span className="font-semibold">Click to upload</span> or drag and drop</p>
-                            <p className="text-xs">PNG, JPG, WEBP (Max 10 files)</p>
-                        </div>
-                        <input id="dropzone-file-edit" type="file" multiple accept="image/*" className="hidden" onChange={handleFileChange} />
-                    </label>
-                </div>
-                {(existingImages.length > 0 || previewUrls.length > 0) && (
-                  <div className="flex flex-wrap gap-3 mt-3">
-                    {existingImages.map((url, idx) => (
-                      <div key={`exist-${idx}`} className="relative w-16 h-16 rounded-md overflow-hidden border border-gray-200">
-                        <img src={url} alt={`Existing ${idx}`} className="object-cover w-full h-full" />
-                        <button type="button" onClick={() => removeExistingImage(idx)} className="absolute top-0.5 right-0.5 bg-black/50 text-white rounded-full p-0.5 hover:bg-black/70">
-                          <Icons name="X" size={12} />
-                        </button>
-                      </div>
-                    ))}
-                    {previewUrls.map((url, idx) => (
-                      <div key={`new-${idx}`} className="relative w-16 h-16 rounded-md overflow-hidden border border-gray-200">
-                        <img src={url} alt={`Preview ${idx}`} className="object-cover w-full h-full" />
-                        <button type="button" onClick={() => removeNewFile(idx)} className="absolute top-0.5 right-0.5 bg-black/50 text-white rounded-full p-0.5 hover:bg-black/70">
-                          <Icons name="X" size={12} />
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                )}
+                <ImageUpload 
+                  multiple 
+                  value={formData.images} 
+                  onChange={(urls) => setFormData(prev => ({ ...prev, images: urls }))} 
+                  onUploadStateChange={setUploadingImage}
+                  folder="erp/inventory"
+                />
               </div>
               
             </div>
           </div>
 
           <div className="shrink-0 border-t border-gray-200 bg-gray-50/50 px-6 py-4 flex justify-end gap-3">
-            <Button variant="outline" type="button" onClick={onClose} disabled={isSubmitting}>Cancel</Button>
-            <Button variant="solid" type="submit" isLoading={isSubmitting} disabled={isSubmitting}>Save Changes</Button>
+            <Button variant="outline" type="button" onClick={onClose} disabled={isSubmitting || uploadingImage}>Cancel</Button>
+            <Button variant="solid" type="submit" isLoading={isSubmitting} disabled={isSubmitting || uploadingImage}>Save Changes</Button>
           </div>
         </form>
       </div>

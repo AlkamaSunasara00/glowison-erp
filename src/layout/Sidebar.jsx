@@ -36,6 +36,7 @@ const menuItems = [
     { name: "Customers", icon: User, path: "/customers" },
     { name: "Orders", icon: ListChecks, path: "/orders" },
     { name: "Inventory", icon: Package, path: "/inventory" },
+    { name: "Catalogue", icon: BookOpen, path: "/catalog" },
     { name: "Suppliers", icon: Truck, path: "/suppliers" },
     { name: "Purchase", icon: CheckSquare, path: "/purchase" },
     { name: "Expense", icon: Clipboard, path: "/expense" },

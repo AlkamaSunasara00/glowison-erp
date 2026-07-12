@@ -4,6 +4,7 @@ import toast from "react-hot-toast";
 import Button from "@/common/Button";
 import Icons from "@/common/Icons";
 import Input from "@/common/Input";
+import ImageUpload from "@/common/ImageUpload";
 
 const categoryOptions = [
   { value: "OFFICE_SUPPLIES", label: "Office Supplies" },
@@ -53,8 +54,8 @@ const AddExpense = ({ open, onClose }) => {
   });
 
   const [suppliers, setSuppliers] = useState([]);
-  const [file, setFile] = useState(null);
-  const fileInputRef = useRef(null);
+  const [receiptUrl, setReceiptUrl] = useState("");
+  const [uploadingImage, setUploadingImage] = useState(false);
 
   useEffect(() => {
     if (open) {
@@ -81,31 +82,10 @@ const AddExpense = ({ open, onClose }) => {
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleFileChange = (e) => {
-    if (e.target.files && e.target.files[0]) {
-      setFile(e.target.files[0]);
-    }
-  };
-
-  const uploadReceipt = async () => {
-    if (!file) return null;
-    const formDataFile = new FormData();
-    formDataFile.append('images', file);
-    const res = await api.post('/upload', formDataFile, {
-      headers: { 'Content-Type': 'multipart/form-data' }
-    });
-    return res.data.urls[0];
-  };
-
   const handleSubmit = async (event) => {
     event.preventDefault();
     try {
       setIsSubmitting(true);
-      
-      let receiptUrl = null;
-      if (file) {
-        receiptUrl = await uploadReceipt();
-      }
 
       const payload = {
         ...formData,
@@ -232,25 +212,21 @@ const AddExpense = ({ open, onClose }) => {
 
               <div className="space-y-1.5 md:col-span-2">
                  <label className="label">Receipt Upload</label>
-                 <div 
-                   onClick={() => fileInputRef.current?.click()}
-                   className="border-2 border-dashed border-gray-200 rounded-lg p-6 flex flex-col items-center justify-center bg-gray-50/50 hover:bg-gray-50 transition-colors cursor-pointer text-gray-500 hover:text-gray-700"
-                 >
-                    <Icons name="UploadCloud" size={24} className="mb-2" />
-                    <span className="text-sm font-medium">
-                      {file ? file.name : "Click to upload or drag and drop"}
-                    </span>
-                    <span className="text-xs mt-1">PDF, JPG, PNG up to 5MB</span>
-                    <input type="file" className="hidden" ref={fileInputRef} onChange={handleFileChange} accept="image/*,.pdf" />
-                 </div>
+                 <ImageUpload 
+                   value={receiptUrl}
+                   onChange={setReceiptUrl}
+                   onUploadStateChange={setUploadingImage}
+                   folder="erp/expenses"
+                   accept="image/*,.pdf"
+                 />
               </div>
               
             </div>
           </div>
 
           <div className="shrink-0 border-t border-gray-200 bg-gray-50/50 px-6 py-4 flex justify-end gap-3">
-            <Button variant="outline" type="button" onClick={onClose} disabled={isSubmitting}>Cancel</Button>
-            <Button variant="solid" type="submit" isLoading={isSubmitting} disabled={isSubmitting}>Save Expense</Button>
+            <Button variant="outline" type="button" onClick={onClose} disabled={isSubmitting || uploadingImage}>Cancel</Button>
+            <Button variant="solid" type="submit" isLoading={isSubmitting} disabled={isSubmitting || uploadingImage}>Save Expense</Button>
           </div>
         </form>
       </div>

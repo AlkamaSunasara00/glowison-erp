@@ -15,129 +15,187 @@ const formatAddress = (addr) => {
   return addr;
 };
 
+// basic number to words for rupees
+const numToWords = (amount) => {
+    const a = ['', 'One ', 'Two ', 'Three ', 'Four ', 'Five ', 'Six ', 'Seven ', 'Eight ', 'Nine ', 'Ten ', 'Eleven ', 'Twelve ', 'Thirteen ', 'Fourteen ', 'Fifteen ', 'Sixteen ', 'Seventeen ', 'Eighteen ', 'Nineteen '];
+    const b = ['', '', 'Twenty', 'Thirty', 'Forty', 'Fifty', 'Sixty', 'Seventy', 'Eighty', 'Ninety'];
+    const inWords = (num) => {
+        if ((num = num.toString()).length > 9) return 'overflow';
+        let n = ('000000000' + num).substr(-9).match(/^(\d{2})(\d{2})(\d{2})(\d{1})(\d{2})$/);
+        if (!n) return; let str = '';
+        str += (n[1] != 0) ? (a[Number(n[1])] || b[n[1][0]] + ' ' + a[n[1][1]]) + 'Crore ' : '';
+        str += (n[2] != 0) ? (a[Number(n[2])] || b[n[2][0]] + ' ' + a[n[2][1]]) + 'Lakh ' : '';
+        str += (n[3] != 0) ? (a[Number(n[3])] || b[n[3][0]] + ' ' + a[n[3][1]]) + 'Thousand ' : '';
+        str += (n[4] != 0) ? (a[Number(n[4])] || b[n[4][0]] + ' ' + a[n[4][1]]) + 'Hundred ' : '';
+        str += (n[5] != 0) ? ((str != '') ? 'and ' : '') + (a[Number(n[5])] || b[n[5][0]] + ' ' + a[n[5][1]]) + '' : '';
+        return str;
+    };
+    
+    let parts = amount.toString().split('.');
+    let rupees = parseInt(parts[0], 10);
+    let paise = parts.length > 1 ? parseInt(parts[1].padEnd(2, '0').slice(0, 2), 10) : 0;
+    
+    let str = inWords(rupees) + 'Rupees';
+    if(paise > 0) {
+        str += ' and ' + inWords(paise) + 'Paise';
+    }
+    return str + ' Only';
+};
+
 const Template4 = ({ data, detailInfo, settings, items }) => {
   return (
-    <div className="print-area bg-white max-w-[800px] mx-auto text-gray-800 relative overflow-hidden shadow-lg border border-gray-100">
-      
-      {/* Decorative Top */}
-      <div className="absolute top-0 right-0 w-3/4 h-40 bg-[#0f172a] rounded-bl-full z-0 transform translate-x-10 -translate-y-4"></div>
-      <div className="absolute top-0 right-0 w-3/4 h-40 bg-[#d4af37] rounded-bl-full z-0 transform translate-x-14 -translate-y-6"></div>
-      
-      <div className="relative z-10 px-12 pt-16 pb-8 flex justify-between items-end">
-         <div>
-           <h1 className="text-6xl font-black text-[#0f172a] tracking-tighter mb-1">INVOICE</h1>
-           <h2 className="text-2xl font-bold text-[#d4af37] tracking-wider">{settings?.companyName || 'Company Name'}</h2>
-         </div>
-         {settings?.logoUrl && (
-            <img src={settings.logoUrl} alt="Logo" className="h-16 object-contain bg-white/50 backdrop-blur-sm p-1 rounded-lg" />
-         )}
+    <div className="print-area bg-white max-w-[800px] mx-auto text-black border border-black font-sans relative">
+      <div className="flex flex-col border-b border-black">
+        {/* Header Section */}
+        <div className="flex justify-between items-center p-4 min-h-[120px]">
+          <div className="w-1/4">
+             <img src="/image/logo1.png" alt="Logo" className="max-h-24 object-contain" />
+          </div>
+          <div className="w-2/4 text-center">
+             <h2 className="text-xl font-bold uppercase">{settings?.companyName || 'JPG | Javex Plastic Group'}</h2>
+             <p className="text-sm mt-1">{formatAddress(settings?.address) || 'Evera Compound, Chhapi highway, Chhapi, Gujarat, India - 385210'}</p>
+          </div>
+          <div className="w-1/4"></div>
+        </div>
+
+        {/* Invoice Title Bar */}
+        <div className="border-t border-black py-1 text-center bg-gray-50">
+          <h1 className="text-xl font-semibold">Invoice</h1>
+        </div>
+
+        {/* Details Section */}
+        <div className="flex border-t border-black text-[11px] leading-relaxed">
+          <div className="w-1/3 border-r border-black p-2">
+            <p className="text-gray-600 mb-1">Billed To & Shipped To</p>
+            <p className="font-bold text-sm">{data.customer?.name || data.customer}</p>
+            {data.customer?.address && <p>{formatAddress(data.customer.address)}</p>}
+            {data.customer?.phone && <p>Phone: {data.customer.phone}</p>}
+          </div>
+          
+          <div className="w-1/3 border-r border-black p-2">
+            <p className="text-gray-600 mb-1">Shipped From</p>
+            <p className="font-bold text-sm">{settings?.companyName || 'JPG | Javex Plastic Group'}</p>
+            {settings?.address && <p>{formatAddress(settings.address)}</p>}
+            {settings?.phone && <p>Phone: {settings.phone}</p>}
+          </div>
+
+          <div className="w-1/3 p-0">
+             <table className="w-full h-full text-[11px]">
+               <tbody>
+                 <tr className="border-b border-gray-200">
+                   <td className="p-1 pl-2 text-gray-600">Invoice No</td>
+                   <td className="p-1 font-bold">{data.invoiceNumber}</td>
+                 </tr>
+                 <tr className="border-b border-gray-200">
+                   <td className="p-1 pl-2 text-gray-600">Invoice Date</td>
+                   <td className="p-1 font-bold">{detailInfo["Invoice Date"]}</td>
+                 </tr>
+                 <tr className="border-b border-gray-200">
+                   <td className="p-1 pl-2 text-gray-600">Due Date</td>
+                   <td className="p-1 font-bold">{detailInfo["Due Date"]}</td>
+                 </tr>
+                 <tr className="border-b border-gray-200">
+                   <td className="p-1 pl-2 text-gray-600">Country of Supply:</td>
+                   <td className="p-1 font-bold">India</td>
+                 </tr>
+                 <tr>
+                   <td className="p-1 pl-2 text-gray-600">Place of Supply:</td>
+                   <td className="p-1 font-bold">{settings?.state || 'Gujarat'}</td>
+                 </tr>
+               </tbody>
+             </table>
+          </div>
+        </div>
       </div>
 
-      <div className="px-12 flex justify-between mb-8 text-sm">
-         <div>
-            <div className="grid grid-cols-[100px_1fr] gap-y-1 mb-2">
-              <span className="font-semibold text-gray-700">Invoice No :</span>
-              <span className="text-gray-900">{data.invoiceNumber}</span>
-              <span className="font-semibold text-gray-700">Date :</span>
-              <span className="text-gray-900">{detailInfo["Invoice Date"]}</span>
-            </div>
-         </div>
-         <div className="text-right">
-            <p className="font-semibold text-[#d4af37] mb-1">Invoice To</p>
-            <h3 className="text-xl font-bold text-[#0f172a] mb-1">{data.customer?.name || data.customer}</h3>
-            {data.customer?.email && <p className="text-gray-600">{data.customer.email}</p>}
-            {data.customer?.address && <p className="text-gray-600 max-w-[200px] text-right ml-auto">{formatAddress(data.customer.address)}</p>}
-         </div>
-      </div>
-
-      <div className="px-12 mb-8">
-        <table className="w-full text-center border-collapse">
+      {/* Items Table */}
+      <div className="w-full border-b border-black">
+        <table className="w-full text-left border-collapse text-[11px]">
           <thead>
-            <tr className="bg-[#0f172a] text-white text-sm">
-              <th className="py-4 px-4 text-left rounded-tl-lg">Description</th>
-              <th className="py-4 px-4 w-20">Qty</th>
-              <th className="py-4 px-4 w-32">Cost</th>
-              <th className="py-4 px-4 w-32 text-right rounded-tr-lg">Subtotal</th>
+            <tr className="border-b border-black">
+               <th className="border-r border-black p-1 w-6 text-center"></th>
+               <th className="border-r border-black p-1">Item</th>
+               <th className="border-r border-black p-1 text-center">HSN/SAC</th>
+               <th className="border-r border-black p-1 text-center w-12">GST<br/>Rate</th>
+               <th className="border-r border-black p-1 text-center w-16">Quantity</th>
+               <th className="border-r border-black p-1 text-center w-16">Rate</th>
+               <th className="border-r border-black p-1 text-right w-20">Amount</th>
+               <th className="border-r border-black p-1 text-right w-16">IGST</th>
+               <th className="p-1 text-right w-20">Total</th>
             </tr>
           </thead>
-          <tbody className="text-sm font-medium">
-            {items.map((item, idx) => (
-              <tr key={idx} className={`${idx % 2 === 0 ? 'bg-[#f8f9fa]' : 'bg-[#e9ecef]'}`}>
-                <td className="py-4 px-4 text-left border-r border-white/20 text-[#0f172a]">{item.product}</td>
-                <td className="py-4 px-4 border-r border-white/20 text-gray-600">{item.quantity}</td>
-                <td className="py-4 px-4 border-r border-white/20 text-gray-600">${Number(item.unitPrice).toFixed(2)}</td>
-                <td className="py-4 px-4 text-right font-bold text-[#0f172a]">${Number(item.lineTotal).toFixed(2)}</td>
-              </tr>
-            ))}
+          <tbody>
+             {items.map((item, idx) => (
+                <tr key={idx} className="border-b border-gray-200 last:border-b-0 align-top">
+                   <td className="border-r border-black p-1 text-center">{idx + 1}.</td>
+                   <td className="border-r border-black p-1">
+                      <p className="font-bold">{item.product}</p>
+                      {item.description && <p className="text-[10px] text-gray-600">{item.description}</p>}
+                   </td>
+                   <td className="border-r border-black p-1 text-center">{item.hsn || ''}</td>
+                   <td className="border-r border-black p-1 text-center">{item.taxRate || 0}%</td>
+                   <td className="border-r border-black p-1 text-center">{item.quantity}</td>
+                   <td className="border-r border-black p-1 text-center">₹{Number(item.unitPrice).toFixed(2)}</td>
+                   <td className="border-r border-black p-1 text-right">₹{Number((item.quantity * item.unitPrice)).toFixed(2)}</td>
+                   <td className="border-r border-black p-1 text-right">₹{Number(((item.quantity * item.unitPrice) * (item.taxRate || 0)) / 100).toFixed(2)}</td>
+                   <td className="p-1 text-right">₹{Number(item.lineTotal).toFixed(2)}</td>
+                </tr>
+             ))}
+             {/* Empty space filler */}
+             <tr className="h-20 border-b border-black">
+                <td className="border-r border-black"></td><td className="border-r border-black"></td><td className="border-r border-black"></td><td className="border-r border-black"></td><td className="border-r border-black"></td><td className="border-r border-black"></td><td className="border-r border-black"></td><td className="border-r border-black"></td><td></td>
+             </tr>
+             <tr className="border-b border-gray-300">
+               <td colSpan="6" className="border-r border-black p-1 text-right font-bold">Amount</td>
+               <td className="border-r border-black p-1 text-right font-bold">₹{Number(data.subtotal || 0).toFixed(2)}</td>
+               <td className="border-r border-black p-1 text-right font-bold">₹{Number(data.tax || 0).toFixed(2)}</td>
+               <td className="p-1 text-right font-bold">₹{Number(data.grandTotal || 0).toFixed(2)}</td>
+             </tr>
+             <tr className="border-b border-gray-300">
+               <td colSpan="8" className="border-r border-black p-1 text-right font-bold">IGST</td>
+               <td className="p-1 text-right font-bold">₹{Number(data.tax || 0).toFixed(2)}</td>
+             </tr>
+             <tr>
+               <td colSpan="8" className="border-r border-black p-1 text-right font-bold">Total (INR)</td>
+               <td className="p-1 text-right font-bold">₹{Number(data.grandTotal || 0).toFixed(2)}</td>
+             </tr>
           </tbody>
         </table>
       </div>
 
-      <div className="px-12 flex justify-between mb-24">
-         <div className="w-1/2 pr-8 text-sm text-gray-600">
-            <h4 className="font-bold text-[#d4af37] mb-2 text-base">Payment Details :</h4>
-            <div className="flex justify-between items-center mb-8 bg-gray-50 p-4 rounded-xl border border-gray-100 gap-4">
-              <div className="grid grid-cols-[100px_1fr] gap-y-1 flex-1 min-w-0">
-                <span className="font-medium">Account Name:</span><span className="text-[#0f172a] font-semibold break-words">{settings?.companyName}</span>
-                {settings?.accountNo && <><span className="font-medium">Account No:</span><span className="text-[#0f172a] break-all">{settings.accountNo}</span></>}
-                {settings?.upiId && <><span className="font-medium">UPI ID:</span><span className="text-[#0f172a] break-all">{settings.upiId}</span></>}
-                <span className="font-medium">GSTIN:</span><span className="text-[#0f172a] break-all">{settings?.gstin || 'N/A'}</span>
-              </div>
-              {settings?.upiId && (
-                <div className="text-center shrink-0 bg-white p-2 rounded-xl border border-[#d4af37]/30 shadow-sm">
-                  <QRCodeSVG value={`upi://pay?pa=${settings.upiId}&pn=${settings.companyName || 'Company'}&am=${data.grandTotal}`} size={64} />
-                  <p className="text-[9px] mt-1.5 text-[#d4af37] font-bold uppercase tracking-widest">Scan to Pay</p>
-                </div>
-              )}
-            </div>
+      <div className="border-b border-black p-1 text-[11px]">
+        <span className="text-gray-600">Total (in words) : </span>
+        <span className="font-bold capitalize">{numToWords(data.grandTotal || 0)}</span>
+      </div>
 
-            <h4 className="font-bold text-[#d4af37] mb-2 text-base">Contact Us :</h4>
-            <div className="space-y-1">
-              {settings?.phone && <p>{settings.phone}</p>}
-              {settings?.email && <p>{settings.email}</p>}
-              {settings?.address && <p>{formatAddress(settings.address)}</p>}
-              {settings?.website && <p>{settings.website}</p>}
-            </div>
+      {/* Footer Section (UPI & Signature) */}
+      <div className="flex min-h-[160px]">
+         <div className="w-1/2 border-r border-black p-4 flex flex-col justify-start">
+            <p className="font-bold text-[12px] mb-2">Scan to pay via UPI</p>
+            {settings?.upiId && (
+               <>
+                  <QRCodeSVG value={`upi://pay?pa=${settings.upiId}&pn=${settings.companyName || 'Company'}&am=${data.grandTotal}`} size={80} className="mb-2" />
+                  <p className="text-[10px] leading-tight text-gray-700 max-w-[150px]">
+                     Maximum of 1 lakh can be transferred via upi in a single day
+                  </p>
+                  <p className="text-[10px] mt-1 font-mono">{settings.upiId}</p>
+               </>
+            )}
          </div>
-
-         <div className="w-1/2">
-            <div className="bg-[#e9ecef] rounded-lg p-6 mb-8 text-sm">
-               <div className="flex justify-between mb-2 font-medium">
-                 <span className="text-gray-700">Subtotal</span>
-                 <span className="text-gray-900">${Number(data.subtotal || 0).toFixed(2)}</span>
-               </div>
-               <div className="flex justify-between mb-2 font-medium">
-                 <span className="text-gray-700">Tax</span>
-                 <span className="text-gray-900">${Number(data.tax || 0).toFixed(2)}</span>
-               </div>
-               {Number(data.discount) > 0 && (
-                 <div className="flex justify-between mb-2 font-medium text-red-600">
-                   <span>Discount</span>
-                   <span>-${Number(data.discount || 0).toFixed(2)}</span>
-                 </div>
-               )}
-               <div className="flex justify-between mt-4 pt-2 border-t border-gray-300 font-bold text-[#0f172a] text-lg">
-                 <span>Grand Total</span>
-                 <span>${Number(data.grandTotal || 0).toFixed(2)}</span>
-               </div>
-            </div>
-
-            <div className="flex flex-col items-center">
-               <h3 className="text-2xl font-bold text-gray-700 mb-2">Thank You</h3>
-               {settings?.signatureUrl ? (
-                  <img src={settings.signatureUrl} alt="Signature" className="h-16 object-contain opacity-80 mix-blend-multiply" />
-               ) : (
-                  <div className="h-16 flex items-center justify-center font-[cursive] text-3xl text-gray-400 opacity-60">Signature</div>
-               )}
-               <div className="w-48 border-t border-gray-400 mt-1"></div>
-               <p className="text-gray-600 text-sm mt-1 uppercase tracking-widest">Administrator</p>
-            </div>
+         
+         <div className="w-1/2 p-4 flex flex-col justify-end items-end relative">
+            {settings?.signatureUrl && (
+               <img src={settings.signatureUrl} alt="Signature" className="h-16 mb-2 object-contain absolute bottom-8 right-4" />
+            )}
+            <p className="font-bold text-[11px] pt-8 border-t border-transparent z-10 w-48 text-right">
+               Authorised Signatory
+            </p>
          </div>
       </div>
 
-      {/* Decorative Bottom */}
-      <div className="absolute bottom-0 left-0 w-full h-24 bg-[#0f172a] rounded-tr-[100%] z-0 transform translate-y-4 origin-bottom scale-x-110"></div>
-      <div className="absolute bottom-0 left-0 w-full h-24 bg-[#d4af37] rounded-tr-[100%] z-0 transform translate-y-6 origin-bottom scale-x-110"></div>
+      <div className="border-t border-black p-1 text-center text-[10px] bg-gray-50">
+         {data.notes || 'For any enquiry, reach out via email at javexplastic@gmail.com, call on +91 74879 64767'}
+      </div>
     </div>
   );
 };

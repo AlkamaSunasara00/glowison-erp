@@ -17,18 +17,14 @@ const formatAddress = (addr) => {
 
 const Template3 = ({ data, detailInfo, settings, items }) => {
   return (
-    <div className="print-area bg-white max-w-[800px] mx-auto text-gray-900 border border-gray-100 relative overflow-hidden">
+    <div className="print-area bg-white max-w-[800px] mx-auto text-gray-900 relative overflow-hidden">
       {/* Top abstract shape */}
       <div className="absolute top-0 right-0 w-64 h-32 bg-orange-500 opacity-20 transform rotate-45 translate-x-20 -translate-y-16"></div>
       <div className="absolute top-0 right-10 w-32 h-64 bg-blue-800 opacity-10 transform -rotate-45 translate-x-10 -translate-y-20"></div>
 
       <div className="p-12 relative z-10 flex justify-between items-center pb-8 border-b-4 border-orange-500">
         <div>
-           {settings?.logoUrl ? (
-              <img src={settings.logoUrl} alt="Logo" className="h-16 object-contain mb-2" />
-           ) : (
-              <div className="text-3xl font-bold text-blue-900 uppercase tracking-widest">{settings?.companyName || 'COMPANY'}</div>
-           )}
+           <img src="/image/logo1.png" alt="Logo" className="h-16 object-contain mb-2" />
            {settings?.address && <p className="text-xs text-gray-500 mt-1">{formatAddress(settings.address)}</p>}
         </div>
         <div className="text-right">
@@ -67,9 +63,9 @@ const Template3 = ({ data, detailInfo, settings, items }) => {
               <tr key={idx} className={`${idx % 2 === 0 ? 'bg-gray-100' : 'bg-gray-200'} border-b-2 border-white`}>
                 <td className="py-3 px-4 text-center font-medium text-gray-700">{String(idx + 1).padStart(2, '0')}</td>
                 <td className="py-3 px-4 text-gray-800 font-medium">{item.product}</td>
-                <td className="py-3 px-4 text-center text-gray-700">${Number(item.unitPrice).toFixed(2)}</td>
+                <td className="py-3 px-4 text-center text-gray-700">₹{Number(item.unitPrice).toFixed(2)}</td>
                 <td className="py-3 px-4 text-center text-gray-700">{item.quantity}</td>
-                <td className="py-3 px-4 text-right font-bold text-gray-900">${Number(item.lineTotal).toFixed(2)}</td>
+                <td className="py-3 px-4 text-right font-bold text-gray-900">₹{Number(item.lineTotal).toFixed(2)}</td>
               </tr>
             ))}
           </tbody>
@@ -92,38 +88,39 @@ const Template3 = ({ data, detailInfo, settings, items }) => {
                 </div>
               )}
             </div>
-
-            <h3 className="text-blue-900 font-bold mb-2 uppercase tracking-wider">Terms & Conditions</h3>
-            <p className="text-black leading-relaxed text-xs">
-               {data.notes || 'Please pay within 15 days of receiving this invoice. Late payments will incur a 5% penalty per month.'}
-            </p>
          </div>
          <div className="w-5/12">
             <div className="flex justify-between py-2 text-sm font-semibold border-b border-gray-200">
               <span className="text-gray-600">Sub Total</span>
-              <span className="text-gray-900">${Number(data.subtotal || 0).toFixed(2)}</span>
+              <span className="text-gray-900">₹{Number(data.subtotal || 0).toFixed(2)}</span>
             </div>
             {Number(data.discount) > 0 && (
               <div className="flex justify-between py-2 text-sm font-semibold border-b border-gray-200">
                 <span className="text-gray-600">Discount</span>
-                <span className="text-red-500">-${Number(data.discount || 0).toFixed(2)}</span>
+                <span className="text-red-500">-₹{Number(data.discount || 0).toFixed(2)}</span>
               </div>
             )}
             <div className="flex justify-between py-2 text-sm font-semibold border-b border-gray-200">
               <span className="text-gray-600">Tax</span>
-              <span className="text-gray-900">${Number(data.tax || 0).toFixed(2)}</span>
+              <span className="text-gray-900">₹{Number(data.tax || 0).toFixed(2)}</span>
             </div>
             <div className="flex justify-between py-3 mt-2 text-lg font-bold text-white bg-blue-900 relative overflow-hidden px-4">
               <div className="absolute inset-y-0 left-0 w-16 bg-orange-500 text-center py-3 flex items-center justify-center">Total</div>
               <span className="pl-16"></span>
-              <span>${Number(data.grandTotal || 0).toFixed(2)}</span>
+              <span>₹{Number(data.grandTotal || 0).toFixed(2)}</span>
             </div>
 
-            <div className="mt-12 flex flex-col items-center border-t-2 border-orange-200 pt-2 w-48 float-right text-center">
+            <div className="mt-8 flex flex-col items-center border-t-2 border-orange-200 pt-2 w-48 ml-auto text-center">
                {settings?.signatureUrl && (
                   <img src={settings.signatureUrl} alt="Signature" className="h-12 -mt-10 mb-1 object-contain" />
                )}
-               <p className="text-xs font-semibold text-gray-800 uppercase tracking-wider">Authorised Sign</p>
+               <p className="text-xs font-semibold text-gray-800 uppercase tracking-wider mb-4 w-full">Authorised Sign</p>
+            </div>
+            <div className="mt-4 text-right pr-2">
+               <p className="text-xs text-blue-900 font-bold mb-1 uppercase tracking-wider">Terms & Conditions</p>
+               <p className="text-black text-[10px] leading-relaxed">
+                  {data.notes || 'For any enquiry, reach out via email at javexplastic@gmail.com, call on +91 74879 64767'}
+               </p>
             </div>
          </div>
       </div>

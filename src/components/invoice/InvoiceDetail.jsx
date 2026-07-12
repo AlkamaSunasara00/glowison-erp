@@ -79,9 +79,9 @@ const InvoiceDetail = ({ open, onClose, invoice, isPage = false, onSuccess }) =>
   const renderTemplate = () => {
     const props = { data, detailInfo, settings, items };
     switch (selectedTemplate) {
+      case 'template4': return <Template4 {...props} />;
       case 'template2': return <Template2 {...props} />;
       case 'template3': return <Template3 {...props} />;
-      case 'template4': return <Template4 {...props} />;
       case 'template1':
       default: return <Template1 {...props} />;
     }
@@ -95,7 +95,7 @@ const InvoiceDetail = ({ open, onClose, invoice, isPage = false, onSuccess }) =>
       onClick={(e) => e.stopPropagation()}
     >
         {/* ── HEADER ─────────────────────────────────────────── */}
-        <div className={`print-hidden ${isPage ? "flex items-center justify-between py-2" : "flex items-center justify-between px-7 py-4 border-b border-gray-100 bg-white"}`}>
+        <div className={`print-hidden ${isPage ? "flex flex-col sm:flex-row sm:items-center justify-between py-2 gap-4" : "flex flex-col sm:flex-row sm:items-center justify-between px-4 sm:px-7 py-4 border-b border-gray-100 bg-white gap-4"}`}>
         <div className="flex items-center gap-4">
           <button
             type="button"
@@ -120,9 +120,9 @@ const InvoiceDetail = ({ open, onClose, invoice, isPage = false, onSuccess }) =>
               size="md"
               onClick={() => setIsTemplateModalOpen(true)}
               leftIcon={(props) => <ActionIcon name="Layout" {...props} />}
-              className="hidden sm:flex rounded-lg px-3! py-1.5! text-xs font-medium"
+              className="flex rounded-lg px-2 sm:px-3! py-1.5! text-xs font-medium max-sm:w-10 max-sm:h-10 max-sm:justify-center overflow-hidden"
             >
-              Select Template
+              <span className="hidden sm:inline">Select Template</span>
             </Button>
 
             <Button
@@ -139,9 +139,9 @@ const InvoiceDetail = ({ open, onClose, invoice, isPage = false, onSuccess }) =>
               size="md"
               onClick={handlePrint}
               leftIcon={(props) => <ActionIcon name="Download" color="white" {...props} />}
-              className="rounded-lg px-3! py-1.5! text-xs font-semibold"
+              className="rounded-lg px-2 sm:px-3! py-1.5! text-xs font-semibold max-sm:w-10 max-sm:h-10 max-sm:justify-center overflow-hidden"
             >
-              Print / PDF
+              <span className="hidden sm:inline">Print / PDF</span>
             </Button>
           </div>
         </div>

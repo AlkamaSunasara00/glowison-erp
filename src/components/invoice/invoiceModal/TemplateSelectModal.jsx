@@ -5,7 +5,7 @@ const templates = [
   { id: 'template1', name: 'Classic Blue', color: 'bg-blue-600' },
   { id: 'template2', name: 'Modern Green', color: 'bg-[#84cc16]' },
   { id: 'template3', name: 'Professional Orange', color: 'bg-orange-500' },
-  { id: 'template4', name: 'Elegant Gold', color: 'bg-[#0f172a]' },
+  { id: 'template4', name: 'Black & White Print', color: 'bg-gray-900' },
 ];
 
 const TemplateSelectModal = ({ open, onClose, selected, onSelect }) => {

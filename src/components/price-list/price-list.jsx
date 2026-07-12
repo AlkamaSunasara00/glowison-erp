@@ -51,6 +51,7 @@ const PriceList = () => {
   // State
   const [search, setSearch] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("all");
+  const [viewMode, setViewMode] = useState("table");
   
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [editItem, setEditItem] = useState(null);
@@ -165,7 +166,24 @@ const PriceList = () => {
             </div>
           </div>
           
+          
           <div className="flex items-center gap-3">
+             <div className="flex items-center bg-gray-100 p-1 rounded-md shrink-0">
+               <button
+                 onClick={() => setViewMode("table")}
+                 className={`p-1.5 rounded-sm transition-colors ${viewMode === "table" ? "bg-white text-primary shadow-sm" : "text-gray-500 hover:text-gray-900"}`}
+                 title="Table View"
+               >
+                 <Icons name="List" size={18} />
+               </button>
+               <button
+                 onClick={() => setViewMode("card")}
+                 className={`p-1.5 rounded-sm transition-colors ${viewMode === "card" ? "bg-white text-primary shadow-sm" : "text-gray-500 hover:text-gray-900"}`}
+                 title="Card View"
+               >
+                 <Icons name="Grid" size={18} />
+               </button>
+             </div>
              <Button variant="outline" leftIcon={(props) => <Icons name="Download" {...props} />}>Export</Button>
           </div>
         </div>
@@ -187,7 +205,7 @@ const PriceList = () => {
               if (!hasActiveFilters) setIsAddOpen(true);
             }}
           />
-        ) : (
+        ) : viewMode === "table" ? (
           <div className="bg-white rounded-lg border border-gray-100 shadow-sm overflow-hidden flex-1 custom-scrollbar">
             <div className="overflow-x-auto">
               <table className="w-full text-left border-collapse min-w-[800px]">
@@ -253,6 +271,67 @@ const PriceList = () => {
                 </tbody>
               </table>
             </div>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 flex-1 content-start">
+            {filteredItems.map(item => (
+              <div 
+                key={item.id}
+                onClick={() => handleRowClick(item)}
+                className="bg-white rounded-xl border border-gray-100 shadow-sm hover:shadow-md transition-shadow p-4 flex flex-col gap-3 relative group cursor-pointer"
+              >
+                {/* Header / Image Area */}
+                <div className="aspect-[4/3] w-full rounded-lg bg-gray-100 border border-gray-200 overflow-hidden flex items-center justify-center relative mb-2">
+                  {item.imageUrl ? (
+                     <img src={item.imageUrl} alt={item.name} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
+                  ) : (
+                     <Icons name="Image" size={32} className="text-gray-400" />
+                  )}
+                  
+                  {/* Floating Action Buttons inside image */}
+                  <div className="absolute top-2 right-2 flex flex-col gap-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity" onClick={(e) => e.stopPropagation()}>
+                     <button onClick={() => setEditItem(item)} className="bg-white/90 backdrop-blur-sm p-2 text-gray-600 hover:text-indigo-600 rounded-md shadow-sm transition-colors border border-gray-200"><Icons name="Pencil" size={14}/></button>
+                     <button onClick={() => setDeleteItem(item)} className="bg-white/90 backdrop-blur-sm p-2 text-gray-600 hover:text-rose-500 rounded-md shadow-sm transition-colors border border-gray-200"><Icons name="Trash2" size={14}/></button>
+                  </div>
+                </div>
+
+                {/* Details */}
+                <div>
+                  <h3 className="font-semibold text-gray-900 truncate" title={item.name}>{item.name}</h3>
+                  <div className="mt-1">
+                    <span className="inline-block px-2 py-0.5 rounded text-[10px] font-medium bg-gray-100 text-gray-800">
+                      {item.category === "OTHER" ? item.otherLabel : formatEnum(item.category, categoryOptions)}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="flex flex-wrap gap-1.5 mt-1">
+                  <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium bg-gray-50 border border-gray-100 text-gray-600">
+                    Size: {item.size === "CUSTOM" ? item.sizeOther : formatEnum(item.size, sizeOptions)}
+                  </span>
+                </div>
+
+                {/* Footer */}
+                <div className="flex items-center justify-between pt-3 border-t border-gray-50 mt-auto">
+                   <div className="flex flex-col">
+                     <span className="text-[10px] text-gray-500 font-medium uppercase tracking-wider">Client Price</span>
+                     <div className="flex items-baseline gap-1">
+                       <span className="text-sm font-semibold text-gray-900">₹{item.clientPrice}</span>
+                       <span className="text-[10px] text-gray-400">/ {item.priceUnit === "CUSTOM" ? item.unitOther : formatEnum(item.priceUnit, unitOptions)}</span>
+                     </div>
+                   </div>
+                   {item.b2bPrice && (
+                     <div className="flex flex-col items-end">
+                       <span className="text-[10px] text-indigo-500 font-medium uppercase tracking-wider">B2B Price</span>
+                       <div className="flex items-baseline gap-1">
+                         <span className="text-sm font-semibold text-indigo-600">₹{item.b2bPrice}</span>
+                         <span className="text-[10px] text-indigo-300">/ {item.priceUnit === "CUSTOM" ? item.unitOther : formatEnum(item.priceUnit, unitOptions)}</span>
+                       </div>
+                     </div>
+                   )}
+                </div>
+              </div>
+            ))}
           </div>
         )}
       </div>

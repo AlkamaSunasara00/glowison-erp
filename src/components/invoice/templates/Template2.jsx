@@ -17,16 +17,10 @@ const formatAddress = (addr) => {
 
 const Template2 = ({ data, detailInfo, settings, items }) => {
   return (
-    <div className="print-area bg-white max-w-[800px] mx-auto text-gray-800 shadow-md">
+    <div className="print-area bg-white max-w-[800px] mx-auto text-gray-800">
       <div className="flex">
         <div className="bg-[#1f2937] text-white p-8 w-[60%] clip-path-header">
-           {settings?.logoUrl ? (
-              <img src={settings.logoUrl} alt="Logo" className="h-12 object-contain mb-2 bg-white p-1 rounded" />
-           ) : (
-              <div className="text-3xl font-bold tracking-wider mb-2 flex items-center gap-2">
-                <span className="text-[#84cc16] text-4xl">◩</span> {settings?.companyName || 'COMPANY'}
-              </div>
-           )}
+           <img src="/image/logo1.png" alt="Logo" className="h-12 object-contain mb-2 bg-white p-1 rounded" />
            <p className="text-xs text-gray-300 uppercase tracking-widest">{settings?.website || 'COMPANY TAGLINE HERE'}</p>
         </div>
         <div className="w-[40%] flex flex-col items-end justify-center pr-12">
@@ -80,9 +74,9 @@ const Template2 = ({ data, detailInfo, settings, items }) => {
                   <p className="font-bold text-gray-900">{item.product}</p>
                   {item.description && <p className="text-xs text-gray-500 mt-0.5">{item.description}</p>}
                 </td>
-                <td className="py-4 px-4 text-center font-medium">${Number(item.unitPrice).toFixed(2)}</td>
+                <td className="py-4 px-4 text-center font-medium">₹{Number(item.unitPrice).toFixed(2)}</td>
                 <td className="py-4 px-4 text-center font-medium">{item.quantity}</td>
-                <td className="py-4 px-4 text-right font-bold text-gray-900">${Number(item.lineTotal).toFixed(2)}</td>
+                <td className="py-4 px-4 text-right font-bold text-gray-900">₹{Number(item.lineTotal).toFixed(2)}</td>
               </tr>
             ))}
           </tbody>
@@ -109,23 +103,23 @@ const Template2 = ({ data, detailInfo, settings, items }) => {
 
             <p className="text-[#84cc16] font-semibold text-sm mb-2">Terms & Conditions:</p>
             <p className="text-gray-500 leading-relaxed">
-              {data.notes || 'Please pay within 15 days of receiving this invoice. Late payments may incur additional charges.'}
+              {data.notes || 'For any enquiry, reach out via email at javexplastic@gmail.com, call on +91 74879 64767'}
             </p>
          </div>
          <div className="w-5/12 pl-4">
             <div className="flex justify-between py-1.5 text-sm font-medium text-gray-600 border-b border-gray-100">
-              <span>Subtotal:</span><span className="text-gray-900">${Number(data.subtotal || 0).toFixed(2)}</span>
+              <span>Subtotal:</span><span className="text-gray-900">₹{Number(data.subtotal || 0).toFixed(2)}</span>
             </div>
             {Number(data.discount) > 0 && (
               <div className="flex justify-between py-1.5 text-sm font-medium text-gray-600 border-b border-gray-100">
-                <span>Discount:</span><span className="text-red-500">-${Number(data.discount || 0).toFixed(2)}</span>
+                <span>Discount:</span><span className="text-red-500">-₹{Number(data.discount || 0).toFixed(2)}</span>
               </div>
             )}
             <div className="flex justify-between py-1.5 text-sm font-medium text-gray-600 border-b border-gray-200">
-              <span>Tax:</span><span className="text-gray-900">${Number(data.tax || 0).toFixed(2)}</span>
+              <span>Tax:</span><span className="text-gray-900">₹{Number(data.tax || 0).toFixed(2)}</span>
             </div>
             <div className="flex justify-between py-4 text-lg font-bold bg-[#84cc16] text-white px-4 mt-2 rounded-sm shadow-sm">
-              <span>Total:</span><span>${Number(data.grandTotal || 0).toFixed(2)}</span>
+              <span>Total:</span><span>₹{Number(data.grandTotal || 0).toFixed(2)}</span>
             </div>
 
             <div className="mt-8 flex flex-col items-center justify-center pt-4 border-t border-gray-200">

@@ -4,7 +4,8 @@ import toast from "react-hot-toast";
 import Button from "@/common/Button";
 import Icons from "@/common/Icons";
 import Input from "@/common/Input";
-import { X, Plus, UploadCloud } from "lucide-react";
+import { X, Plus } from "lucide-react";
+import ImageUpload from "@/common/ImageUpload";
 
 const paymentMethods = [
   { value: "CASH", label: "Cash" },
@@ -150,26 +151,6 @@ const AddPurchase = ({ open, onClose }) => {
       dueAmount: gt - paid
     }));
   }, [items, formData.discount, formData.tax, formData.shippingCharges, formData.paidAmount, formData.paymentStatus]);
-
-  const handleFileUpload = async (e) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    const fd = new FormData();
-    fd.append('images', file);
-    fd.append('folder', 'erp/invoices');
-
-    try {
-      setUploadingFile(true);
-      const res = await api.post('/upload', fd, { headers: { 'Content-Type': 'multipart/form-data' } });
-      setInvoiceUrl(res.data.urls[0]);
-      toast.success("Invoice uploaded");
-    } catch (error) {
-      toast.error("Failed to upload invoice");
-    } finally {
-      setUploadingFile(false);
-    }
-  };
 
   const handleSubmit = async (event) => {
     event.preventDefault();
@@ -334,26 +315,16 @@ const AddPurchase = ({ open, onClose }) => {
                       <label className="label">Delivery Status</label>
                       <Input type="select" name="deliveryStatus" value={formData.deliveryStatus} onChange={handleChange} options={deliveryStatuses} />
                     </div>
-                    <div className="space-y-1.5">
-                    <label className="label">Invoice Attachment</label>
-                    <div className="relative">
-                      <input type="file" onChange={handleFileUpload} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" accept="image/*,.pdf" />
-                      <Button type="button" variant="outline" className="w-full text-xs font-normal justify-start" leftIcon={(props) => <UploadCloud {...props} size={16} />}>
-                        {uploadingFile ? "Uploading..." : invoiceUrl ? "Invoice Attached" : "Upload File"}
-                      </Button>
+                    <div className="space-y-1.5 md:col-span-2 mt-4">
+                      <label className="label">Invoice Attachment</label>
+                      <ImageUpload 
+                        value={invoiceUrl}
+                        onChange={setInvoiceUrl}
+                        onUploadStateChange={setUploadingFile}
+                        folder="erp/invoices"
+                        accept="image/*,.pdf"
+                      />
                     </div>
-                    {invoiceUrl && (
-                      <div className="mt-2 p-2 bg-gray-50 border border-gray-100 rounded-lg">
-                        {invoiceUrl.endsWith('.pdf') ? (
-                          <a href={invoiceUrl} target="_blank" rel="noopener noreferrer" className="text-primary text-xs underline font-medium">View Uploaded PDF</a>
-                        ) : (
-                          <a href={invoiceUrl} target="_blank" rel="noopener noreferrer">
-                            <img src={invoiceUrl} alt="Preview" className="h-16 w-auto object-contain rounded hover:opacity-90" />
-                          </a>
-                        )}
-                      </div>
-                    )}
-                  </div>
                   </div>
                   <div className="space-y-1.5">
                     <label className="label">Notes / Terms</label>
@@ -408,8 +379,8 @@ const AddPurchase = ({ open, onClose }) => {
             </div>
 
             <div className="shrink-0 border-t border-gray-200 bg-gray-50/80 px-6 py-4 flex justify-end gap-3 backdrop-blur-sm">
-              <Button variant="outline" type="button" onClick={onClose} disabled={isSubmitting}>Cancel</Button>
-              <Button variant="solid" type="submit" isLoading={isSubmitting} disabled={isSubmitting}>
+              <Button variant="outline" type="button" onClick={onClose} disabled={isSubmitting || uploadingFile}>Cancel</Button>
+              <Button variant="solid" type="submit" isLoading={isSubmitting} disabled={isSubmitting || uploadingFile}>
                 Save Purchase & {formData.deliveryStatus === 'DELIVERED' ? 'Update Stock' : 'Keep Pending'}
               </Button>
             </div>
