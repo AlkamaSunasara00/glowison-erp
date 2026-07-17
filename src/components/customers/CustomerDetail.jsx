@@ -167,12 +167,12 @@ const CustomerDetail = ({ open, onClose, customer, isPage = false, onCustomerUpd
                 <div className="flex-1 overflow-auto custom-scrollbar">
                   {activeTab === "Orders" && (
                     <table className="w-full text-left border-collapse">
-                      <thead className="bg-gray-50 border-b border-gray-100 text-xs font-semibold text-gray-600">
+                      <thead className="bg-primary border-b border-primary/20 text-xs font-semibold text-white">
                         <tr>
-                          <th className="px-4 py-3">Order ID</th>
+                          <th className="px-4 py-3 rounded-tl-lg">Order ID</th>
                           <th className="px-4 py-3">Date</th>
                           <th className="px-4 py-3">Amount</th>
-                          <th className="px-4 py-3">Status</th>
+                          <th className="px-4 py-3 rounded-tr-lg">Status</th>
                         </tr>
                       </thead>
                       <tbody className="text-sm">
@@ -192,12 +192,12 @@ const CustomerDetail = ({ open, onClose, customer, isPage = false, onCustomerUpd
 
                   {activeTab === "Invoices" && (
                     <table className="w-full text-left border-collapse">
-                      <thead className="bg-gray-50 border-b border-gray-100 text-xs font-semibold text-gray-600">
+                      <thead className="bg-primary border-b border-primary/20 text-xs font-semibold text-white">
                         <tr>
-                          <th className="px-4 py-3">Invoice ID</th>
+                          <th className="px-4 py-3 rounded-tl-lg">Invoice ID</th>
                           <th className="px-4 py-3">Date</th>
                           <th className="px-4 py-3">Amount</th>
-                          <th className="px-4 py-3">Status</th>
+                          <th className="px-4 py-3 rounded-tr-lg">Status</th>
                         </tr>
                       </thead>
                       <tbody className="text-sm">

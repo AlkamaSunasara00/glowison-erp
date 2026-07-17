@@ -44,9 +44,6 @@ const AddInventory = ({ open, onClose }) => {
     // Units
     purchaseUnit: "Piece",
     purchaseUnitOther: "",
-    usageUnit: "Piece",
-    usageUnitOther: "",
-    conversionFactor: 1,
     lastPurchasePrice: 0,
     
     openingStock: 0,
@@ -98,11 +95,11 @@ const AddInventory = ({ open, onClose }) => {
         finish: formData.finish || undefined,
 
         purchaseUnit: formData.purchaseUnit === "OTHER" ? formData.purchaseUnitOther : formData.purchaseUnit,
-        usageUnit: formData.usageUnit === "OTHER" ? formData.usageUnitOther : formData.usageUnit,
-        conversionFactor: formData.conversionFactor ? Number(formData.conversionFactor) : 1,
+        usageUnit: formData.purchaseUnit === "OTHER" ? formData.purchaseUnitOther : formData.purchaseUnit,
+        conversionFactor: 1,
         lastPurchasePrice: formData.lastPurchasePrice ? Number(formData.lastPurchasePrice) : 0,
         
-        openingPurchaseStock: formData.openingStock ? Number(formData.openingStock) / (Number(formData.conversionFactor) || 1) : 0,
+        openingPurchaseStock: formData.openingStock ? Number(formData.openingStock) : 0,
         openingUsageStock: formData.openingStock ? Number(formData.openingStock) : 0,
         minimumStock: formData.minimumStock ? Number(formData.minimumStock) : 0,
         maximumStock: formData.maximumStock ? Number(formData.maximumStock) : 0,
@@ -199,32 +196,15 @@ const AddInventory = ({ open, onClose }) => {
               {/* Unit Conversions */}
               <div className="col-span-1 md:col-span-2 text-sm font-semibold text-gray-900 border-b pb-2 mt-4">Units & Costing</div>
               <div className="space-y-1.5">
-                <label className="label">Purchase Unit <span className="required">*</span></label>
+                <label className="label">Unit <span className="required">*</span></label>
                 <Input type="select" name="purchaseUnit" value={formData.purchaseUnit} onChange={handleChange} options={unitOptions} required />
               </div>
               {formData.purchaseUnit === "OTHER" && (
                 <div className="space-y-1.5 animate-in fade-in slide-in-from-top-1">
-                  <label className="label">Specify Purchase Unit <span className="required">*</span></label>
+                  <label className="label">Specify Unit <span className="required">*</span></label>
                   <Input name="purchaseUnitOther" value={formData.purchaseUnitOther} onChange={handleChange} required />
                 </div>
               )}
-              <div className="space-y-1.5">
-                <label className="label">Usage Unit <span className="required">*</span></label>
-                <Input type="select" name="usageUnit" value={formData.usageUnit} onChange={handleChange} options={unitOptions} required />
-              </div>
-              {formData.usageUnit === "OTHER" && (
-                <div className="space-y-1.5 animate-in fade-in slide-in-from-top-1">
-                  <label className="label">Specify Usage Unit <span className="required">*</span></label>
-                  <Input name="usageUnitOther" value={formData.usageUnitOther} onChange={handleChange} required />
-                </div>
-              )}
-              <div className="space-y-1.5">
-                <label className="label">Conversion Factor <span className="required">*</span></label>
-                <div className="flex flex-col gap-1">
-                  <Input type="number" name="conversionFactor" value={formData.conversionFactor} onChange={handleChange} min="0.01" step="0.01" required />
-                  <span className="text-[10px] text-gray-500">1 {formData.purchaseUnit === "OTHER" ? (formData.purchaseUnitOther || "Unit") : formData.purchaseUnit} = {formData.conversionFactor || 1} {formData.usageUnit === "OTHER" ? (formData.usageUnitOther || "Unit") : formData.usageUnit}</span>
-                </div>
-              </div>
               <div className="space-y-1.5">
                 <label className="label">Purchase Price (per {formData.purchaseUnit === "OTHER" ? (formData.purchaseUnitOther || "Unit") : formData.purchaseUnit})</label>
                 <div className="flex flex-col gap-1">
@@ -235,7 +215,7 @@ const AddInventory = ({ open, onClose }) => {
               {/* Stock Tracking */}
               <div className="col-span-1 md:col-span-2 text-sm font-semibold text-gray-900 border-b pb-2 mt-4">Stock Levels</div>
               <div className="space-y-1.5">
-                <label className="label">Opening Stock (in {formData.usageUnit})</label>
+                <label className="label">Opening Stock (in {formData.purchaseUnit === "OTHER" ? (formData.purchaseUnitOther || "Unit") : formData.purchaseUnit})</label>
                 <Input type="number" name="openingStock" value={formData.openingStock} onChange={handleChange} min="0" step="0.01" />
               </div>
               <div className="space-y-1.5">

@@ -185,14 +185,14 @@ export const Customers = () => {
           <div className="bg-white rounded-lg border border-gray-100 shadow-sm overflow-hidden flex-1 custom-scrollbar">
             <div className="overflow-x-auto">
               <table className="w-full text-left border-collapse min-w-[900px]">
-                <thead className="bg-gray-50 border-b border-gray-100 text-xs font-semibold text-gray-600">
+                <thead className="bg-primary border-b border-primary/20 text-xs font-semibold text-white">
                   <tr>
-                    <th className="px-4 py-3">Customer Info</th>
+                    <th className="px-4 py-3 rounded-tl-lg">Customer Info</th>
                     <th className="px-4 py-3">Contact</th>
                     <th className="px-4 py-3">Location</th>
                     <th className="px-4 py-3">Type</th>
                     <th className="px-4 py-3">Total Order Value</th>
-                    <th className="px-4 py-3 text-center">Actions</th>
+                    <th className="px-4 py-3 text-center rounded-tr-lg">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="text-sm">

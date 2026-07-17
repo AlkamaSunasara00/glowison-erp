@@ -120,9 +120,9 @@ const handler = async (req, res) => {
     const inventoryItems = await prisma.inventoryItem.findMany({
         select: {
             name: true,
-            stockQty: true,
+            currentPurchaseStock: true,
             averageCost: true,
-            reorderThreshold: true,
+            minimumStock: true,
         }
     });
 
@@ -131,16 +131,16 @@ const handler = async (req, res) => {
     const lowStockItems = [];
 
     inventoryItems.forEach(item => {
-        const qty = Number(item.stockQty);
+        const qty = Number(item.currentPurchaseStock);
         const cost = Number(item.averageCost);
         totalInventoryValue += qty * cost;
         
-        if (qty <= Number(item.reorderThreshold)) {
+        if (qty <= Number(item.minimumStock)) {
             lowStockItemsCount++;
             lowStockItems.push({
                 name: item.name,
                 stockQty: qty,
-                threshold: Number(item.reorderThreshold)
+                threshold: Number(item.minimumStock)
             });
         }
     });

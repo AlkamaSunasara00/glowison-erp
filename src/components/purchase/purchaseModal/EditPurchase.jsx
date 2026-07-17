@@ -64,6 +64,8 @@ const EditPurchase = ({ open, onClose, initialData }) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [uploadingFile, setUploadingFile] = useState(false);
   const [invoiceUrl, setInvoiceUrl] = useState("");
+  const [showSplitModal, setShowSplitModal] = useState(false);
+  const [splitAmount, setSplitAmount] = useState("");
   
   useEffect(() => {
     if (open) {
@@ -105,15 +107,13 @@ const EditPurchase = ({ open, onClose, initialData }) => {
                 inventoryItemId: item.inventoryItemId || 'MANUAL',
                 itemName: item.itemName || "",
                 purchaseUnit: item.purchaseUnit,
-                usageUnit: item.usageUnit || item.purchaseUnit,
-                conversionFactor: item.inventoryItem?.conversionFactor || 1,
                 purchaseQuantity: parseFloat(item.quantity || item.purchaseQuantity),
-                usageQuantity: parseFloat(item.usageQuantity || item.quantity),
                 purchasePrice: parseFloat(item.unitPrice || item.purchasePrice),
                 unitCost: parseFloat(item.unitCost || item.unitPrice),
                 discount: parseFloat(item.discount || 0),
                 tax: parseFloat(item.tax || 0),
-                total: parseFloat(item.total)
+                total: parseFloat(item.total),
+                selected: false
               })));
             }
           }
@@ -149,19 +149,14 @@ const EditPurchase = ({ open, onClose, initialData }) => {
     if (field === 'inventoryItemId') {
       if (value === 'MANUAL') {
         item.purchaseUnit = "Nos";
-        item.usageUnit = "Nos";
-        item.conversionFactor = 1;
         item.purchasePrice = 0;
         item.unitCost = 0;
       } else {
         const inv = inventoryItems.find(i => i.id === value);
         if (inv) {
           item.purchaseUnit = inv.purchaseUnit;
-          item.usageUnit = inv.usageUnit;
-          item.conversionFactor = inv.conversionFactor || 1;
           item.purchasePrice = inv.lastPurchasePrice || 0;
-          item.unitCost = item.purchasePrice / item.conversionFactor;
-          item.usageQuantity = item.purchaseQuantity * item.conversionFactor;
+          item.unitCost = item.purchasePrice;
         }
       }
     }
@@ -172,8 +167,7 @@ const EditPurchase = ({ open, onClose, initialData }) => {
       const d = parseFloat(item.discount) || 0;
       const t = parseFloat(item.tax) || 0;
       
-      item.usageQuantity = q * (item.conversionFactor || 1);
-      item.unitCost = q > 0 ? (up / (item.conversionFactor || 1)) : 0;
+      item.unitCost = up;
       
       const baseTotal = q * up;
       const afterDiscount = baseTotal - d;
@@ -185,7 +179,7 @@ const EditPurchase = ({ open, onClose, initialData }) => {
   };
 
   const addItem = () => {
-    setItems([...items, { id: Date.now(), inventoryItemId: "", itemName: "", purchaseUnit: "Nos", usageUnit: "Nos", conversionFactor: 1, purchaseQuantity: 1, usageQuantity: 1, purchasePrice: 0, unitCost: 0, discount: 0, tax: 0, total: 0 }]);
+    setItems([...items, { id: Date.now(), inventoryItemId: "", itemName: "", purchaseUnit: "Nos", purchaseQuantity: 1, purchasePrice: 0, unitCost: 0, discount: 0, tax: 0, total: 0, selected: false }]);
   };
 
   const removeItem = (index) => {
@@ -217,6 +211,42 @@ const EditPurchase = ({ open, onClose, initialData }) => {
     }));
   }, [items, formData.discount, formData.tax, formData.shippingCharges, formData.paidAmount, formData.paymentStatus]);
 
+  const handleSplitTotal = () => {
+    const amount = parseFloat(splitAmount);
+    if (isNaN(amount) || amount <= 0) return toast.error("Enter a valid amount");
+    const selectedItems = items.filter(i => i.selected);
+    if (selectedItems.length < 2) return toast.error("Select at least 2 items to split");
+    
+    const totalQty = selectedItems.reduce((sum, item) => sum + (parseFloat(item.purchaseQuantity) || 0), 0);
+    if (totalQty === 0) return toast.error("Selected items have no quantity");
+
+    const newItems = [...items];
+    newItems.forEach((item) => {
+      if (item.selected) {
+        const qty = parseFloat(item.purchaseQuantity) || 0;
+        const proportion = qty / totalQty;
+        const allocatedAmount = amount * proportion;
+        const newPrice = qty > 0 ? (allocatedAmount / qty) : 0;
+        
+        item.purchasePrice = newPrice.toFixed(2);
+        
+        // Recalculate everything for this item
+        const up = parseFloat(item.purchasePrice) || 0;
+        const d = parseFloat(item.discount) || 0;
+        const t = parseFloat(item.tax) || 0;
+        item.unitCost = up;
+        const baseTotal = qty * up;
+        const afterDiscount = baseTotal - d;
+        const taxAmount = (afterDiscount * t) / 100;
+        item.total = afterDiscount + taxAmount;
+      }
+    });
+    setItems(newItems);
+    setShowSplitModal(false);
+    setSplitAmount("");
+    toast.success("Total distributed successfully");
+  };
+
   const handleSubmit = async (event) => {
     event.preventDefault();
     if (items.some(i => !i.inventoryItemId)) return toast.error("Please select an inventory item for all rows");
@@ -233,8 +263,9 @@ const EditPurchase = ({ open, onClose, initialData }) => {
           itemName: i.inventoryItemId === 'MANUAL' ? i.itemName : null,
           purchaseQuantity: i.purchaseQuantity,
           purchaseUnit: i.purchaseUnit,
-          usageQuantity: i.usageQuantity,
-          usageUnit: i.usageUnit,
+          usageQuantity: i.purchaseQuantity,
+          usageUnit: i.purchaseUnit,
+          conversionFactor: 1,
           purchasePrice: i.purchasePrice,
           unitCost: i.unitCost,
           discount: i.discount,
@@ -313,11 +344,22 @@ const EditPurchase = ({ open, onClose, initialData }) => {
 
               {/* Items Table */}
               <div className="space-y-3">
-                <h3 className="font-semibold text-gray-800 text-sm border-b pb-2">Line Items</h3>
+                <div className="flex items-center justify-between border-b pb-2">
+                  <h3 className="font-semibold text-gray-800 text-sm">Line Items</h3>
+                  <Button type="button" variant="outline" size="sm" onClick={() => setShowSplitModal(true)}>
+                    Split Total Price
+                  </Button>
+                </div>
                 <div className="overflow-x-auto rounded-lg border border-gray-200">
                   <table className="w-full text-sm text-left">
                     <thead className="bg-gray-50 border-b border-gray-200 text-gray-600 font-medium">
                       <tr>
+                        <th className="px-3 py-2 w-[40px] text-center">
+                          <input type="checkbox" onChange={(e) => {
+                            const val = e.target.checked;
+                            setItems(items.map(i => ({ ...i, selected: val })));
+                          }} checked={items.length > 0 && items.every(i => i.selected)} />
+                        </th>
                         <th className="px-3 py-2 w-[250px]">Item</th>
                         <th className="px-3 py-2 w-[100px]">Unit</th>
                         <th className="px-3 py-2 w-[100px]">Qty</th>
@@ -331,6 +373,9 @@ const EditPurchase = ({ open, onClose, initialData }) => {
                     <tbody>
                       {items.map((item, index) => (
                         <tr key={item.id} className="border-b border-gray-100 last:border-0">
+                          <td className="p-2 text-center">
+                            <input type="checkbox" checked={item.selected || false} onChange={(e) => handleItemChange(index, 'selected', e.target.checked)} />
+                          </td>
                           <td className="p-2">
                             <div className="flex flex-col gap-1">
                               <select 
@@ -357,23 +402,13 @@ const EditPurchase = ({ open, onClose, initialData }) => {
                             </div>
                           </td>
                           <td className="p-2">
-                            <Input value={item.purchaseUnit} onChange={(e) => handleItemChange(index, 'purchaseUnit', e.target.value)} disabled={item.inventoryItemId !== 'MANUAL'} className={`text-sm py-1.5 px-2 ${item.inventoryItemId !== 'MANUAL' ? 'bg-gray-50' : ''}`} />
+                            <Input value={item.purchaseUnit} onChange={(e) => handleItemChange(index, 'purchaseUnit', e.target.value)} placeholder="e.g. Box, Roll" disabled={item.inventoryItemId !== 'MANUAL'} className={`text-sm py-1.5 px-2 ${item.inventoryItemId !== 'MANUAL' ? 'bg-gray-50' : ''}`} />
                           </td>
                           <td className="p-2">
                             <Input type="number" step="0.01" min="0.01" value={item.purchaseQuantity} onChange={(e) => handleItemChange(index, 'purchaseQuantity', e.target.value)} required className="text-sm py-1.5 px-2" />
-                            {item.inventoryItemId === 'MANUAL' ? (
-                              <div className="flex items-center gap-1 mt-1">
-                                <span className="text-[10px] text-gray-500">x</span>
-                                <Input type="number" step="0.01" min="0.01" value={item.conversionFactor || 1} onChange={(e) => handleItemChange(index, 'conversionFactor', e.target.value)} className="w-12 h-6 text-xs px-1" />
-                                <Input value={item.usageUnit} onChange={(e) => handleItemChange(index, 'usageUnit', e.target.value)} placeholder="Usage Unit" className="w-16 h-6 text-xs px-1" />
-                              </div>
-                            ) : (
-                              <div className="text-[10px] text-gray-500 mt-1 whitespace-nowrap">= {item.usageQuantity} {item.usageUnit}</div>
-                            )}
                           </td>
                           <td className="p-2">
                             <Input type="number" step="0.01" min="0" value={item.purchasePrice} onChange={(e) => handleItemChange(index, 'purchasePrice', e.target.value)} required className="text-sm py-1.5 px-2" />
-                            <div className="text-[10px] text-gray-500 mt-1 whitespace-nowrap">Rs. {item.unitCost?.toFixed(2)} / {item.usageUnit}</div>
                           </td>
                           <td className="p-2">
                             <Input type="number" step="0.01" min="0" value={item.discount} onChange={(e) => handleItemChange(index, 'discount', e.target.value)} className="text-sm py-1.5 px-2" />
@@ -503,6 +538,26 @@ const EditPurchase = ({ open, onClose, initialData }) => {
           </form>
         )}
       </div>
+
+      {/* Split Total Modal */}
+      {showSplitModal && (
+        <div className="fixed inset-0 z-[1100] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-sm p-6 space-y-4 animate-in zoom-in-95">
+            <div>
+              <h3 className="text-lg font-bold text-gray-900">Split Total Price</h3>
+              <p className="text-sm text-gray-500">Distributes lump sum across selected items proportionally by quantity.</p>
+            </div>
+            <div className="space-y-1.5">
+              <label className="label">Lump Sum Total (Rs.)</label>
+              <Input type="number" value={splitAmount} onChange={(e) => setSplitAmount(e.target.value)} placeholder="e.g. 5000" autoFocus />
+            </div>
+            <div className="flex justify-end gap-2 pt-2">
+              <Button type="button" variant="outline" onClick={() => { setShowSplitModal(false); setSplitAmount(""); }}>Cancel</Button>
+              <Button type="button" variant="solid" onClick={handleSplitTotal}>Apply Split</Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

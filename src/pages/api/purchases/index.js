@@ -142,17 +142,17 @@ const handler = async (req, res) => {
             if (!invItem) continue;
 
             const newPurchaseStock = parseFloat(invItem.currentPurchaseStock) + parseFloat(pItem.purchaseQuantity);
-            const newUsageStock = parseFloat(invItem.currentUsageStock) + parseFloat(pItem.usageQuantity);
+            const newUsageStock = parseFloat(invItem.currentUsageStock) + (parseFloat(pItem.purchaseQuantity) * parseFloat(invItem.conversionFactor));
             const currentAvgCost = parseFloat(invItem.averageCost);
             
             const lineCost = parseFloat(pItem.total);
             const newLastPurchasePrice = parseFloat(pItem.purchasePrice);
             
             let newAvgCost = currentAvgCost;
-            if (newUsageStock > 0) {
-              // Calculate avg cost based on usage stock
-              const currentTotalValue = parseFloat(invItem.currentUsageStock) * currentAvgCost;
-              newAvgCost = (currentTotalValue + lineCost) / newUsageStock;
+            if (newPurchaseStock > 0) {
+              // Calculate avg cost based on purchase stock
+              const currentTotalValue = parseFloat(invItem.currentPurchaseStock) * currentAvgCost;
+              newAvgCost = (currentTotalValue + lineCost) / newPurchaseStock;
             }
 
             await tx.inventoryItem.update({
@@ -174,7 +174,7 @@ const handler = async (req, res) => {
                 referenceId: purchase.id,
                 purchaseQuantity: parseFloat(pItem.purchaseQuantity),
                 purchaseUnit: pItem.purchaseUnit,
-                usageQuantity: parseFloat(pItem.usageQuantity),
+                usageQuantity: parseFloat(pItem.purchaseQuantity) * parseFloat(invItem.conversionFactor),
                 usageUnit: pItem.usageUnit,
                 unitCost: parseFloat(pItem.unitCost),
                 totalCost: lineCost,
