@@ -1,10 +1,10 @@
 import { useRouter } from "next/router";
-import OrderDetail from "@/components/orders/OrderDetail";
+import EditOrder from "@/components/orders/ordersModal/EditOrder";
 import { useEffect, useState } from "react";
 import api from "@/lib/api";
 import Loader from "@/common/Loader";
 
-const OrderDetailPage = () => {
+const EditOrderPage = () => {
   const router = useRouter();
   const { id } = router.query;
 
@@ -55,7 +55,7 @@ const OrderDetailPage = () => {
     );
   }
 
-  return <OrderDetail open={true} order={order} isPage={true} onOrderUpdated={fetchOrder} />;
+  return <EditOrder open={true} initialData={order} isPage={true} />;
 };
 
-export default OrderDetailPage;
+export default EditOrderPage;

@@ -3,18 +3,18 @@ import Select from "react-select";
 import Icons from "@/common/Icons";
 import api from "@/lib/api";
 
-const customStyles = {
+const getCustomStyles = (size) => ({
   control: (base, state) => ({
     ...base,
-    minHeight: '36px',
-    height: '36px',
+    minHeight: size === 'lg' ? '40px' : '36px',
+    height: size === 'lg' ? '40px' : '36px',
     borderColor: state.isFocused ? 'var(--color-primary)' : '#f3f4f6', // gray-100
     boxShadow: state.isFocused ? '0 0 0 2px var(--color-secondary)' : '0 1px 2px 0 rgba(0, 0, 0, 0.05)',
     '&:hover': {
       borderColor: state.isFocused ? 'var(--color-primary)' : '#e5e7eb',
     },
     borderRadius: '2px', // rounded-sm
-    fontSize: '0.875rem',
+    fontSize: size === 'lg' ? '0.875rem' : '0.875rem',
     backgroundColor: 'white',
   }),
   valueContainer: (base) => ({
@@ -42,7 +42,7 @@ const customStyles = {
     ...base,
     backgroundColor: state.isSelected ? 'var(--color-primary)' : state.isFocused ? '#f9fafb' : 'white',
     color: state.isSelected ? 'white' : '#1f2937',
-    fontSize: '0.875rem',
+    fontSize: size === 'lg' ? '0.875rem' : '0.875rem',
     padding: '8px 12px',
     cursor: 'pointer',
     '&:active': {
@@ -55,9 +55,9 @@ const customStyles = {
     boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
     zIndex: 9999,
   }),
-};
+});
 
-const CustomerPicker = ({ value, onChange, error, label, required }) => {
+const CustomerPicker = ({ value, onChange, error, label, required, size = "md" }) => {
   const [customers, setCustomers] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -99,7 +99,7 @@ const CustomerPicker = ({ value, onChange, error, label, required }) => {
         onChange={handleChange}
         options={customers}
         isLoading={loading}
-        styles={customStyles}
+        styles={getCustomStyles(size)}
         placeholder="Search and select customer..."
         isClearable
         classNamePrefix="react-select"

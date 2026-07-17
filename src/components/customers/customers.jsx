@@ -26,7 +26,12 @@ export const Customers = () => {
   const [search, setSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState("all");
   const [locationFilter, setLocationFilter] = useState("");
-  const [viewMode, setViewMode] = useState("table");
+  const [viewMode, setViewMode] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('customersViewMode') || 'table';
+    }
+    return 'table';
+  });
   const [isAddCustomerOpen, setIsAddCustomerOpen] = useState(false);
   const [customers, setCustomers] = useState(globalCustomersCache || []);
   const [editItem, setEditItem] = useState(null);
@@ -177,14 +182,20 @@ export const Customers = () => {
           </div>
           <div className="ml-auto flex items-center bg-gray-100 p-1 rounded-md shrink-0 self-start md:self-auto">
             <button
-              onClick={() => setViewMode("table")}
+              onClick={() => {
+                setViewMode("table");
+                if (typeof window !== 'undefined') localStorage.setItem('customersViewMode', "table");
+              }}
               className={`p-1.5 rounded-sm transition-colors ${viewMode === "table" ? "bg-white text-primary shadow-sm" : "text-gray-500 hover:text-gray-900"}`}
               title="Table View"
             >
               <Icons name="List" size={18} />
             </button>
             <button
-              onClick={() => setViewMode("card")}
+              onClick={() => {
+                setViewMode("card");
+                if (typeof window !== 'undefined') localStorage.setItem('customersViewMode', "card");
+              }}
               className={`p-1.5 rounded-sm transition-colors ${viewMode === "card" ? "bg-white text-primary shadow-sm" : "text-gray-500 hover:text-gray-900"}`}
               title="Card View"
             >

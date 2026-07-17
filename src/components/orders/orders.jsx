@@ -6,7 +6,6 @@ import EmptyState from "@/common/EmptyState";
 import Icons from "@/common/Icons";
 import Input from "@/common/Input";
 import StatusBadge from "@/common/StatusBadge";
-import AddOrder from "./ordersModal/AddOrder";
 import EditOrder from "./ordersModal/EditOrder";
 import DeleteConfirmModal from "@/common/DeleteConfirmModal";
 import toast from "react-hot-toast";
@@ -37,6 +36,29 @@ const paymentOptions = [
   { value: "paid", label: "Paid" },
 ];
 
+let inMemoryCache = null;
+
+const getCachedOrders = () => {
+  if (inMemoryCache) return inMemoryCache;
+  if (typeof window !== 'undefined') {
+    const saved = sessionStorage.getItem('ordersCache');
+    if (saved) {
+      try {
+        inMemoryCache = JSON.parse(saved);
+        return inMemoryCache;
+      } catch (e) {}
+    }
+  }
+  return null;
+};
+
+const setCachedOrders = (data) => {
+  inMemoryCache = data;
+  if (typeof window !== 'undefined') {
+    sessionStorage.setItem('ordersCache', JSON.stringify(data));
+  }
+};
+
 export const Orders = () => {
   const router = useRouter();
   const [search, setSearch] = useState("");
@@ -44,17 +66,16 @@ export const Orders = () => {
   const [statusFilter, setStatusFilter] = useState("all");
   const [paymentFilter, setPaymentFilter] = useState("all");
   const [monthFilter, setMonthFilter] = useState("");
-  const [isAddOrderOpen, setIsAddOrderOpen] = useState(false);
-  const [orders, setOrders] = useState([]);
+  const [orders, setOrders] = useState(getCachedOrders() || []);
   const [editItem, setEditItem] = useState(null);
   const [deleteItem, setDeleteItem] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(!getCachedOrders());
 
-  const fetchOrders = async () => {
+  const fetchOrders = async (silent = false) => {
     try {
-      setLoading(true);
+      if (!silent && !getCachedOrders()) setLoading(true);
       const res = await api.get('/orders?limit=100');
-      setOrders(res.data.data.map(o => ({
+      const mapped = res.data.data.map(o => ({
         ...o,
         id: `GLW-${o.orderNumber}`,
         originalId: o.id,
@@ -69,7 +90,9 @@ export const Orders = () => {
         status: o.status.toLowerCase(),
         paymentStatus: o.paymentStatus.toLowerCase().replace('_', ' '),
         date: formatDate(o.createdAt)
-      })));
+      }));
+      setCachedOrders(mapped);
+      setOrders(mapped);
     } catch (error) {
       toast.error('Failed to load orders');
     } finally {
@@ -78,7 +101,7 @@ export const Orders = () => {
   };
 
   useEffect(() => {
-    fetchOrders();
+    fetchOrders(!!getCachedOrders());
   }, []);
 
   // Filters
@@ -115,7 +138,7 @@ export const Orders = () => {
 
   return (
     <div className="flex flex-col min-h-screen w-full relative gap-4">
-      <div className="flex flex-col gap-4 rounded-lg">
+      <div className="flex flex-col gap-4 rounded-sm">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div className="space-y-1">
             <h1 className="page-header text-2xl font-bold text-gray-900">Orders</h1>
@@ -127,10 +150,11 @@ export const Orders = () => {
           <div className="flex flex-wrap items-center gap-2 shrink-0">
             <Button
               variant="solid"
-              onClick={() => setIsAddOrderOpen(true)}
+              onClick={() => router.push('/orders/add')}
               leftIcon={(props) => (
                 <Icons name="Plus" color="white" {...props} />
               )}
+              className="rounded-sm px-4 py-2.5 text-sm font-semibold shadow-md shadow-primary/20 hover:shadow-lg hover:shadow-primary/30 transition-all"
             >
               Create Order
             </Button>
@@ -138,27 +162,50 @@ export const Orders = () => {
         </div>
 
         {/* KPIs */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-          <div className="rounded-xl border border-gray-100 bg-white p-4 shadow-sm">
-            <p className="text-sm font-medium text-gray-500">Total Orders</p>
-            <p className="mt-1 text-2xl font-bold text-gray-900">{totalOrders}</p>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="bg-white rounded-sm p-5 shadow-sm border border-gray-100 flex flex-col justify-center gap-3 hover:-translate-y-1 hover:shadow-md transition-all duration-300">
+            <div className="w-10 h-10 rounded-sm bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0 border border-indigo-100">
+              <Icons name="ShoppingCart" size={20} />
+            </div>
+            <div>
+              <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-1">Total Orders</p>
+              <h4 className="text-2xl font-black text-gray-900 tracking-tight">{totalOrders}</h4>
+            </div>
           </div>
-          <div className="rounded-xl border border-gray-100 bg-white p-4 shadow-sm">
-            <p className="text-sm font-medium text-gray-500">Total Value</p>
-            <p className="mt-1 text-2xl font-bold text-emerald-600">Rs. {totalValue.toLocaleString()}</p>
+          
+          <div className="bg-white rounded-sm p-5 shadow-sm border border-gray-100 flex flex-col justify-center gap-3 hover:-translate-y-1 hover:shadow-md transition-all duration-300">
+            <div className="w-10 h-10 rounded-sm bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0 border border-emerald-100">
+              <Icons name="TrendingUp" size={20} />
+            </div>
+            <div>
+              <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-1">Total Value</p>
+              <h4 className="text-2xl font-black text-gray-900 tracking-tight">Rs. {totalValue.toLocaleString()}</h4>
+            </div>
           </div>
-          <div className="rounded-xl border border-gray-100 bg-white p-4 shadow-sm">
-            <p className="text-sm font-medium text-gray-500">Pending/Processing</p>
-            <p className="mt-1 text-2xl font-bold text-indigo-600">{pendingCount}</p>
+
+          <div className="bg-white rounded-sm p-5 shadow-sm border border-gray-100 flex flex-col justify-center gap-3 hover:-translate-y-1 hover:shadow-md transition-all duration-300">
+            <div className="w-10 h-10 rounded-sm bg-sky-50 text-sky-600 flex items-center justify-center shrink-0 border border-sky-100">
+              <Icons name="Activity" size={20} />
+            </div>
+            <div>
+              <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-1">Pending/Processing</p>
+              <h4 className="text-2xl font-black text-gray-900 tracking-tight">{pendingCount}</h4>
+            </div>
           </div>
-          <div className="rounded-xl border border-gray-100 bg-white p-4 shadow-sm">
-            <p className="text-sm font-medium text-gray-500">Unpaid/Outstanding</p>
-            <p className="mt-1 text-2xl font-bold text-rose-600">Rs. {unpaidValue.toLocaleString()}</p>
+
+          <div className="bg-white rounded-sm p-5 shadow-sm border border-gray-100 flex flex-col justify-center gap-3 hover:-translate-y-1 hover:shadow-md transition-all duration-300">
+            <div className="w-10 h-10 rounded-sm bg-rose-50 text-rose-600 flex items-center justify-center shrink-0 border border-rose-100">
+              <Icons name="AlertCircle" size={20} />
+            </div>
+            <div>
+              <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-1">Unpaid/Outstanding</p>
+              <h4 className="text-2xl font-black text-gray-900 tracking-tight">Rs. {unpaidValue.toLocaleString()}</h4>
+            </div>
           </div>
         </div>
 
         {/* Filters */}
-        <div className="bg-white p-3 rounded-lg border border-gray-100 shadow-sm flex flex-col md:flex-row gap-3">
+        <div className="bg-white p-3 rounded-sm border border-gray-100 shadow-sm flex flex-col md:flex-row gap-3">
           <div className="w-full md:w-64">
             <Input
               id="search"
@@ -217,22 +264,22 @@ export const Orders = () => {
             addLabel="Create Order"
           />
         ) : (
-          <div className="bg-white rounded-lg border border-gray-100 shadow-sm overflow-hidden flex-1 custom-scrollbar">
+          <div className="bg-white rounded-sm border border-gray-100 shadow-sm overflow-hidden flex-1 custom-scrollbar min-h-[400px]">
             <div className="overflow-x-auto">
               <table className="w-full text-left border-collapse min-w-[900px]">
-                <thead className="bg-gray-50 border-b border-gray-100 text-xs font-semibold text-gray-600">
+                <thead className="bg-primary border-b border-primary/20 text-xs font-semibold text-white">
                   <tr>
-                    <th className="px-4 py-3">Order ID</th>
+                    <th className="px-4 py-3 rounded-tl-sm">Order ID</th>
                     <th className="px-4 py-3">Customer</th>
                     <th className="px-4 py-3">Type</th>
                     <th className="px-4 py-3">Amount & Balance</th>
                     <th className="px-4 py-3">Status</th>
                     <th className="px-4 py-3">Payment</th>
                     <th className="px-4 py-3">Date</th>
-                    <th className="px-4 py-3 text-center">Actions</th>
+                    <th className="px-4 py-3 text-center rounded-tr-sm">Actions</th>
                   </tr>
                 </thead>
-                <tbody className="text-sm">
+                <tbody className="text-sm divide-y divide-gray-50">
                   {filteredOrders.map(order => (
                     <tr 
                       key={order.id} 
@@ -241,8 +288,8 @@ export const Orders = () => {
                     >
                       <td className="px-4 py-3 font-semibold text-primary">{order.id}</td>
                       <td className="px-4 py-3">
-                        <div className="font-medium text-gray-900">{order.customer}</div>
-                        <div className="text-xs text-gray-500">{order.phone}</div>
+                        <div className="font-semibold text-gray-900 group-hover:text-primary transition-colors">{order.customer}</div>
+                        <div className="text-xs text-gray-500 font-medium">{order.phone}</div>
                       </td>
                       <td className="px-4 py-3">
                          <div className="font-medium text-gray-700">{order.type}</div>
@@ -260,14 +307,14 @@ export const Orders = () => {
                       <td className="px-4 py-3">
                         <StatusBadge status={order.paymentStatus} />
                       </td>
-                      <td className="px-4 py-3 text-gray-500">{order.date}</td>
+                      <td className="px-4 py-3 text-xs text-gray-500 font-medium">{order.date}</td>
                       <td className="px-4 py-3 text-center" onClick={(e) => e.stopPropagation()}>
                         <div className="flex items-center justify-center gap-2">
-                          <Button variant="ghost" size="sm" onClick={() => setEditItem(order)} className="px-2!">
-                            <Icons name="Pencil" size={16} className="text-gray-400 hover:text-indigo-600 transition-colors" />
+                          <Button variant="ghost" size="sm" onClick={() => router.push(`/orders/edit/${order.id}`)} className="px-2! rounded-sm hover:bg-indigo-50">
+                            <Icons name="Pencil" size={14} className="text-gray-400 hover:text-indigo-600 transition-colors" />
                           </Button>
-                          <Button variant="ghost" size="sm" onClick={() => setDeleteItem(order)} className="px-2!">
-                            <Icons name="Trash2" size={16} className="text-gray-400 hover:text-rose-500 transition-colors" />
+                          <Button variant="ghost" size="sm" onClick={() => setDeleteItem(order)} className="px-2! rounded-sm hover:bg-rose-50">
+                            <Icons name="Trash2" size={14} className="text-gray-400 hover:text-rose-500 transition-colors" />
                           </Button>
                         </div>
                       </td>
@@ -280,7 +327,6 @@ export const Orders = () => {
         )}
       </div>
 
-      {isAddOrderOpen && <AddOrder open={isAddOrderOpen} onClose={() => { setIsAddOrderOpen(false); fetchOrders(); }} />}
       {editItem && <EditOrder open={!!editItem} onClose={() => { setEditItem(null); fetchOrders(); }} initialData={editItem} />}
       {deleteItem && (
         <DeleteConfirmModal
@@ -291,7 +337,9 @@ export const Orders = () => {
             try {
               await api.delete(`/orders/${deleteItem.originalId}`);
               toast.success("Order deleted");
-              setOrders(orders.filter(o => o.originalId !== deleteItem.originalId));
+              const updated = orders.filter(o => o.originalId !== deleteItem.originalId);
+              setCachedOrders(updated);
+              setOrders(updated);
             } catch (err) {
               toast.error("Failed to delete order");
             }

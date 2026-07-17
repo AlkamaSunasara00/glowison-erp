@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { useRouter } from "next/router";
 import api from "@/lib/api";
 import toast from "react-hot-toast";
 import Button from "@/common/Button";
@@ -22,7 +23,8 @@ const sourceOptions = [
   { label: "Other", value: "Other" },
 ];
 
-const AddOrder = ({ open, onClose }) => {
+const AddOrder = ({ open, onClose, isPage = false }) => {
+  const router = useRouter();
   const [orderType, setOrderType] = useState("Retail/Dealer");
   const [customerId, setCustomerId] = useState("");
   const [onlineData, setOnlineData] = useState({ source: "Website", otherSource: "", name: "", phone: "" });
@@ -32,15 +34,18 @@ const AddOrder = ({ open, onClose }) => {
   const [notes, setNotes] = useState("");
 
   useEffect(() => {
-    if (!open) return undefined;
+    if (!open && !isPage) return undefined;
     const handleKeyDown = (event) => {
-      if (event.key === "Escape") onClose();
+      if (event.key === "Escape") handleClose();
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [open, onClose]);
+  }, [open, onClose, isPage]);
 
-
+  const handleClose = () => {
+    if (isPage) router.push('/orders');
+    else onClose?.();
+  };
 
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -76,7 +81,7 @@ const AddOrder = ({ open, onClose }) => {
 
       await api.post('/orders', payload);
       toast.success('Order created successfully');
-      onClose();
+      handleClose();
     } catch (error) {
       toast.error('Failed to create order');
       console.error(error);
@@ -141,38 +146,35 @@ const AddOrder = ({ open, onClose }) => {
   };
   const calculateTotal = () => calculateSubtotal() + calculateTax();
 
-  return (
-    <div
-      className={`fixed inset-x-0 bottom-0 top-16 z-[1000] flex items-start justify-center p-4 md:inset-0 md:items-center md:p-6 ${
-        open ? "pointer-events-auto" : "pointer-events-none"
-      }`}
-      aria-hidden={!open}
-    >
-      <div
-        className={`absolute inset-0 bg-black/40 backdrop-blur-[2px] ${
-          open ? "animate-overlay-in" : "animate-overlay-out"
-        }`}
-        onClick={onClose}
-      />
-
-      <div
-        className={`relative flex h-full w-full max-w-4xl flex-col overflow-hidden rounded-md border border-gray-200 bg-white shadow-lg md:h-auto md:max-h-[90vh] ${
-          open ? "animate-modal-in" : "animate-modal-out"
-        }`}
-      >
-        <form onSubmit={handleSubmit} className="flex h-full min-h-0 flex-col">
-          <div className="shrink-0 border-b border-gray-200 px-6 py-4 flex items-center justify-between bg-gray-50/50">
-            <div>
-              <h2 className="text-base font-semibold text-gray-900">Create Order</h2>
-              <p className="mt-1 text-sm text-gray-500">Record a new retail, dealer, or online order.</p>
+  const formContent = (
+        <form onSubmit={handleSubmit} className={isPage ? "flex flex-col w-full h-full" : "flex h-full min-h-0 flex-col"}>
+          <div className={isPage ? "sticky top-0 z-50 bg-white/80 backdrop-blur-xl border-b border-gray-200 px-6 py-4 flex items-center justify-between" : "shrink-0 border-b border-gray-200 px-6 py-4 flex items-center justify-between bg-gray-50/50"}>
+            <div className={isPage ? "flex items-center gap-4" : ""}>
+              {isPage && (
+                <button type="button" onClick={handleClose} className="text-gray-500 hover:text-gray-700 transition-colors shrink-0">
+                  <Icons name="ArrowLeft" size={20} />
+                </button>
+              )}
+              <div>
+                <h2 className={isPage ? "page-header text-xl" : "text-base font-semibold text-gray-900"}>Create Order</h2>
+                <p className={isPage ? "text-sm text-gray-500 mt-0.5" : "mt-1 text-sm text-gray-500"}>Record a new retail, dealer, or online order.</p>
+              </div>
             </div>
-            <button type="button" onClick={onClose}>
-              <Icons name="X" size={18} className="text-gray-500 hover:text-gray-700" />
-            </button>
+            {isPage ? (
+              <div className="flex items-center gap-3">
+                <Button variant="outline" type="button" onClick={handleClose} disabled={isSubmitting}>Cancel</Button>
+                <Button variant="solid" type="submit" isLoading={isSubmitting} disabled={isSubmitting}>Create Order</Button>
+              </div>
+            ) : (
+              <button type="button" onClick={handleClose}>
+                <Icons name="X" size={18} className="text-gray-500 hover:text-gray-700" />
+              </button>
+            )}
           </div>
 
-          <div className="min-h-0 flex-1 overflow-y-auto px-6 py-5 custom-scrollbar">
-            
+          <div className={isPage ? "flex-1 w-full mx-auto px-4 py-8 md:px-8 bg-gray-50/50" : "min-h-0 flex-1 overflow-y-auto px-6 py-5 custom-scrollbar"}>
+            <div className={isPage ? "max-w-5xl mx-auto space-y-6 lg:space-y-8" : ""}>
+
             {/* Order Type & Customer */}
             <div className="mb-6 p-4 rounded-xl border border-gray-100 bg-gray-50/30">
               <h3 className="text-sm font-semibold text-gray-800 mb-4">Customer Details</h3>
@@ -195,44 +197,43 @@ const AddOrder = ({ open, onClose }) => {
                       value={customerId}
                       onChange={(val) => setCustomerId(val)}
                       required
+                      size={isPage ? "lg" : "md"}
                     />
                   </div>
                 ) : (
                   <>
                     <div className="space-y-1.5">
                       <label className="label">Online Source <span className="required">*</span></label>
-                      <Input type="select" options={sourceOptions} value={onlineData.source} onChange={(e) => setOnlineData({...onlineData, source: e.target.value})} required />
+                      <Input size={isPage ? "lg" : "md"} type="select" options={sourceOptions} value={onlineData.source} onChange={(e) => setOnlineData({...onlineData, source: e.target.value})} required />
                     </div>
                     {onlineData.source === "Other" && (
                       <div className="space-y-1.5">
                         <label className="label">Specify Source <span className="required">*</span></label>
-                        <Input value={onlineData.otherSource} onChange={(e) => setOnlineData({...onlineData, otherSource: e.target.value})} required />
+                        <Input size={isPage ? "lg" : "md"} value={onlineData.otherSource} onChange={(e) => setOnlineData({...onlineData, otherSource: e.target.value})} required />
                       </div>
                     )}
                     <div className="space-y-1.5">
                       <label className="label">Buyer Name</label>
-                      <Input value={onlineData.name} onChange={(e) => setOnlineData({...onlineData, name: e.target.value})} placeholder="Optional for online orders" />
+                      <Input size={isPage ? "lg" : "md"} value={onlineData.name} onChange={(e) => setOnlineData({...onlineData, name: e.target.value})} placeholder="Optional for online orders" />
                     </div>
                     <div className="space-y-1.5">
                       <label className="label">Buyer Phone</label>
-                      <Input value={onlineData.phone} onChange={(e) => setOnlineData({...onlineData, phone: e.target.value})} placeholder="Optional for online orders" />
+                      <Input size={isPage ? "lg" : "md"} value={onlineData.phone} onChange={(e) => setOnlineData({...onlineData, phone: e.target.value})} placeholder="Optional for online orders" />
                     </div>
                   </>
                 )}
               </div>
             </div>
-
             {/* Line Items */}
             <div className="mb-6 p-4 rounded-xl border border-gray-100">
                <div className="flex items-center justify-between mb-4">
                  <h3 className="text-sm font-semibold text-gray-800">Line Items</h3>
-                 <Button type="button" variant="ghost" size="sm" onClick={handleAddLineItem} leftIcon={(props) => <Icons name="Plus" {...props} />} className="text-primary">Add Item</Button>
                </div>
                
                <div className="space-y-3">
                   {lineItems.map((item, index) => (
-                    <div key={item.id} className="relative bg-gray-50/50 p-4 md:p-5 rounded-xl border border-gray-200 mb-4 group shadow-sm">
-                       <div className="absolute -left-3 -top-3 bg-white text-gray-500 border border-gray-200 rounded-full w-7 h-7 flex items-center justify-center text-xs font-bold shadow-sm">
+                    <div key={item.id} className="relative bg-gray-50/50 p-4 md:p-5 rounded-sm border border-gray-200 mb-4 group shadow-sm">
+                       <div className="absolute -left-3 -top-3 bg-primary text-white border border-primary rounded-full w-7 h-7 flex items-center justify-center text-xs font-bold shadow-sm">
                          {index + 1}
                        </div>
                        <button type="button" onClick={() => handleRemoveLineItem(item.id)} className="absolute right-2 top-2 p-1.5 text-gray-400 hover:text-red-500 rounded-md hover:bg-red-50 transition-colors" disabled={lineItems.length === 1}>
@@ -242,60 +243,66 @@ const AddOrder = ({ open, onClose }) => {
                        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4 pr-6">
                          <div className="space-y-1.5">
                            <label className="text-xs font-semibold text-gray-600">Product Name <span className="text-red-500">*</span></label>
-                           <CatalogPicker value={item.name} onChange={(val, data) => handleCatalogSelect(item.id, val, data)} />
+                           <CatalogPicker size={isPage ? "lg" : "md"} value={item.name} onChange={(val, data) => handleCatalogSelect(item.id, val, data)} />
                          </div>
                          <div className="space-y-1.5">
                            <label className="text-xs font-semibold text-gray-600">SKU (Optional)</label>
-                           <Input placeholder="E.g. SK-123" value={item.sku} onChange={(e) => handleLineItemChange(item.id, 'sku', e.target.value)} />
+                           <Input size={isPage ? "lg" : "md"} placeholder="E.g. SK-123" value={item.sku} onChange={(e) => handleLineItemChange(item.id, 'sku', e.target.value)} />
                          </div>
                          <div className="space-y-1.5">
                            <label className="text-xs font-semibold text-gray-600">Size</label>
-                           <Input placeholder="E.g. 6mm" value={item.size} onChange={(e) => handleLineItemChange(item.id, 'size', e.target.value)} />
+                           <Input size={isPage ? "lg" : "md"} placeholder="E.g. 6mm" value={item.size} onChange={(e) => handleLineItemChange(item.id, 'size', e.target.value)} />
                          </div>
                          <div className="space-y-1.5">
                            <label className="text-xs font-semibold text-gray-600">Color</label>
-                           <Input placeholder="E.g. Red" value={item.color} onChange={(e) => handleLineItemChange(item.id, 'color', e.target.value)} />
+                           <Input size={isPage ? "lg" : "md"} placeholder="E.g. Red" value={item.color} onChange={(e) => handleLineItemChange(item.id, 'color', e.target.value)} />
                          </div>
                        </div>
 
                        <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
                          <div className="space-y-1.5">
                            <label className="text-xs font-semibold text-gray-600">Pricing Unit</label>
-                           <Input type="select" options={[{label: "Inch", value: "inch"}, {label: "Sq Ft", value: "sqft"}, {label: "Piece", value: "piece"}, {label: "Feet", value: "feet"}]} value={item.unit} onChange={(e) => handleLineItemChange(item.id, 'unit', e.target.value)} />
+                           <Input size="md" type="select" options={[{label: "Inch", value: "inch"}, {label: "Sq Ft", value: "sqft"}, {label: "Piece", value: "piece"}, {label: "Feet", value: "feet"}]} value={item.unit} onChange={(e) => handleLineItemChange(item.id, 'unit', e.target.value)} />
                          </div>
                          <div className="space-y-1.5">
                            <label className="text-xs font-semibold text-gray-600">Price Type</label>
-                           <Input type="select" options={[{label: "Retail", value: "Retail"}, {label: "Dealer", value: "Dealer"}, {label: "Custom", value: "Custom"}]} value={item.priceType} onChange={(e) => handleLineItemChange(item.id, 'priceType', e.target.value)} />
+                           <Input size="md" type="select" options={[{label: "Retail", value: "Retail"}, {label: "Dealer", value: "Dealer"}, {label: "Custom", value: "Custom"}]} value={item.priceType} onChange={(e) => handleLineItemChange(item.id, 'priceType', e.target.value)} />
                          </div>
                          <div className="space-y-1.5">
-                           <label className="text-xs font-semibold text-gray-600">Price / {item.unit === 'sqft' ? 'Sq Ft' : item.unit === 'piece' ? 'Piece' : 'Inch'} (Info)</label>
-                           <Input type="number" min="0" placeholder="e.g. 15" value={item.pricePerUnit} onChange={(e) => handleLineItemChange(item.id, 'pricePerUnit', e.target.value)} />
+                           <label className="text-xs font-semibold text-gray-600">Price / {item.unit === 'sqft' ? 'Sq Ft' : item.unit === 'piece' ? 'Piece' : item.unit === 'feet' ? 'Feet' : 'Inch'} (Info)</label>
+                           <Input size="md" type="number" min="0" placeholder="e.g. 15" value={item.pricePerUnit} onChange={(e) => handleLineItemChange(item.id, 'pricePerUnit', e.target.value)} />
                          </div>
                          <div className="space-y-1.5">
                            <label className="text-xs font-semibold text-gray-600">Qty <span className="text-red-500">*</span></label>
-                           <Input type="number" min="1" placeholder="1" value={item.qty} onChange={(e) => handleLineItemChange(item.id, 'qty', e.target.value)} required />
+                           <Input size="md" type="number" min="1" placeholder="1" value={item.qty} onChange={(e) => handleLineItemChange(item.id, 'qty', e.target.value)} required />
                          </div>
                          <div className="space-y-1.5">
                            <label className="text-xs font-semibold text-gray-600">Unit Price <span className="text-red-500">*</span></label>
-                           <Input type="number" min="0" placeholder="0.00" value={item.price} onChange={(e) => { handleLineItemChange(item.id, 'priceType', 'Custom'); handleLineItemChange(item.id, 'price', e.target.value); }} required />
+                           <Input size="md" type="number" min="0" placeholder="0.00" value={item.price} onChange={(e) => { handleLineItemChange(item.id, 'priceType', 'Custom'); handleLineItemChange(item.id, 'price', e.target.value); }} required />
                          </div>
                          <div className="w-full space-y-1.5">
                            <label className="text-xs font-semibold text-gray-600">Tax %</label>
-                           <Input type="number" min="0" placeholder="e.g. 18" value={item.taxPercent} onChange={(e) => handleLineItemChange(item.id, 'taxPercent', e.target.value)} />
+                           <Input size="md" type="number" min="0" placeholder="e.g. 18" value={item.taxPercent} onChange={(e) => handleLineItemChange(item.id, 'taxPercent', e.target.value)} />
                          </div>
                        </div>
                        
-                        <div className="mt-3 w-full">
-                          <ImageUpload 
-                            value={item.imageUrl} 
-                            onChange={(url) => handleLineItemChange(item.id, 'imageUrl', url)} 
-                            folder="erp/orders" 
-                          />
-                        </div>
+                       <div className="mt-3 w-40">
+                         <ImageUpload 
+                           value={item.imageUrl} 
+                           onChange={(url) => handleLineItemChange(item.id, 'imageUrl', url)} 
+                           folder="erp/orders" 
+                         />
+                       </div>
                     </div>
                   ))}
                </div>
+               
+               <div className="mt-4 pt-4 border-t border-gray-100 flex justify-center">
+                 <Button type="button" variant="solid" onClick={handleAddLineItem} leftIcon={(props) => <Icons name="Plus" {...props} />}>Add Another Item</Button>
+               </div>
+            </div>
 
+               {/* Summary */}
                <div className="mt-4 flex justify-end">
                   <div className="bg-gray-50 px-4 py-3 rounded-lg border border-gray-100 min-w-[200px]">
                      <div className="flex justify-between text-sm font-semibold text-gray-800">
@@ -312,20 +319,19 @@ const AddOrder = ({ open, onClose }) => {
                      </div>
                   </div>
                </div>
-            </div>
 
             {/* Payment Details */}
             <div className="mb-6 p-4 rounded-xl border border-gray-100 bg-gray-50/30">
-               <h3 className="text-sm font-semibold text-gray-800 mb-4">Payment Details</h3>
+               <h3 className="text-sm font-semibold text-gray-800 mb-4">Payment</h3>
                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                  <div className="space-y-1.5">
                    <label className="text-xs font-semibold text-gray-600">Payment Status</label>
-                   <Input type="select" options={[{label: "Unpaid", value: "UNPAID"}, {label: "Partially Paid", value: "PARTIAL"}, {label: "Fully Paid", value: "PAID"}]} value={paymentStatus} onChange={(e) => setPaymentStatus(e.target.value)} />
+                   <Input size="md" type="select" options={[{label: "Unpaid", value: "UNPAID"}, {label: "Partially Paid", value: "PARTIAL"}, {label: "Fully Paid", value: "PAID"}]} value={paymentStatus} onChange={(e) => setPaymentStatus(e.target.value)} />
                  </div>
                  {paymentStatus === "PARTIAL" && (
                    <div className="space-y-1.5 animate-fade-in">
-                     <label className="text-xs font-semibold text-gray-600">Amount Paid (Installment) <span className="text-red-500">*</span></label>
-                     <Input type="number" min="0" placeholder="e.g. 500" value={amountPaid} onChange={(e) => setAmountPaid(e.target.value)} required />
+                     <label className="text-xs font-semibold text-gray-600">Amount Paid <span className="text-red-500">*</span></label>
+                     <Input size="md" type="number" min="0" placeholder="e.g. 500" value={amountPaid} onChange={(e) => setAmountPaid(e.target.value)} required />
                    </div>
                  )}
                </div>
@@ -334,16 +340,49 @@ const AddOrder = ({ open, onClose }) => {
             {/* Notes */}
             <div className="space-y-1.5">
               <label className="label">Order Notes</label>
-              <Input type="textarea" name="notes" value={notes} onChange={(e) => setNotes(e.target.value)} className="min-h-[80px]" placeholder="Add any special instructions..." />
+              <Input size="md" type="textarea" name="notes" value={notes} onChange={(e) => setNotes(e.target.value)} className="min-h-[80px]" placeholder="Add any special instructions..." />
             </div>
 
+           </div>
           </div>
 
-          <div className="shrink-0 border-t border-gray-200 bg-gray-50/50 px-6 py-4 flex justify-end gap-3">
-            <Button variant="outline" type="button" onClick={onClose} disabled={isSubmitting}>Cancel</Button>
-            <Button variant="solid" type="submit" isLoading={isSubmitting} disabled={isSubmitting}>Create Order</Button>
-          </div>
+          {!isPage && (
+            <div className="shrink-0 border-t border-gray-200 bg-gray-50/50 px-6 py-4 flex justify-end gap-3">
+              <Button variant="outline" type="button" onClick={handleClose} disabled={isSubmitting}>Cancel</Button>
+              <Button variant="solid" type="submit" isLoading={isSubmitting} disabled={isSubmitting}>Create Order</Button>
+            </div>
+          )}
         </form>
+  );
+
+  if (isPage) {
+    return (
+      <div className="flex flex-col w-full min-h-screen bg-gray-50/30 animate-fade-in">
+        {formContent}
+      </div>
+    );
+  }
+
+  return (
+    <div
+      className={`fixed inset-x-0 bottom-0 top-16 z-[1000] flex items-start justify-center p-4 md:inset-0 md:items-center md:p-6 ${
+        open ? "pointer-events-auto" : "pointer-events-none"
+      }`}
+      aria-hidden={!open}
+    >
+      <div
+        className={`absolute inset-0 bg-black/40 backdrop-blur-[2px] ${
+          open ? "animate-overlay-in" : "animate-overlay-out"
+        }`}
+        onClick={handleClose}
+      />
+
+      <div
+        className={`relative flex h-full w-full max-w-4xl flex-col overflow-hidden rounded-md border border-gray-200 bg-white shadow-lg md:h-auto md:max-h-[90vh] ${
+          open ? "animate-modal-in" : "animate-modal-out"
+        }`}
+      >
+        {formContent}
       </div>
     </div>
   );

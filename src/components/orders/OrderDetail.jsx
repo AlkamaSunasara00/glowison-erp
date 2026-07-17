@@ -4,7 +4,6 @@ import Button from "@/common/Button";
 import Icons from "@/common/Icons";
 import { useRouter } from "next/router";
 import StatusBadge from "@/common/StatusBadge";
-import EditOrder from "./ordersModal/EditOrder";
 import api from "@/lib/api";
 import toast from "react-hot-toast";
 import { formatDate } from "@/utils/formatters";
@@ -19,7 +18,6 @@ const mockLineItems = [
 
 const OrderDetail = ({ open, onClose, order, isPage = false, onOrderUpdated }) => {
   const router = useRouter();
-  const [isEditOpen, setIsEditOpen] = useState(false);
   const [showPartialInput, setShowPartialInput] = useState(false);
   const [partialAmount, setPartialAmount] = useState("");
   const data = order || {};
@@ -61,13 +59,13 @@ const OrderDetail = ({ open, onClose, order, isPage = false, onOrderUpdated }) =
 
   const detailPanelContent = (
     <div
-      className={isPage ? "flex flex-col gap-4 w-full animate-fade-in" : `relative flex h-full w-full max-w-full flex-col bg-white shadow-2xl md:w-[90%] md:h-screen ${
+      className={isPage ? "flex flex-col w-full min-h-screen bg-transparent animate-fade-in" : `relative flex h-full w-full max-w-full flex-col bg-white shadow-2xl md:w-[90%] md:h-screen ${
         open ? "animate-slide-in-right" : "animate-slide-out-right"
       }`}
       onClick={(e) => e.stopPropagation()}
     >
         {/* ── HEADER ─────────────────────────────────────────── */}
-        <div className={isPage ? "flex items-center justify-between py-2" : "flex items-center justify-between px-7 py-4 border-b border-gray-100 bg-white"}>
+        <div className={isPage ? "flex items-center justify-between pb-6" : "flex items-center justify-between px-7 py-4 border-b border-gray-100 bg-white"}>
         <div className="flex items-center gap-4">
           <button
             type="button"
@@ -91,7 +89,7 @@ const OrderDetail = ({ open, onClose, order, isPage = false, onOrderUpdated }) =
             <Button
               variant="outline"
               size="md"
-              onClick={() => setIsEditOpen(true)}
+              onClick={() => router.push(`/orders/edit/${data.id}`)}
               leftIcon={(props) => <ActionIcon name="Pencil" {...props} />}
               className="hidden sm:flex rounded-lg px-3! py-1.5! text-xs font-medium"
             >
@@ -110,13 +108,14 @@ const OrderDetail = ({ open, onClose, order, isPage = false, onOrderUpdated }) =
         </div>
 
         {/* ── BODY ───────────────────────────────────────────── */}
-        <div className={isPage ? "" : "flex-1 overflow-hidden"}>
-          <div className={isPage ? "grid grid-cols-1 lg:grid-cols-[1fr_340px] gap-4" : "grid h-full grid-cols-1 lg:grid-cols-[1fr_340px] divide-y lg:divide-y-0 lg:divide-x divide-gray-100"}>
+        <div className={isPage ? "pb-10" : "flex-1 overflow-hidden"}>
+          <div className={isPage ? "grid grid-cols-1 lg:grid-cols-12 gap-6" : "grid h-full grid-cols-1 lg:grid-cols-[1fr_340px] divide-y lg:divide-y-0 lg:divide-x divide-gray-100"}>
 
-            {/* ── TOP SECTION (Details & Status) ── */}
-            <div className={isPage ? "flex flex-col gap-4" : "h-full overflow-y-auto px-7 py-6 space-y-7 bg-gray-50/40"}>
+            {/* ── LEFT SECTION (Details & Line Items) ── */}
+            <div className={isPage ? "lg:col-span-8 flex flex-col gap-6" : "h-full overflow-y-auto px-7 py-6 space-y-7 bg-gray-50/40"}>
 
-              <section className={isPage ? "bg-white border border-slate-200/60 rounded-xl p-6 shadow-sm" : ""}>
+              <section className={isPage ? "bg-white border border-gray-100/80 rounded-sm p-6 shadow-sm relative overflow-hidden group" : ""}>
+                <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-bl from-primary/5 to-transparent rounded-bl-full opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
                 <h3 className="text-base font-semibold text-gray-900 mb-4">
                   Order Information
                 </h3>
@@ -131,31 +130,92 @@ const OrderDetail = ({ open, onClose, order, isPage = false, onOrderUpdated }) =
                   ))}
                 </div>
               </section>
+
+              {/* ── LINE ITEMS (Moved here) ── */}
+              <section className={isPage ? "bg-white border border-gray-100/80 rounded-sm p-6 shadow-sm relative overflow-hidden group" : "mx-7 mb-7 bg-white border border-gray-200 rounded-sm p-6 shadow-sm"}>
+                 <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-bl from-indigo-500/5 to-transparent rounded-bl-full opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
+                 <h3 className="text-base font-semibold text-gray-900 mb-4">
+                  Line Items
+                </h3>
+                <div className="rounded-sm border border-gray-100 overflow-hidden">
+                   <table className="w-full text-left border-collapse">
+                      <thead className="bg-primary border-b border-primary/20 text-xs font-semibold text-white">
+                        <tr>
+                          <th className="px-4 py-3 w-16">Image</th>
+                          <th className="px-4 py-3">Product</th>
+                          <th className="px-4 py-3">Details</th>
+                          <th className="px-4 py-3 text-right">Qty</th>
+                          <th className="px-4 py-3 text-right">Unit Price</th>
+                          <th className="px-4 py-3 text-right">Total</th>
+                        </tr>
+                      </thead>
+                      <tbody className="text-sm divide-y divide-gray-50">
+                        {(data.items ? data.items : []).map(item => (
+                          <tr key={item.id} className="border-b border-gray-50 hover:bg-gray-50/50 transition-colors">
+                            <td className="px-4 py-3">
+                              {item.imageUrl ? (
+                                <a href={item.imageUrl} target="_blank" rel="noreferrer" className="block w-10 h-10 rounded-sm border border-gray-200 overflow-hidden hover:opacity-80 transition-opacity bg-white">
+                                  <img src={item.imageUrl} alt={item.product} className="w-full h-full object-cover" />
+                                </a>
+                              ) : (
+                                <div className="w-10 h-10 rounded-sm bg-gray-100 flex items-center justify-center text-gray-400 border border-gray-200">
+                                  <Icons name="Image" size={16} />
+                                </div>
+                              )}
+                            </td>
+                            <td className="px-4 py-3 font-semibold text-gray-900">{item.product || item.name}</td>
+                            <td className="px-4 py-3 text-gray-500 text-xs font-medium">Size: {item.size || "N/A"} | Color: {item.color || "N/A"}</td>
+                            <td className="px-4 py-3 text-right">{item.qty}</td>
+                            <td className="px-4 py-3 text-right">Rs. {item.unitPrice || item.price}</td>
+                            <td className="px-4 py-3 text-right font-semibold">Rs. {(item.qty * (item.unitPrice || item.price)).toFixed(2)}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                   </table>
+                    <div className="bg-gray-50/50 p-4 border-t border-gray-100 flex flex-col items-end gap-2 text-sm">
+                      <div className="flex justify-between w-48 text-gray-900 font-bold border-t border-gray-200 pt-2">
+                        <span>Total</span>
+                        <span>Rs. {Number(data.total || 0).toLocaleString()}</span>
+                      </div>
+                      <div className="flex justify-between w-48 text-gray-600 text-sm mt-1">
+                        <span>Amount Paid</span>
+                        <span>Rs. {Number(data.amountPaid || 0).toLocaleString()}</span>
+                      </div>
+                      <div className="flex justify-between w-48 text-rose-600 font-bold mt-1">
+                        <span>Balance Due</span>
+                        <span>Rs. {Math.max(0, Number(data.total || 0) - Number(data.amountPaid || 0)).toLocaleString()}</span>
+                      </div>
+                   </div>
+                </div>
+              </section>
+
             </div>
 
             {/* ── RIGHT (Customer link & Status) ── */}
-            <div className={isPage ? "flex flex-col gap-4" : "h-full overflow-y-auto px-6 py-6 space-y-6"}>
+            <div className={isPage ? "lg:col-span-4 flex flex-col gap-6" : "h-full overflow-y-auto px-6 py-6 space-y-6"}>
               
               {data.type !== 'ONLINE' && (
-                <section className={isPage ? "bg-white border border-slate-200/60 rounded-xl p-6 shadow-sm" : ""}>
-                  <h3 className="text-base font-semibold text-gray-900 mb-3">
+                <section className={isPage ? "bg-white border border-gray-100/80 rounded-sm p-6 shadow-sm relative overflow-hidden group" : ""}>
+                  <div className="absolute top-0 right-0 w-24 h-24 bg-gradient-to-bl from-sky-500/5 to-transparent rounded-bl-full opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
+                  <h3 className="text-base font-semibold text-gray-900 mb-3 relative">
                     Customer Details
                   </h3>
-                  <div className="flex items-center gap-3 p-3 border border-gray-100 rounded-lg hover:border-primary/30 transition-colors cursor-pointer group" onClick={() => router.push('/customers/1')}>
-                    <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold">
+                  <div className="flex items-center gap-3 p-3 border border-gray-100 rounded-sm hover:border-primary/30 hover:bg-primary/5 transition-colors cursor-pointer group/link relative" onClick={() => router.push(`/customers/${data.customer?.id || ''}`)}>
+                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center text-primary font-bold shadow-inner">
                       {data.customer ? (typeof data.customer === 'string' ? data.customer.charAt(0) : data.customer.name?.charAt(0) || 'C') : 'C'}
                     </div>
                     <div className="flex-1">
-                      <div className="font-semibold text-sm group-hover:text-primary transition-colors">{data.customer ? data.customer.name || data.customer : "—"}</div>
-                      <div className="text-xs text-gray-500">{data.customer?.phone || data.phone}</div>
+                      <div className="font-semibold text-sm group-hover/link:text-primary transition-colors">{data.customer ? data.customer.name || data.customer : "—"}</div>
+                      <div className="text-xs text-gray-500 font-medium">{data.customer?.phone || data.phone}</div>
                     </div>
-                    <Icons name="ChevronRight" size={16} className="text-gray-400" />
+                    <Icons name="ChevronRight" size={16} className="text-gray-400 group-hover/link:text-primary transition-colors" />
                   </div>
                 </section>
               )}
 
-               <section className={isPage ? "bg-white border border-slate-200/60 rounded-xl p-6 shadow-sm" : ""}>
-                 <h3 className="text-base font-semibold text-gray-900 mb-3">
+               <section className={isPage ? "bg-white border border-gray-100/80 rounded-sm p-6 shadow-sm relative overflow-hidden group" : ""}>
+                 <div className="absolute top-0 right-0 w-24 h-24 bg-gradient-to-bl from-emerald-500/5 to-transparent rounded-bl-full opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
+                 <h3 className="text-base font-semibold text-gray-900 mb-3 relative">
                     Status Updates
                   </h3>
                   <div className="flex flex-col gap-3">
@@ -176,65 +236,7 @@ const OrderDetail = ({ open, onClose, order, isPage = false, onOrderUpdated }) =
 
             </div>
           </div>
-          
-          {/* ── FULL WIDTH BOTTOM SECTION (Line Items) ── */}
-          <div className="mt-4 px-0 md:px-0">
-             <section className={isPage ? "bg-white border border-slate-200/60 rounded-xl p-6 shadow-sm" : "mx-7 mb-7 bg-white border border-gray-200 rounded-xl p-6 shadow-sm"}>
-                 <h3 className="text-base font-semibold text-gray-900 mb-4">
-                  Line Items
-                </h3>
-                <div className="rounded-xl border border-gray-100 overflow-hidden">
-                   <table className="w-full text-left border-collapse">
-                      <thead className="bg-gray-50 border-b border-gray-100 text-xs font-medium text-gray-500">
-                        <tr>
-                          <th className="px-4 py-3 w-16">Image</th>
-                          <th className="px-4 py-3">Product</th>
-                          <th className="px-4 py-3">Details</th>
-                          <th className="px-4 py-3 text-right">Qty</th>
-                          <th className="px-4 py-3 text-right">Unit Price</th>
-                          <th className="px-4 py-3 text-right">Total</th>
-                        </tr>
-                      </thead>
-                      <tbody className="text-sm">
-                        {(data.items ? data.items : []).map(item => (
-                          <tr key={item.id} className="border-b border-gray-50">
-                            <td className="px-4 py-3">
-                              {item.imageUrl ? (
-                                <a href={item.imageUrl} target="_blank" rel="noreferrer" className="block w-10 h-10 rounded border border-gray-200 overflow-hidden hover:opacity-80 transition-opacity bg-white">
-                                  <img src={item.imageUrl} alt={item.product} className="w-full h-full object-cover" />
-                                </a>
-                              ) : (
-                                <div className="w-10 h-10 rounded bg-gray-100 flex items-center justify-center text-gray-400 border border-gray-200">
-                                  <Icons name="Image" size={16} />
-                                </div>
-                              )}
-                            </td>
-                            <td className="px-4 py-3 font-medium text-gray-900">{item.product || item.name}</td>
-                            <td className="px-4 py-3 text-gray-500 text-xs">Size: {item.size || "N/A"} | Color: {item.color || "N/A"}</td>
-                            <td className="px-4 py-3 text-right">{item.qty}</td>
-                            <td className="px-4 py-3 text-right">Rs. {item.unitPrice || item.price}</td>
-                            <td className="px-4 py-3 text-right font-semibold">Rs. {(item.qty * (item.unitPrice || item.price)).toFixed(2)}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                   </table>
-                    <div className="bg-gray-50/50 p-4 border-t border-gray-100 flex flex-col items-end gap-2 text-sm">
-                      <div className="flex justify-between w-48 text-gray-900 font-bold border-t border-gray-200 pt-2">
-                        <span>Total</span>
-                        <span>Rs. {Number(data.total || 0).toLocaleString()}</span>
-                      </div>
-                      <div className="flex justify-between w-48 text-gray-600 text-sm mt-1">
-                        <span>Amount Paid</span>
-                        <span>Rs. {Number(data.amountPaid || 0).toLocaleString()}</span>
-                      </div>
-                      <div className="flex justify-between w-48 text-red-600 font-bold mt-1">
-                        <span>Balance Due</span>
-                        <span>Rs. {Math.max(0, Number(data.total || 0) - Number(data.amountPaid || 0)).toLocaleString()}</span>
-                      </div>
-                   </div>
-                </div>
-              </section>
-          </div>
+
         </div>
       </div>
     );
@@ -243,7 +245,6 @@ const OrderDetail = ({ open, onClose, order, isPage = false, onOrderUpdated }) =
     return (
       <>
         {detailPanelContent}
-        {isEditOpen && <EditOrder open={isEditOpen} onClose={() => { setIsEditOpen(false); if (onOrderUpdated) onOrderUpdated(); else if (isPage) router.replace(router.asPath); }} initialData={data} />}
       </>
     );
   }
@@ -264,7 +265,6 @@ const OrderDetail = ({ open, onClose, order, isPage = false, onOrderUpdated }) =
         />
         {detailPanelContent}
       </div>
-      {isEditOpen && <EditOrder open={isEditOpen} onClose={() => { setIsEditOpen(false); if (onOrderUpdated) onOrderUpdated(); }} initialData={data} />}
     </>
   );
 };
