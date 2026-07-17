@@ -2,10 +2,12 @@ import React, { useState, useEffect } from "react";
 import Button from "./Button";
 import Icons from "./Icons";
 import Input from "./Input";
+import Loader from "./Loader";
 
 const DeleteConfirmModal = ({ open, onClose, onConfirm, entityName = "this item" }) => {
   const [confirmCode, setConfirmCode] = useState("");
   const [inputCode, setInputCode] = useState("");
+  const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
     if (open) {
@@ -25,9 +27,14 @@ const DeleteConfirmModal = ({ open, onClose, onConfirm, entityName = "this item"
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [open, onClose]);
 
-  const handleConfirm = () => {
+  const handleConfirm = async () => {
     if (inputCode === confirmCode) {
-      onConfirm();
+      setIsDeleting(true);
+      try {
+        await onConfirm();
+      } finally {
+        setIsDeleting(false);
+      }
     }
   };
 
@@ -48,10 +55,11 @@ const DeleteConfirmModal = ({ open, onClose, onConfirm, entityName = "this item"
       />
 
       <div
-        className={`relative flex w-full max-w-sm flex-col overflow-hidden rounded-xl bg-white shadow-2xl ${
+        className={`relative flex w-full max-w-sm flex-col overflow-hidden rounded-sm bg-white shadow-2xl border border-gray-100 ${
           open ? "animate-modal-in" : "animate-modal-out"
         }`}
       >
+        {isDeleting && <Loader fullScreen text="Deleting..." />}
         <div className="flex flex-col items-center justify-center p-6 text-center">
           <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-rose-100 text-rose-600">
             <Icons name="AlertTriangle" size={28} />
@@ -74,10 +82,10 @@ const DeleteConfirmModal = ({ open, onClose, onConfirm, entityName = "this item"
           </div>
 
           <div className="flex w-full gap-3">
-            <Button variant="outline" className="flex-1" onClick={onClose}>
+            <Button variant="outline" className="flex-1 rounded-sm border-gray-200 shadow-sm" onClick={onClose} disabled={isDeleting}>
               Cancel
             </Button>
-            <Button variant="solid" className={`flex-1 ${isMatched ? 'bg-rose-600 hover:bg-rose-700 focus:ring-rose-500' : 'bg-rose-300 pointer-events-none'}`} onClick={handleConfirm} disabled={!isMatched}>
+            <Button variant="solid" className={`flex-1 rounded-sm shadow-md ${isMatched ? 'bg-rose-600 hover:bg-rose-700 shadow-rose-600/20 hover:shadow-rose-600/30' : 'bg-rose-300 pointer-events-none'}`} onClick={handleConfirm} disabled={!isMatched || isDeleting}>
               Delete
             </Button>
           </div>

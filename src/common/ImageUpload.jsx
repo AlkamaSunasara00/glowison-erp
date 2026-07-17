@@ -3,7 +3,7 @@ import api from "@/lib/api";
 import toast from "react-hot-toast";
 import { UploadCloud, X, FileText } from "lucide-react";
 
-const ImageUpload = ({ value, onChange, onUploadStateChange, folder = "erp/general", disabled = false, multiple = false, accept = "image/*", className = "" }) => {
+const ImageUpload = ({ value, onChange, onUploadStateChange, folder = "erp/general", disabled = false, multiple = false, accept = "image/*", className = "", variant = "default" }) => {
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef(null);
 
@@ -61,7 +61,33 @@ const ImageUpload = ({ value, onChange, onUploadStateChange, folder = "erp/gener
 
   return (
     <div className={`w-full ${className}`}>
-      {showDropzone && (
+      {variant === "avatar" ? (
+        <div className="relative w-24 h-24 rounded-full overflow-hidden border border-gray-200 bg-gray-50 flex items-center justify-center group shrink-0">
+          <input 
+            type="file" 
+            ref={fileInputRef}
+            accept={accept}
+            onChange={handleImageUpload}
+            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-20"
+            disabled={isDisabled}
+          />
+          {isUploading ? (
+            <div className="h-5 w-5 animate-spin rounded-full border-b-2 border-indigo-600"></div>
+          ) : hasValue ? (
+            <>
+              <img src={value} alt="Avatar Preview" className="w-full h-full object-cover" />
+              <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity z-10 cursor-pointer">
+                <span className="text-white text-xs font-medium">Change</span>
+              </div>
+            </>
+          ) : (
+            <div className="flex flex-col items-center text-gray-400 group-hover:text-indigo-600 transition-colors">
+              <UploadCloud size={20} className="mb-1" />
+              <span className="text-[10px] font-medium uppercase tracking-wider">Upload</span>
+            </div>
+          )}
+        </div>
+      ) : showDropzone ? (
         <div className="relative border-2 border-dashed border-gray-200 rounded-lg p-6 flex flex-col items-center justify-center bg-gray-50/50 hover:bg-gray-50 transition-colors cursor-pointer text-gray-500 hover:text-indigo-600 overflow-hidden group mb-3">
           <input 
             type="file" 
@@ -85,9 +111,9 @@ const ImageUpload = ({ value, onChange, onUploadStateChange, folder = "erp/gener
             </>
           )}
         </div>
-      )}
+      ) : null}
 
-      {hasValue && (
+      {hasValue && variant !== "avatar" && (
         <div className={multiple ? "flex flex-wrap gap-3 mt-3" : "relative w-full max-w-sm rounded-lg overflow-hidden border border-gray-200"}>
           {multiple ? (
              (value || []).map((url, idx) => (

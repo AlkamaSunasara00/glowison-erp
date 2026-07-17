@@ -2,6 +2,7 @@ import { useRouter } from "next/router";
 import CustomerDetail from "@/components/customers/CustomerDetail";
 import { useEffect, useState } from "react";
 import api from "@/lib/api";
+import Loader from "@/common/Loader";
 
 const CustomerDetailPage = () => {
   const router = useRouter();
@@ -27,8 +28,8 @@ const CustomerDetailPage = () => {
 
   if (!id || loading) {
     return (
-      <div className="flex h-full w-full items-center justify-center bg-white rounded-xl border border-gray-100">
-        <p className="text-sm text-gray-500">Loading customer details...</p>
+      <div className="flex flex-col w-full min-h-screen items-center justify-center bg-transparent">
+        <Loader text="Loading customer details..." />
       </div>
     );
   }

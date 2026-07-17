@@ -11,14 +11,15 @@ import EditCustomer from "./customersModal/EditCustomer";
 import DeleteConfirmModal from "@/common/DeleteConfirmModal";
 import toast from "react-hot-toast";
 import { formatDate } from "@/utils/formatters";
-
-
+import Loader from "@/common/Loader";
 
 const customerTypeOptions = [
   { value: "all", label: "All Types" },
   { value: "Retail", label: "Retail" },
   { value: "Dealer", label: "Dealer" },
 ];
+
+let globalCustomersCache = null;
 
 export const Customers = () => {
   const router = useRouter();
@@ -27,22 +28,24 @@ export const Customers = () => {
   const [locationFilter, setLocationFilter] = useState("");
   const [viewMode, setViewMode] = useState("table");
   const [isAddCustomerOpen, setIsAddCustomerOpen] = useState(false);
-  const [customers, setCustomers] = useState([]);
+  const [customers, setCustomers] = useState(globalCustomersCache || []);
   const [editItem, setEditItem] = useState(null);
   const [deleteItem, setDeleteItem] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(!globalCustomersCache);
 
-  const fetchCustomers = async () => {
+  const fetchCustomers = async (silent = false) => {
     try {
-      setLoading(true);
+      if (!silent && !globalCustomersCache) setLoading(true);
       const res = await api.get('/customers?limit=100');
-      setCustomers(res.data.data.map(c => ({
+      const mapped = res.data.data.map(c => ({
         ...c,
         type: c.type.toLowerCase() === 'retail' ? 'Retail' : 'Dealer',
         created: formatDate(c.createdAt),
         address: typeof c.address === 'string' ? JSON.parse(c.address) : (c.address || { city: '', state: '' }),
         totalValue: c.totalOrderValue || "Rs. 0"
-      })));
+      }));
+      globalCustomersCache = mapped;
+      setCustomers(mapped);
     } catch (error) {
       toast.error('Failed to load customers');
     } finally {
@@ -51,7 +54,8 @@ export const Customers = () => {
   };
 
   useEffect(() => {
-    fetchCustomers();
+    // If we have cache, do a silent background refresh
+    fetchCustomers(!!globalCustomersCache);
   }, []);
 
   // Filters
@@ -80,8 +84,8 @@ export const Customers = () => {
   };
 
   return (
-    <div className="flex flex-col min-h-screen w-full relative gap-4">
-      <div className="flex flex-col gap-4 rounded-lg">
+    <div className="flex flex-col min-h-screen w-full relative gap-4 pb-10">
+      <div className="flex flex-col gap-4 rounded-sm">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div className="space-y-1">
             <h1 className="page-header text-2xl font-bold text-gray-900">Customers</h1>
@@ -97,6 +101,7 @@ export const Customers = () => {
               leftIcon={(props) => (
                 <Icons name="Plus" color="white" {...props} />
               )}
+              className="rounded-sm px-4 py-2.5 text-sm font-semibold shadow-md shadow-primary/20 hover:shadow-lg hover:shadow-primary/30 transition-all"
             >
               Add customer
             </Button>
@@ -104,27 +109,47 @@ export const Customers = () => {
         </div>
 
         {/* KPIs */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-          <div className="rounded-xl border border-gray-100 bg-white p-4 shadow-sm">
-            <p className="text-sm font-medium text-gray-500">Total Customers</p>
-            <p className="mt-1 text-2xl font-bold text-gray-900">{totalCustomers}</p>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="bg-white rounded-sm p-5 sm:p-6 shadow-sm border border-gray-100 flex items-center gap-5 hover:-translate-y-1 hover:shadow-md transition-all duration-300">
+            <div className="w-14 h-14 rounded-sm bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0 border border-indigo-100">
+              <Icons name="Users" size={24} />
+            </div>
+            <div>
+              <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-1">Total Customers</p>
+              <h4 className="text-2xl font-black text-gray-900 tracking-tight">{totalCustomers}</h4>
+            </div>
           </div>
-          <div className="rounded-xl border border-gray-100 bg-white p-4 shadow-sm">
-            <p className="text-sm font-medium text-gray-500">Retail Customers</p>
-            <p className="mt-1 text-2xl font-bold text-sky-600">{retailCount}</p>
+          <div className="bg-white rounded-sm p-5 sm:p-6 shadow-sm border border-gray-100 flex items-center gap-5 hover:-translate-y-1 hover:shadow-md transition-all duration-300">
+            <div className="w-14 h-14 rounded-sm bg-sky-50 text-sky-600 flex items-center justify-center shrink-0 border border-sky-100">
+              <Icons name="User" size={24} />
+            </div>
+            <div>
+              <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-1">Retail Customers</p>
+              <h4 className="text-2xl font-black text-gray-900 tracking-tight">{retailCount}</h4>
+            </div>
           </div>
-          <div className="rounded-xl border border-gray-100 bg-white p-4 shadow-sm">
-            <p className="text-sm font-medium text-gray-500">Dealers</p>
-            <p className="mt-1 text-2xl font-bold text-indigo-600">{dealerCount}</p>
+          <div className="bg-white rounded-sm p-5 sm:p-6 shadow-sm border border-gray-100 flex items-center gap-5 hover:-translate-y-1 hover:shadow-md transition-all duration-300">
+            <div className="w-14 h-14 rounded-sm bg-purple-50 text-purple-600 flex items-center justify-center shrink-0 border border-purple-100">
+              <Icons name="Briefcase" size={24} />
+            </div>
+            <div>
+              <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-1">Dealers</p>
+              <h4 className="text-2xl font-black text-gray-900 tracking-tight">{dealerCount}</h4>
+            </div>
           </div>
-          <div className="rounded-xl border border-gray-100 bg-white p-4 shadow-sm">
-            <p className="text-sm font-medium text-gray-500">New (This Month)</p>
-            <p className="mt-1 text-2xl font-bold text-emerald-600">{newCustomers}</p>
+          <div className="bg-white rounded-sm p-5 sm:p-6 shadow-sm border border-gray-100 flex items-center gap-5 hover:-translate-y-1 hover:shadow-md transition-all duration-300">
+            <div className="w-14 h-14 rounded-sm bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0 border border-emerald-100">
+              <Icons name="UserPlus" size={24} />
+            </div>
+            <div>
+              <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-1">New (This Month)</p>
+              <h4 className="text-2xl font-black text-gray-900 tracking-tight">{newCustomers}</h4>
+            </div>
           </div>
         </div>
 
         {/* Filters */}
-        <div className="bg-white p-3 rounded-lg border border-gray-100 shadow-sm flex flex-col md:flex-row gap-3">
+        <div className="bg-white p-3 rounded-sm border border-gray-100 shadow-sm flex flex-col md:flex-row gap-3">
           <div className="w-full md:w-64">
             <Input
               id="search"
@@ -169,7 +194,11 @@ export const Customers = () => {
         </div>
 
         {/* Content */}
-        {filteredCustomers.length === 0 ? (
+        {loading ? (
+          <div className="flex-1 bg-white rounded-sm border border-gray-100 shadow-sm overflow-hidden min-h-[400px] flex items-center justify-center">
+            <Loader text="Loading Customers..." />
+          </div>
+        ) : filteredCustomers.length === 0 ? (
           <EmptyState
             search={search || (hasActiveFilters ? "active filters" : "")}
             entityName="Customers"
@@ -182,7 +211,7 @@ export const Customers = () => {
             addLabel="Add customer"
           />
         ) : viewMode === "table" ? (
-          <div className="bg-white rounded-lg border border-gray-100 shadow-sm overflow-hidden flex-1 custom-scrollbar">
+          <div className="bg-white rounded-sm border border-gray-100 shadow-sm overflow-hidden flex-1 custom-scrollbar">
             <div className="overflow-x-auto">
               <table className="w-full text-left border-collapse min-w-[900px]">
                 <thead className="bg-primary border-b border-primary/20 text-xs font-semibold text-white">
@@ -203,8 +232,19 @@ export const Customers = () => {
                       className="border-b border-gray-50 hover:bg-gray-50/50 cursor-pointer transition-colors"
                     >
                       <td className="px-4 py-3">
-                        <div className="font-medium text-gray-900">{customer.name}</div>
-                        {customer.gstin && <div className="text-[11px] text-gray-500 mt-0.5">GST: {customer.gstin}</div>}
+                        <div className="flex items-center gap-3">
+                          {customer.imageUrl ? (
+                            <img src={customer.imageUrl} alt={customer.name} className="w-9 h-9 rounded-full object-cover border border-gray-200 shadow-sm shrink-0 bg-gray-50" />
+                          ) : (
+                            <div className={`w-9 h-9 rounded-full flex items-center justify-center font-bold text-[11px] shrink-0 shadow-sm border ${customer.type === "Retail" ? "bg-sky-100 text-sky-600 border-sky-200" : "bg-indigo-100 text-indigo-600 border-indigo-200"}`}>
+                              {customer.name.substring(0, 2).toUpperCase()}
+                            </div>
+                          )}
+                          <div>
+                            <div className="font-medium text-gray-900">{customer.name}</div>
+                            {customer.gstin && <div className="text-[11px] text-gray-500 mt-0.5">GST: {customer.gstin}</div>}
+                          </div>
+                        </div>
                       </td>
                       <td className="px-4 py-3 text-gray-500">
                         <div>{customer.phone}</div>
@@ -244,10 +284,10 @@ export const Customers = () => {
               <div 
                 key={customer.id}
                 onClick={() => handleRowClick(customer)}
-                className="bg-white rounded-xl border border-gray-100 shadow-sm hover:shadow-md transition-shadow cursor-pointer p-4 flex flex-col gap-3 relative group"
+                className="bg-white rounded-sm border border-gray-100 shadow-sm hover:shadow-md transition-shadow cursor-pointer p-4 flex flex-col gap-3 relative group"
               >
                 {/* Header Area */}
-                <div className={`h-32 w-full rounded-lg border border-gray-200 overflow-hidden flex flex-col items-center justify-center relative mb-2 ${customer.type === "Retail" ? "bg-gradient-to-br from-sky-50 to-white" : "bg-gradient-to-br from-indigo-50 to-white"}`}>
+                <div className={`h-32 w-full rounded-sm border border-gray-200 overflow-hidden flex flex-col items-center justify-center relative mb-2 ${customer.type === "Retail" ? "bg-gradient-to-br from-sky-50 to-white" : "bg-gradient-to-br from-indigo-50 to-white"}`}>
                   
                   {customer.imageUrl ? (
                     <img src={customer.imageUrl} alt={customer.name} className="w-full h-full object-cover" />
@@ -259,9 +299,9 @@ export const Customers = () => {
                   {!customer.imageUrl && <StatusBadge status={customer.type} label={customer.type} />}
                   
                   {/* Floating Action Buttons inside header */}
-                  <div className="absolute top-2 right-2 flex gap-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity" onClick={(e) => e.stopPropagation()}>
-                     <button onClick={() => setEditItem(customer)} className="bg-white/90 backdrop-blur-sm p-1.5 text-gray-600 hover:text-indigo-600 rounded-md shadow-sm transition-colors border border-gray-200"><Icons name="Pencil" size={14}/></button>
-                     <button onClick={() => setDeleteItem(customer)} className="bg-white/90 backdrop-blur-sm p-1.5 text-gray-600 hover:text-rose-500 rounded-md shadow-sm transition-colors border border-gray-200"><Icons name="Trash2" size={14}/></button>
+                  <div className="absolute top-2 right-2 flex gap-1.5 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity" onClick={(e) => e.stopPropagation()}>
+                     <Button variant="outline" size="sm" onClick={() => setEditItem(customer)} className="bg-white/90 backdrop-blur-sm px-2! py-1.5! border-gray-200 shadow-sm"><Icons name="Pencil" size={14} className="text-gray-600 hover:text-indigo-600" /></Button>
+                     <Button variant="outline" size="sm" onClick={() => setDeleteItem(customer)} className="bg-white/90 backdrop-blur-sm px-2! py-1.5! border-gray-200 shadow-sm"><Icons name="Trash2" size={14} className="text-gray-600 hover:text-rose-500" /></Button>
                   </div>
                 </div>
 
@@ -305,8 +345,8 @@ export const Customers = () => {
         )}
       </div>
 
-      {isAddCustomerOpen && <AddCustomer open={isAddCustomerOpen} onClose={() => { setIsAddCustomerOpen(false); fetchCustomers(); }} />}
-      {editItem && <EditCustomer open={!!editItem} onClose={() => { setEditItem(null); fetchCustomers(); }} initialData={editItem} />}
+      {isAddCustomerOpen && <AddCustomer open={isAddCustomerOpen} onClose={() => setIsAddCustomerOpen(false)} onSuccess={() => fetchCustomers()} />}
+      {editItem && <EditCustomer open={!!editItem} onClose={() => setEditItem(null)} onSuccess={() => fetchCustomers()} initialData={editItem} />}
       {deleteItem && (
         <DeleteConfirmModal
           open={!!deleteItem}
@@ -316,7 +356,9 @@ export const Customers = () => {
             try {
               await api.delete(`/customers/${deleteItem.id}`);
               toast.success("Customer deleted");
-              setCustomers(customers.filter(c => c.id !== deleteItem.id));
+              const updated = customers.filter(c => c.id !== deleteItem.id);
+              globalCustomersCache = updated;
+              setCustomers(updated);
             } catch (err) {
               toast.error("Failed to delete customer");
             }

@@ -5,6 +5,7 @@ import Button from "@/common/Button";
 import Icons from "@/common/Icons";
 import Input from "@/common/Input";
 import ImageUpload from "@/common/ImageUpload";
+import Loader from "@/common/Loader";
 
 const customerTypeOptions = [
   { label: "Retail", value: "Retail" },
@@ -26,7 +27,7 @@ const initialFormData = {
   notes: "",
 };
 
-const AddCustomer = ({ open, onClose }) => {
+const AddCustomer = ({ open, onClose, onSuccess }) => {
   const [formData, setFormData] = useState(initialFormData);
   const [imageUrl, setImageUrl] = useState("");
 
@@ -70,6 +71,7 @@ const AddCustomer = ({ open, onClose }) => {
       await api.post('/customers', payload);
       toast.success('Customer added successfully');
       setFormData(initialFormData);
+      if (onSuccess) onSuccess();
       onClose();
     } catch (error) {
       toast.error('Failed to add customer');
@@ -94,17 +96,19 @@ const AddCustomer = ({ open, onClose }) => {
       />
 
       <div
-        className={`relative flex h-full w-full max-w-3xl flex-col overflow-hidden rounded-md border border-gray-200 bg-white shadow-lg md:h-auto md:max-h-[90vh] ${
+        className={`relative flex h-full w-full max-w-3xl flex-col overflow-hidden rounded-sm border border-gray-100 bg-white shadow-2xl md:h-auto md:max-h-[90vh] ${
           open ? "animate-modal-in" : "animate-modal-out"
         }`}
       >
+        {isSubmitting && <Loader fullScreen text="Saving Customer..." />}
         <form onSubmit={handleSubmit} className="flex h-full min-h-0 flex-col">
-          <div className="shrink-0 border-b border-gray-200 px-6 py-4 flex items-center justify-between">
+          <div className="shrink-0 border-b border-gray-100/80 px-7 py-5 flex items-center justify-between bg-white relative">
+            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-primary to-indigo-500"></div>
             <div>
-              <h2 className="text-base font-semibold text-gray-900">Add new customer</h2>
-              <p className="mt-1 text-sm text-gray-500">Add a new retail or dealer customer.</p>
+              <h2 className="text-lg font-bold text-gray-900 tracking-tight">Add new customer</h2>
+              <p className="mt-1 text-xs font-medium text-gray-500">Add a new retail or dealer customer.</p>
             </div>
-            <button type="button" onClick={onClose}>
+            <button type="button" onClick={onClose} className="p-2 bg-gray-50 hover:bg-gray-100 rounded-full transition-colors">
               <Icons name="X" size={18} className="text-gray-500 hover:text-gray-700" />
             </button>
           </div>
@@ -113,13 +117,12 @@ const AddCustomer = ({ open, onClose }) => {
             <div className="grid grid-cols-1 gap-x-6 gap-y-5 md:grid-cols-2">
               <div className="space-y-1.5 md:col-span-2">
                 <label className="label">Customer Profile Image</label>
-                <div className="w-32 h-32 rounded-full overflow-hidden border border-gray-200 bg-gray-50 mx-auto md:mx-0">
-                   <ImageUpload 
-                      value={imageUrl}
-                      onChange={setImageUrl}
-                      folder="erp/customers"
-                   />
-                </div>
+                <ImageUpload 
+                  value={imageUrl}
+                  onChange={setImageUrl}
+                  folder="erp/customers"
+                  variant="avatar"
+                />
               </div>
 
               <div className="space-y-1.5 md:col-span-2">
@@ -185,9 +188,9 @@ const AddCustomer = ({ open, onClose }) => {
             </div>
           </div>
 
-          <div className="shrink-0 border-t border-gray-200 bg-gray-50/50 px-6 py-4 flex justify-end gap-3">
-            <Button variant="outline" type="button" onClick={onClose} disabled={isSubmitting}>Cancel</Button>
-            <Button variant="solid" type="submit" isLoading={isSubmitting} disabled={isSubmitting}>Save customer</Button>
+          <div className="shrink-0 border-t border-gray-100 bg-gray-50/50 px-7 py-5 flex justify-end gap-3">
+            <Button variant="outline" type="button" onClick={onClose} disabled={isSubmitting} className="rounded-sm shadow-sm bg-white border-gray-200 hover:bg-gray-50 px-4 py-2 font-semibold">Cancel</Button>
+            <Button variant="solid" type="submit" disabled={isSubmitting} className="rounded-sm shadow-md shadow-primary/20 hover:shadow-lg hover:shadow-primary/30 px-5 py-2 font-semibold">Save customer</Button>
           </div>
         </form>
       </div>
