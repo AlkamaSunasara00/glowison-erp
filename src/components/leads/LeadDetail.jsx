@@ -51,49 +51,60 @@ const LeadDetail = ({ open, onClose, lead, isPage = false, onLeadUpdated }) => {
 
   const detailPanelContent = (
     <div
-      className={isPage ? "flex flex-col gap-4 w-full animate-fade-in" : `relative flex h-full w-full max-w-full flex-col bg-white shadow-2xl md:w-[90%] md:h-screen ${
+      className={isPage ? "flex flex-col w-full min-h-screen bg-transparent animate-fade-in" : `relative flex h-full w-full max-w-full flex-col bg-gray-50 shadow-2xl md:w-[95%] md:max-w-6xl md:h-[95vh] md:rounded-sm md:my-auto mx-auto overflow-hidden ${
         open ? "animate-slide-in-right" : "animate-slide-out-right"
       }`}
       onClick={(e) => e.stopPropagation()}
     >
         {/* ── HEADER ─────────────────────────────────────────── */}
-        <div className={isPage ? "flex items-center justify-between py-2" : "flex items-center justify-between px-7 py-4 border-b border-gray-100 bg-white"}>
-        <div className="flex items-center gap-4">
+        <div className={`relative shrink-0 z-10 ${isPage ? 'mb-4' : 'bg-white border-b border-gray-100 px-6 py-4'}`}>
+        <div className="relative z-10 flex flex-col sm:flex-row sm:items-start justify-between gap-4">
+        <div className="flex items-start sm:items-center gap-4">
           <button
             type="button"
             onClick={handleBack}
-            className="text-gray-500 hover:text-gray-700 transition-colors shrink-0"
+            className="mt-1 sm:mt-0 p-2 text-gray-500 hover:text-gray-900 hover:bg-gray-100 rounded-full transition-all shrink-0"
             title="Go back"
           >
             <Icons name="ArrowLeft" size={20} />
           </button>
-          <div>
-            <h2 className="page-header">
-              {data.name || "Unknown Lead"}
-            </h2>
-            <p className="text-xs text-gray-400 mt-0.5">{data.phone}</p>
+          <div className="flex items-center gap-4">
+            <div className="hidden sm:flex items-center justify-center w-12 h-12 rounded-sm bg-gradient-to-br from-primary to-indigo-600 text-white font-bold text-xl shadow-md shadow-primary/20 shrink-0 overflow-hidden bg-white border border-gray-100">
+               {(data.name || "UN").substring(0, 2).toUpperCase()}
+            </div>
+            <div>
+              <div className="flex items-center gap-2 mb-1">
+                <h2 className="text-xl font-bold text-gray-900 tracking-tight">
+                  {data.name || "Unknown Lead"}
+                </h2>
+                <StatusBadge status={(data.status || data.stage || "NEW").replace('_', ' ')} />
+              </div>
+              <div className="flex items-center gap-3 text-xs text-gray-500 font-medium">
+                {data.phone}
+              </div>
+            </div>
           </div>
-          <StatusBadge status={(data.status || data.stage || "NEW").replace('_', ' ')} />
         </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-3 w-full sm:w-auto mt-2 sm:mt-0 justify-start sm:justify-end">
             {data.status === 'CLOSED_WON' && (
               <Button
                 variant="solid"
-                size="md"
+                size="sm"
                 rightIcon={(props) => <LeadActionIcon name="ArrowRight" color="white" {...props} />}
-                className="rounded-lg px-3! py-1.5! text-xs font-semibold"
+                className="rounded-sm px-3 py-2 text-xs font-semibold shadow-sm shadow-primary/20 hover:shadow-md hover:shadow-primary/30 transition-all"
               >
                 Convert to customer
               </Button>
             )}
           </div>
         </div>
+        </div>
 
         {/* ── STAGE PROGRESS ─────────────────────────────────── */}
         {!isLost && (
-          <div className={isPage ? "px-4 py-3 bg-white border border-slate-200/60 rounded-xl shadow-sm" : "px-7 py-4 bg-gray-50/60 border-b border-gray-100"}>
-            <div className="flex items-center">
+          <div className={isPage ? "px-6 py-5 mb-4 bg-white border border-gray-100/80 rounded-sm shadow-sm" : "px-7 py-5 bg-gray-50/60 border-b border-gray-100"}>
+            <div className="flex items-start w-full">
               {stages.map((stage, i) => {
                 const isCompleted = i < currentStageIndex;
                 const isActive    = i === currentStageIndex;
@@ -122,7 +133,7 @@ const LeadDetail = ({ open, onClose, lead, isPage = false, onLeadUpdated }) => {
                     </span>
                     </div>
                     {i < stages.length - 1 && (
-                      <div className="flex-1 mx-2 mb-5">
+                      <div className="flex-1 mx-2 relative top-[15px]">
                         <div className="relative h-0.5 bg-gray-200 rounded-full overflow-hidden">
                           <div
                             className={`absolute inset-y-0 left-0 rounded-full transition-all duration-500 ${
@@ -140,31 +151,31 @@ const LeadDetail = ({ open, onClose, lead, isPage = false, onLeadUpdated }) => {
         )}
 
         {/* ── BODY ───────────────────────────────────────────── */}
-        <div className={isPage ? "" : "flex-1 overflow-hidden"}>
-          <div className={isPage ? "grid grid-cols-1 lg:grid-cols-[1fr_340px] gap-4" : "grid h-full grid-cols-1 lg:grid-cols-[1fr_340px] divide-y lg:divide-y-0 lg:divide-x divide-gray-100"}>
+        <div className={`flex-1 overflow-y-auto custom-scrollbar ${isPage ? 'pb-10' : 'p-6'}`}>
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 w-full">
 
             {/* ── LEFT ── */}
-            <div className={isPage ? "flex flex-col gap-4" : "h-full overflow-y-auto px-7 py-6 space-y-7"}>
+            <div className="lg:col-span-8 flex flex-col gap-4">
 
               {/* Lead Information */}
-              <section className={isPage ? "bg-white border border-slate-200/60 rounded-xl p-6 shadow-sm" : ""}>
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-sm font-bold text-gray-800 tracking-wide uppercase">
-                    Lead Information
+              <section className="bg-white rounded-sm p-5 shadow-sm border border-gray-100/80 relative overflow-hidden group">
+                <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-primary/5 to-transparent rounded-bl-full -z-10 group-hover:scale-110 transition-transform duration-500"></div>
+                <div className="flex items-center justify-between mb-6">
+                  <h3 className="text-xs font-bold text-gray-900 tracking-wider uppercase flex items-center gap-2">
+                    <Icons name="User" size={16} className="text-primary"/> Lead Information
                   </h3>
                   <Button
                     variant="ghost"
                     size="sm"
-                    leftIcon={(props) => <LeadActionIcon name="Pencil" {...props} />}
-                    className="h-auto px-0 text-xs text-primary hover:bg-transparent hover:text-primary/70"
+                    className="h-8 w-8 p-0 rounded-full text-gray-400 hover:text-primary hover:bg-primary/5 transition-colors"
                     onClick={() => setIsEditOpen(true)}
                   >
-                    Edit
+                    <Icons name="Pencil" size={14} />
                   </Button>
                 </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-6">
                   {Object.entries(detailInfo).map(([key, value]) => (
-                    <div key={key} className="flex flex-col gap-0.5">
+                    <div key={key} className="flex flex-col w-fit gap-0.5">
                       <span className="text-[11px] font-semibold uppercase tracking-wider text-gray-400">
                         {key}
                       </span>
@@ -180,19 +191,19 @@ const LeadDetail = ({ open, onClose, lead, isPage = false, onLeadUpdated }) => {
             </div>
 
             {/* ── RIGHT ── */}
-            <div className={isPage ? "flex flex-col gap-4" : "h-full overflow-y-auto px-6 py-6 space-y-6 bg-gray-50/40"}>
+            <div className="lg:col-span-4 flex flex-col gap-4">
 
               {/* Quick Actions */}
-              <section className={isPage ? "bg-white border border-slate-200/60 rounded-xl p-6 shadow-sm" : ""}>
-                <h3 className="text-sm font-bold text-gray-800 tracking-wide uppercase mb-3">
-                  Quick Actions
+              <section className="bg-white rounded-sm p-5 shadow-sm border border-gray-100/80">
+                <h3 className="text-xs font-bold text-gray-900 tracking-wider uppercase flex items-center gap-2 mb-4">
+                  <Icons name="Zap" size={16} className="text-primary"/> Quick Actions
                 </h3>
-                <div className="grid grid-cols-2 gap-2">
+                <div className="grid grid-cols-2 gap-3">
                   <Button
                     variant="outline"
                     size="md"
                     leftIcon={(props) => <LeadActionIcon name="MessageCircle" {...props} />}
-                    className="w-full justify-start rounded-lg px-3! py-2! text-xs font-medium"
+                    className="w-full justify-center rounded-sm px-3 py-2 text-xs font-semibold shadow-sm border-gray-200 hover:bg-gray-50 bg-white"
                     onClick={() => data.phone && window.open(`https://wa.me/${data.phone.length === 10 ? '91' + data.phone : data.phone.replace(/\D/g, '')}`, '_blank')}
                   >
                     WhatsApp
@@ -201,41 +212,12 @@ const LeadDetail = ({ open, onClose, lead, isPage = false, onLeadUpdated }) => {
                     variant="outline"
                     size="md"
                     leftIcon={(props) => <LeadActionIcon name="Phone" {...props} />}
-                    className="w-full justify-start rounded-lg px-3! py-2! text-xs font-medium"
+                    className="w-full justify-center rounded-sm px-3 py-2 text-xs font-semibold shadow-sm border-gray-200 hover:bg-gray-50 bg-white"
                     onClick={() => data.phone && (window.location.href = `tel:${data.phone}`)}
                   >
                     Call
                   </Button>
                 </div>
-              </section>
-
-              {!isPage && <div className="h-px bg-gray-200" />}
-
-              {/* Activity Timeline */}
-              <section className={isPage ? "bg-white border border-slate-200/60 rounded-xl p-6 shadow-sm" : ""}>
-                <h3 className="text-sm font-bold text-gray-800 tracking-wide uppercase mb-3">
-                  Activity Timeline
-                </h3>
-                <div className="relative">
-                  <div className="absolute left-[7px] top-2 bottom-2 w-px bg-gray-200" />
-                  <div className="space-y-4 pl-6">
-                    {timeline.map((item, i) => (
-                      <div key={i} className="relative">
-                        <div className={`absolute -left-6 top-1 w-3.5 h-3.5 rounded-full border-2 border-white shadow-sm ${item.dot}`} />
-                        <p className="text-xs font-semibold text-gray-700 leading-snug">{item.label}</p>
-                        <p className="text-[11px] text-gray-400 mt-0.5">{item.date} · {item.by}</p>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  rightIcon={(props) => <LeadActionIcon name="ArrowUpRight" {...props} />}
-                  className="mt-3 h-auto px-0 text-xs text-primary hover:bg-transparent hover:text-primary/70"
-                >
-                  Full log
-                </Button>
               </section>
             </div>
           </div>
@@ -265,13 +247,13 @@ const LeadDetail = ({ open, onClose, lead, isPage = false, onLeadUpdated }) => {
   return (
     <>
       <div
-        className={`fixed inset-x-0 bottom-0 top-16 z-[1000] flex justify-end md:inset-0 ${
+        className={`fixed inset-0 z-[1000] flex items-center justify-center p-4 sm:p-6 ${
           open ? "pointer-events-auto" : "pointer-events-none"
         }`}
         aria-hidden={!open}
       >
         <div
-          className={`absolute inset-0 bg-black/40 backdrop-blur-[2px] ${
+          className={`absolute inset-0 bg-gray-900/40 backdrop-blur-sm ${
             open ? "animate-overlay-in" : "animate-overlay-out"
           }`}
           onClick={handleBack}

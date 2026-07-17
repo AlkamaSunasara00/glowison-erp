@@ -12,14 +12,38 @@ import DeleteConfirmModal from "@/common/DeleteConfirmModal";
 import LeadDetail from "./LeadDetail";
 import toast from "react-hot-toast";
 import { formatDate } from "@/utils/formatters";
+import Loader from "@/common/Loader";
 
-export const STAGES = [
+const STAGES = [
   { key: "NEW", label: "New", color: "bg-sky-50 border-sky-200 text-sky-800" },
   { key: "CONTACTED", label: "Contacted", color: "bg-indigo-50 border-indigo-200 text-indigo-800" },
   { key: "NEGOTIATION", label: "Negotiation", color: "bg-violet-50 border-violet-200 text-violet-800" },
   { key: "CLOSED_WON", label: "Won", color: "bg-emerald-50 border-emerald-200 text-emerald-800" },
   { key: "CLOSED_LOST", label: "Lost", color: "bg-rose-50 border-rose-200 text-rose-800" },
 ];
+
+let inMemoryCache = null;
+
+const getCachedLeads = () => {
+  if (inMemoryCache) return inMemoryCache;
+  if (typeof window !== 'undefined') {
+    const saved = sessionStorage.getItem('leadsCache');
+    if (saved) {
+      try {
+        inMemoryCache = JSON.parse(saved);
+        return inMemoryCache;
+      } catch (e) {}
+    }
+  }
+  return null;
+};
+
+const setCachedLeads = (data) => {
+  inMemoryCache = data;
+  if (typeof window !== 'undefined') {
+    sessionStorage.setItem('leadsCache', JSON.stringify(data));
+  }
+};
 
 
 
@@ -49,24 +73,30 @@ export const Leads = () => {
   const [search, setSearch] = useState("");
   const [sourceFilter, setSourceFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
-  const [viewMode, setViewMode] = useState("kanban"); // kanban or table
+  const [viewMode, setViewMode] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('leadsViewMode') || 'kanban';
+    }
+    return 'kanban';
+  });
   const [isAddLeadOpen, setIsAddLeadOpen] = useState(false);
-  const [leads, setLeads] = useState([]);
+  const [leads, setLeads] = useState(getCachedLeads() || []);
   const [editItem, setEditItem] = useState(null);
   const [draggedLead, setDraggedLead] = useState(null);
-  const [loading, setLoading] = useState(true);
-  
+  const [loading, setLoading] = useState(!getCachedLeads());
   const [deleteItem, setDeleteItem] = useState(null);
 
-  const fetchLeads = async () => {
+  const fetchLeads = async (silent = false) => {
     try {
-      setLoading(true);
+      if (!silent && !getCachedLeads()) setLoading(true);
       const res = await api.get('/leads?limit=100'); // simple all fetch for kanban
-      setLeads(res.data.data.map(l => ({
+      const mapped = res.data.data.map(l => ({
         ...l, 
         stage: l.status,
         created: formatDate(l.createdAt)
-      })));
+      }));
+      setCachedLeads(mapped);
+      setLeads(mapped);
     } catch (error) {
       toast.error('Failed to load leads');
     } finally {
@@ -75,7 +105,7 @@ export const Leads = () => {
   };
 
   useEffect(() => {
-    fetchLeads();
+    fetchLeads(!!getCachedLeads());
   }, []);
 
   // Filters
@@ -132,8 +162,8 @@ export const Leads = () => {
   };
 
   return (
-    <div className="flex flex-col min-h-screen w-full relative gap-4">
-      <div className="flex flex-col gap-4 rounded-lg">
+    <div className="flex flex-col min-h-screen w-full relative gap-4 pb-10">
+      <div className="flex flex-col gap-4 rounded-sm">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div className="space-y-1">
             <h1 className="page-header text-2xl font-bold text-gray-900">Leads</h1>
@@ -145,8 +175,13 @@ export const Leads = () => {
           <div className="flex flex-wrap items-center gap-2 shrink-0">
             <Button
               variant="ghost"
-              onClick={() => setViewMode(viewMode === 'kanban' ? 'table' : 'kanban')}
+              onClick={() => {
+                const newMode = viewMode === 'kanban' ? 'table' : 'kanban';
+                setViewMode(newMode);
+                if (typeof window !== 'undefined') localStorage.setItem('leadsViewMode', newMode);
+              }}
               leftIcon={(props) => <Icons name={viewMode === 'kanban' ? "List" : "LayoutGrid"} {...props} />}
+              className="rounded-sm"
             >
               {viewMode === 'kanban' ? 'List view' : 'Kanban view'}
             </Button>
@@ -156,6 +191,7 @@ export const Leads = () => {
               leftIcon={(props) => (
                 <Icons name="Plus" color="white" {...props} />
               )}
+              className="rounded-sm px-4 py-2.5 text-sm font-semibold shadow-md shadow-primary/20 hover:shadow-lg hover:shadow-primary/30 transition-all"
             >
               Add lead
             </Button>
@@ -163,31 +199,60 @@ export const Leads = () => {
         </div>
 
         {/* KPIs */}
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-          <div className="rounded-xl border border-gray-100 bg-white p-4 shadow-sm">
-            <p className="text-sm font-medium text-gray-500">Total Leads</p>
-            <p className="mt-1 text-2xl font-bold text-gray-900">{totalLeads}</p>
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+          <div className="bg-white rounded-sm p-5 shadow-sm border border-gray-100 flex flex-col justify-center gap-3 hover:-translate-y-1 hover:shadow-md transition-all duration-300">
+            <div className="w-10 h-10 rounded-sm bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0 border border-indigo-100">
+              <Icons name="Users" size={20} />
+            </div>
+            <div>
+              <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-1">Total Leads</p>
+              <h4 className="text-2xl font-black text-gray-900 tracking-tight">{totalLeads}</h4>
+            </div>
           </div>
-          <div className="rounded-xl border border-gray-100 bg-white p-4 shadow-sm">
-            <p className="text-sm font-medium text-gray-500">New Leads</p>
-            <p className="mt-1 text-2xl font-bold text-sky-600">{newLeads}</p>
+          
+          <div className="bg-white rounded-sm p-5 shadow-sm border border-gray-100 flex flex-col justify-center gap-3 hover:-translate-y-1 hover:shadow-md transition-all duration-300">
+            <div className="w-10 h-10 rounded-sm bg-sky-50 text-sky-600 flex items-center justify-center shrink-0 border border-sky-100">
+              <Icons name="UserPlus" size={20} />
+            </div>
+            <div>
+              <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-1">New Leads</p>
+              <h4 className="text-2xl font-black text-gray-900 tracking-tight">{newLeads}</h4>
+            </div>
           </div>
-          <div className="rounded-xl border border-gray-100 bg-white p-4 shadow-sm">
-            <p className="text-sm font-medium text-gray-500">Conversion Rate</p>
-            <p className="mt-1 text-2xl font-bold text-emerald-600">{conversionRate}%</p>
+
+          <div className="bg-white rounded-sm p-5 shadow-sm border border-gray-100 flex flex-col justify-center gap-3 hover:-translate-y-1 hover:shadow-md transition-all duration-300">
+            <div className="w-10 h-10 rounded-sm bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0 border border-emerald-100">
+              <Icons name="TrendingUp" size={20} />
+            </div>
+            <div>
+              <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-1">Conversion</p>
+              <h4 className="text-2xl font-black text-gray-900 tracking-tight">{conversionRate}%</h4>
+            </div>
           </div>
-          <div className="rounded-xl border border-gray-100 bg-white p-4 shadow-sm">
-            <p className="text-sm font-medium text-gray-500">In Progress</p>
-            <p className="mt-1 text-2xl font-bold text-indigo-600">{openLeads}</p>
+
+          <div className="bg-white rounded-sm p-5 shadow-sm border border-gray-100 flex flex-col justify-center gap-3 hover:-translate-y-1 hover:shadow-md transition-all duration-300">
+            <div className="w-10 h-10 rounded-sm bg-violet-50 text-violet-600 flex items-center justify-center shrink-0 border border-violet-100">
+              <Icons name="Activity" size={20} />
+            </div>
+            <div>
+              <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-1">In Progress</p>
+              <h4 className="text-2xl font-black text-gray-900 tracking-tight">{openLeads}</h4>
+            </div>
           </div>
-          <div className="rounded-xl border border-gray-100 bg-white p-4 shadow-sm">
-            <p className="text-sm font-medium text-gray-500">Leads Lost</p>
-            <p className="mt-1 text-2xl font-bold text-rose-600">{lostLeads}</p>
+
+          <div className="bg-white rounded-sm p-5 shadow-sm border border-gray-100 flex flex-col justify-center gap-3 hover:-translate-y-1 hover:shadow-md transition-all duration-300">
+            <div className="w-10 h-10 rounded-sm bg-rose-50 text-rose-600 flex items-center justify-center shrink-0 border border-rose-100">
+              <Icons name="UserMinus" size={20} />
+            </div>
+            <div>
+              <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-1">Leads Lost</p>
+              <h4 className="text-2xl font-black text-gray-900 tracking-tight">{lostLeads}</h4>
+            </div>
           </div>
         </div>
 
         {/* Filters */}
-        <div className="bg-white p-3 rounded-lg border border-gray-100 shadow-sm flex flex-col md:flex-row gap-3">
+        <div className="bg-white p-3 rounded-sm border border-gray-100 shadow-sm flex flex-col md:flex-row gap-3">
           <div className="w-full md:w-64">
             <Input
               id="search"
@@ -219,7 +284,11 @@ export const Leads = () => {
         </div>
 
         {/* Content */}
-        {filteredLeads.length === 0 ? (
+        {loading ? (
+          <div className="flex-1 bg-white rounded-sm border border-gray-100 shadow-sm overflow-hidden min-h-[400px] flex items-center justify-center">
+            <Loader text="Loading Leads..." />
+          </div>
+        ) : filteredLeads.length === 0 ? (
           <EmptyState
             search={search || (hasActiveFilters ? "active filters" : "")}
             entityName="Leads"
@@ -273,45 +342,54 @@ export const Leads = () => {
             })}
           </div>
         ) : (
-          <div className="bg-white rounded-lg border border-gray-100 shadow-sm overflow-hidden">
+          <div className="bg-white rounded-sm border border-gray-100 shadow-sm overflow-hidden min-h-[400px]">
             <div className="overflow-x-auto">
               <table className="w-full text-left border-collapse min-w-[900px]">
-                <thead className="bg-gray-50 border-b border-gray-100 text-xs font-semibold text-gray-600">
+                <thead className="bg-primary border-b border-primary/20 text-xs font-semibold text-white">
                   <tr>
-                    <th className="px-4 py-3">Lead Name</th>
-                    <th className="px-4 py-3">Contact</th>
+                    <th className="px-4 py-3 rounded-tl-sm">Lead Info</th>
                     <th className="px-4 py-3">Source</th>
                     <th className="px-4 py-3">Product Interest</th>
                     <th className="px-4 py-3">Stage</th>
                     <th className="px-4 py-3">Created</th>
-                    <th className="px-4 py-3 text-center">Actions</th>
+                    <th className="px-4 py-3 text-center rounded-tr-sm">Actions</th>
                   </tr>
                 </thead>
-                <tbody className="text-sm">
+                <tbody className="text-sm divide-y divide-gray-50">
                   {filteredLeads.map(lead => (
                     <tr 
                       key={lead.id} 
                       onClick={() => handleRowClick(lead)}
                       className="border-b border-gray-50 hover:bg-gray-50/50 cursor-pointer transition-colors"
                     >
-                      <td className="px-4 py-3 font-medium text-gray-900">{lead.name}</td>
-                      <td className="px-4 py-3 text-gray-500">
-                        <div>{lead.phone}</div>
-                        <div className="text-xs">{lead.email}</div>
+                      <td className="px-4 py-3">
+                        <div className="font-semibold text-gray-900 group-hover:text-primary transition-colors">{lead.name}</div>
+                        <div className="flex items-center gap-2 mt-1">
+                          <span className="text-xs text-gray-500 font-medium">{lead.phone}</span>
+                          {lead.email && <span className="text-[10px] text-gray-400">· {lead.email}</span>}
+                        </div>
                       </td>
-                      <td className="px-4 py-3 text-gray-700">{lead.source === 'OTHER' ? lead.sourceOther : (sourceOptions.find(o => o.value === lead.source)?.label || lead.source)}</td>
-                      <td className="px-4 py-3 text-gray-700">{lead.interest === 'OTHER' ? lead.interestOther : (productInterestOptions.find(o => o.value === lead.interest)?.label || lead.interest)}</td>
+                      <td className="px-4 py-3">
+                        <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-semibold bg-gray-100 text-gray-600">
+                          {lead.source === 'OTHER' ? lead.sourceOther : (sourceOptions.find(o => o.value === lead.source)?.label || lead.source)}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3">
+                        <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-semibold bg-blue-50 text-blue-600">
+                          {lead.interest === 'OTHER' ? lead.interestOther : (productInterestOptions.find(o => o.value === lead.interest)?.label || lead.interest)}
+                        </span>
+                      </td>
                       <td className="px-4 py-3">
                         <StatusBadge status={lead.stage} label={STAGES.find(s => s.key === lead.stage)?.label} />
                       </td>
-                      <td className="px-4 py-3 text-gray-500">{lead.created}</td>
+                      <td className="px-4 py-3 text-xs text-gray-500 font-medium">{lead.created}</td>
                       <td className="px-4 py-3 text-center" onClick={(e) => e.stopPropagation()}>
                         <div className="flex items-center justify-center gap-2">
-                          <Button variant="ghost" size="sm" onClick={() => setEditItem(lead)} className="px-2!">
-                            <Icons name="Pencil" size={16} className="text-gray-400 hover:text-indigo-600 transition-colors" />
+                          <Button variant="ghost" size="sm" onClick={() => setEditItem(lead)} className="px-2! rounded-sm hover:bg-indigo-50">
+                            <Icons name="Pencil" size={14} className="text-gray-400 hover:text-indigo-600 transition-colors" />
                           </Button>
-                          <Button variant="ghost" size="sm" onClick={() => setDeleteItem(lead)} className="px-2!">
-                            <Icons name="Trash2" size={16} className="text-gray-400 hover:text-rose-500 transition-colors" />
+                          <Button variant="ghost" size="sm" onClick={() => setDeleteItem(lead)} className="px-2! rounded-sm hover:bg-rose-50">
+                            <Icons name="Trash2" size={14} className="text-gray-400 hover:text-rose-500 transition-colors" />
                           </Button>
                         </div>
                       </td>
@@ -324,8 +402,8 @@ export const Leads = () => {
         )}
       </div>
 
-      {isAddLeadOpen && <AddLead open={isAddLeadOpen} onClose={() => setIsAddLeadOpen(false)} onSuccess={fetchLeads} />}
-      {editItem && <EditLead open={!!editItem} onClose={() => { setEditItem(null); fetchLeads(); }} initialData={editItem} />}
+      {isAddLeadOpen && <AddLead open={isAddLeadOpen} onClose={() => setIsAddLeadOpen(false)} onSuccess={() => fetchLeads()} />}
+      {editItem && <EditLead open={!!editItem} onClose={() => setEditItem(null)} onSuccess={() => fetchLeads()} initialData={editItem} />}
       {deleteItem && (
         <DeleteConfirmModal
           open={!!deleteItem}
@@ -335,7 +413,9 @@ export const Leads = () => {
             try {
               await api.delete(`/leads/${deleteItem.id}`);
               toast.success("Lead deleted");
-              setLeads(leads.filter(l => l.id !== deleteItem.id));
+              const updated = leads.filter(l => l.id !== deleteItem.id);
+              setCachedLeads(updated);
+              setLeads(updated);
             } catch (err) {
               toast.error("Failed to delete lead");
             }
