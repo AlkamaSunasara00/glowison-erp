@@ -211,6 +211,38 @@ enum PriceUnit {
   CUSTOM
 }
 
+// Associates Enums
+enum AssociateCategory {
+  INSTALLER
+  FABRICATOR
+  ELECTRICIAN
+  HELPER
+  TRANSPORT
+  OTHER
+}
+
+enum AssociateStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum ProjectStatus {
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+}
+
+enum CostType {
+  LABOUR
+  MATERIAL
+  TRANSPORT
+  CRANE
+  HELPER
+  FOOD
+  ACCOMMODATION
+  OTHER
+}
+
 // ================= MODELS =================
 
 model User {
@@ -275,6 +307,7 @@ model Order {
   paymentStatus     PaymentStatus @default(UNPAID)
   note              String?
   invoices          Invoice[]
+  associateProjects AssociateProject[]
   createdAt         DateTime      @default(now())
   updatedAt         DateTime      @updatedAt
 
@@ -584,4 +617,70 @@ model CatalogItem {
   description  String?
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
+}
+
+// ================= ASSOCIATES MODULE =================
+
+model Associate {
+  id        String            @id @default(uuid())
+  name      String
+  phone     String?
+  address   String?
+  category  AssociateCategory @default(INSTALLER)
+  status    AssociateStatus   @default(ACTIVE)
+  notes     String?
+  projects  AssociateProject[]
+  createdAt DateTime          @default(now())
+  updatedAt DateTime          @updatedAt
+
+  @@index([status])
+  @@index([category])
+}
+
+model AssociateProject {
+  id            String        @id @default(uuid())
+  associate     Associate     @relation(fields: [associateId], references: [id])
+  associateId   String
+  projectName   String
+  order         Order?        @relation(fields: [orderId], references: [id])
+  orderId       String?
+  customerName  String?
+  location      String?
+  description   String?
+  date          DateTime      @default(now())
+  status        ProjectStatus @default(PENDING)
+  totalAmount   Decimal       @default(0) @db.Decimal(10, 2)
+  paidAmount    Decimal       @default(0) @db.Decimal(10, 2)
+  dueAmount     Decimal       @default(0) @db.Decimal(10, 2)
+  paymentStatus PaymentStatus @default(UNPAID)
+  costItems     ProjectCostItem[]
+  payments      ProjectPayment[]
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  @@index([associateId])
+  @@index([orderId])
+  @@index([status])
+}
+
+model ProjectCostItem {
+  id          String           @id @default(uuid())
+  project     AssociateProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  projectId   String
+  type        CostType         @default(LABOUR)
+  description String?
+  quantity    Decimal          @default(1) @db.Decimal(10, 2)
+  rate        Decimal          @default(0) @db.Decimal(10, 2)
+  amount      Decimal          @default(0) @db.Decimal(10, 2)
+}
+
+model ProjectPayment {
+  id            String           @id @default(uuid())
+  project       AssociateProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  projectId     String
+  amount        Decimal          @db.Decimal(10, 2)
+  paymentMethod PaymentMethod    @default(CASH)
+  date          DateTime         @default(now())
+  notes         String?
+  createdAt     DateTime         @default(now())
 }

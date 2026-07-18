@@ -23,7 +23,8 @@ import {
     Brush,
     X,
     Truck,
-    LogOut
+    LogOut,
+    Wrench
 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
@@ -40,6 +41,7 @@ const menuItems = [
     { name: "Suppliers", icon: Truck, path: "/suppliers" },
     { name: "Purchase", icon: CheckSquare, path: "/purchase" },
     { name: "Expense", icon: Clipboard, path: "/expense" },
+    { name: "Associates", icon: Wrench, path: "/associates" },
     { name: "Price List", icon: Palette, path: "/price-list" },
     { name: "Invoice", icon: FileText, path: "/invoice" },
     { name: "Reports", icon: BarChart, path: "/reports" },
