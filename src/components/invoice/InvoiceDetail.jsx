@@ -1,27 +1,27 @@
 import React, { useState, useEffect } from "react";
-import Button from "@/common/Button";
-import Icons from "@/common/Icons";
 import { useRouter } from "next/router";
-import StatusBadge from "@/common/StatusBadge";
-import EditInvoice from "./invoiceModal/EditInvoice";
 import api from "@/lib/api";
 import toast from "react-hot-toast";
+import Button from "@/common/Button";
+import Icons from "@/common/Icons";
+import StatusBadge from "@/common/StatusBadge";
+import EditInvoice from "./invoiceModal/EditInvoice";
 import TemplateSelectModal from "./invoiceModal/TemplateSelectModal";
+import Loader from "@/common/Loader";
+
 import Template1 from "./templates/Template1";
 import Template2 from "./templates/Template2";
 import Template3 from "./templates/Template3";
 import Template4 from "./templates/Template4";
 
-const ActionIcon = ({ name, color = "currentColor", ...props }) => (
-  <Icons name={name} color={color} {...props} />
-);
-
-const InvoiceDetail = ({ open, onClose, invoice, isPage = false, onSuccess }) => {
+const InvoiceDetail = ({ open, onClose, invoiceId, onUpdated, isPage = false }) => {
   const router = useRouter();
+  
+  const [invoice, setInvoice] = useState(null);
+  const [loading, setLoading] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
-  const data = invoice || {};
-
-  const [selectedTemplate, setSelectedTemplate] = useState(data.template || "template1");
+  
+  const [selectedTemplate, setSelectedTemplate] = useState("template1");
   const [isTemplateModalOpen, setIsTemplateModalOpen] = useState(false);
   const [settings, setSettings] = useState(null);
 
@@ -31,18 +31,54 @@ const InvoiceDetail = ({ open, onClose, invoice, isPage = false, onSuccess }) =>
     }).catch(err => console.error(err));
   }, []);
 
-  useEffect(() => {
-    if (data.template) {
-      setSelectedTemplate(data.template);
+  const fetchInvoice = async () => {
+    try {
+      setLoading(true);
+      const res = await api.get(`/invoices/${invoiceId}`);
+      setInvoice(res.data.data);
+      if (res.data.data.template) {
+        setSelectedTemplate(res.data.data.template);
+      }
+    } catch (error) {
+      console.error(error);
+      toast.error("Failed to load invoice details");
+    } finally {
+      setLoading(false);
     }
-  }, [data.template]);
+  };
 
-  const handleBack = () => {
+  useEffect(() => {
+    if (open && invoiceId) {
+      fetchInvoice();
+    }
+  }, [open, invoiceId]);
+
+  useEffect(() => {
+    if (!isPage) {
+      if (open) {
+        document.body.style.overflow = "hidden";
+      } else {
+        document.body.style.overflow = "unset";
+      }
+      return () => {
+        document.body.style.overflow = "unset";
+      };
+    }
+  }, [open, isPage]);
+
+  if (!open && !isPage) return null;
+
+  const handleClose = () => {
     if (isPage) {
       router.push("/invoice");
     } else {
-      onClose?.();
+      if (onClose) onClose();
     }
+  };
+
+  const handleUpdated = () => {
+    fetchInvoice();
+    if (onUpdated) onUpdated();
   };
 
   const handlePrint = () => {
@@ -51,33 +87,35 @@ const InvoiceDetail = ({ open, onClose, invoice, isPage = false, onSuccess }) =>
 
   const handleChangeStatus = async (newStatus) => {
     try {
-      await api.put(`/invoices/${data.id}`, { status: newStatus });
+      let paymentStatus = invoice?.paymentStatus;
+      if (newStatus === 'PAID') paymentStatus = 'PAID';
+      else if (newStatus === 'CANCELLED') paymentStatus = 'CANCELLED';
+      else if (newStatus === 'SENT' || newStatus === 'OVERDUE') paymentStatus = 'UNPAID';
+
+      await api.put(`/invoices/${invoiceId}`, { status: newStatus, paymentStatus });
       toast.success("Status updated");
-      if (onSuccess) onSuccess();
-      if (isPage) {
-        router.replace(router.asPath);
-      } else {
-        onClose();
-      }
+      handleUpdated();
     } catch (err) {
       toast.error("Failed to update status");
     }
   };
 
-  const detailInfo = {
-    "Invoice Number": data.invoiceNumber || "—",
-    "Customer": data.customer?.name || data.customer || "—",
-    "Order Ref": data.order?.orderNumber ? `ORD-${String(data.order.orderNumber).padStart(6, '0')}` : "—",
-    "Invoice Date": data.invoiceDate ? new Date(data.invoiceDate).toLocaleDateString('en-CA') : "—",
-    "Due Date": data.dueDate ? new Date(data.dueDate).toLocaleDateString('en-CA') : "—",
-    "Payment Status": data.paymentStatus || "—",
-    "Payment Method": data.paymentMethod || "—",
-  };
-
-  const items = data.items || [];
-
   const renderTemplate = () => {
-    const props = { data, detailInfo, settings, items };
+    if (!invoice) return null;
+    
+    const detailInfo = {
+      "Invoice Number": invoice.invoiceNumber || "—",
+      "Customer": invoice.customer?.name || invoice.customer || "—",
+      "Order Ref": invoice.order?.orderNumber ? `ORD-${String(invoice.order.orderNumber).padStart(6, '0')}` : "—",
+      "Invoice Date": invoice.invoiceDate ? new Date(invoice.invoiceDate).toLocaleDateString('en-CA') : "—",
+      "Due Date": invoice.dueDate ? new Date(invoice.dueDate).toLocaleDateString('en-CA') : "—",
+      "Payment Status": invoice.paymentStatus || "—",
+      "Payment Method": invoice.paymentMethod || "—",
+    };
+    
+    const items = invoice.items || [];
+    const props = { data: invoice, detailInfo, settings, items };
+
     switch (selectedTemplate) {
       case 'template4': return <Template4 {...props} />;
       case 'template2': return <Template2 {...props} />;
@@ -89,168 +127,209 @@ const InvoiceDetail = ({ open, onClose, invoice, isPage = false, onSuccess }) =>
 
   const detailPanelContent = (
     <div
-      className={isPage ? "flex flex-col gap-4 w-full animate-fade-in" : `relative flex h-full w-full max-w-full flex-col bg-white shadow-2xl md:w-[90%] md:h-screen ${
+      className={isPage ? "flex flex-col w-full min-h-screen bg-gray-50/50 animate-fade-in pb-10" : `relative flex h-full w-full max-w-full flex-col bg-gray-50 shadow-2xl md:w-[95%] md:max-w-6xl md:h-[95vh] md:rounded-sm md:my-auto mx-auto overflow-hidden ${
         open ? "animate-slide-in-right" : "animate-slide-out-right"
       }`}
       onClick={(e) => e.stopPropagation()}
     >
-        {/* ── HEADER ─────────────────────────────────────────── */}
-        <div className={`print-hidden ${isPage ? "flex flex-col sm:flex-row sm:items-center justify-between py-2 gap-4" : "flex flex-col sm:flex-row sm:items-center justify-between px-4 sm:px-7 py-4 border-b border-gray-100 bg-white gap-4"}`}>
-        <div className="flex items-center gap-4">
-          <button
-            type="button"
-            onClick={handleBack}
-            className="text-gray-500 hover:text-gray-700 transition-colors shrink-0"
-            title="Go back"
-          >
-            <Icons name="ArrowLeft" size={20} />
-          </button>
-          <div>
-            <h2 className="page-header flex items-center gap-2">
-              {data.invoiceNumber || "Invoice Details"}
-              <StatusBadge status={data.status} />
-            </h2>
-            <p className="text-xs text-gray-400 mt-0.5">Customer: {data.customer?.name || data.customer}</p>
-          </div>
+      {loading || !invoice ? (
+        <div className="flex flex-1 w-full h-full min-h-[400px] items-center justify-center bg-transparent">
+          <Loader text="Loading invoice details..." />
         </div>
-
-          <div className="flex items-center gap-3">
-            <Button
-              variant="outline"
-              size="md"
-              onClick={() => setIsTemplateModalOpen(true)}
-              leftIcon={(props) => <ActionIcon name="Layout" {...props} />}
-              className="flex rounded-lg px-2 sm:px-3! py-1.5! text-xs font-medium max-sm:w-10 max-sm:h-10 max-sm:justify-center overflow-hidden"
-            >
-              <span className="hidden sm:inline">Select Template</span>
-            </Button>
-
-            <Button
-              variant="outline"
-              size="md"
-              onClick={() => setIsEditOpen(true)}
-              leftIcon={(props) => <ActionIcon name="Pencil" {...props} />}
-              className="hidden sm:flex rounded-lg px-3! py-1.5! text-xs font-medium"
-            >
-              Edit
-            </Button>
-            <Button
-              variant="solid"
-              size="md"
-              onClick={handlePrint}
-              leftIcon={(props) => <ActionIcon name="Download" color="white" {...props} />}
-              className="rounded-lg px-2 sm:px-3! py-1.5! text-xs font-semibold max-sm:w-10 max-sm:h-10 max-sm:justify-center overflow-hidden"
-            >
-              <span className="hidden sm:inline">Print / PDF</span>
-            </Button>
+      ) : (
+        <>
+          {/* ── HEADER (Sleek Info) - Hidden on Print ── */}
+          <div className={`print-hidden ${isPage ? "flex flex-col sm:flex-row sm:items-center justify-between py-2 gap-4 px-4 sm:px-8" : "flex flex-col sm:flex-row sm:items-center justify-between px-4 sm:px-7 py-4 border-b border-gray-100 bg-transparent gap-4"}`}>
+             <div className="flex items-center gap-4">
+                <button
+                  onClick={handleClose}
+                  className="flex items-center gap-2 text-sm font-medium text-gray-500 transition-colors hover:text-gray-900"
+                >
+                  <Icons name="ArrowLeft" size={18} />
+                  <span>{isPage ? "Back" : "Close"}</span>
+                </button>
+             </div>
           </div>
-        </div>
 
-        {/* ── BODY ───────────────────────────────────────────── */}
-        <div className={isPage ? "" : "flex-1 overflow-y-auto bg-gray-100 p-4 md:p-8"}>
-          <style>{`
-            @media print {
-              @page {
-                margin: 0mm;
-              }
-              html, body {
-                -webkit-print-color-adjust: exact !important;
-                print-color-adjust: exact !important;
-                margin: 0 !important;
-              }
-              body * { visibility: hidden; }
-              .print-area, .print-area * { visibility: visible; }
-              .print-area { position: absolute; left: 0; top: 0; width: 100%; border: none; box-shadow: none; margin: 0; padding: 0; }
-              .print-hidden { display: none !important; }
-            }
-          `}</style>
-          
-          <div className="grid h-full grid-cols-1 xl:grid-cols-[1fr_300px] gap-6">
-            
-            {/* ── LEFT (Template Preview) ── */}
-            <div className="flex-1 w-full overflow-x-auto print-area-container">
-              {renderTemplate()}
-            </div>
+          <div className={`flex flex-col gap-6 md:flex-row md:items-start md:justify-between print-hidden ${isPage ? "px-4 sm:px-8 py-2" : "px-6 py-4"}`}>
+              {/* Left Side: Avatar & Titles */}
+              <div className="flex items-center gap-4">
+                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-sm bg-gradient-to-br from-indigo-50 to-white text-indigo-600 shadow-sm border border-indigo-100/50">
+                   <Icons name="FileText" size={24} />
+                </div>
+                <div>
+                  <h1 className="text-2xl font-black text-gray-900 tracking-tight flex items-center gap-3">
+                    {invoice.invoiceNumber}
+                    <StatusBadge status={invoice.status} />
+                  </h1>
+                  <div className="mt-1 flex items-center gap-3">
+                    <span className="inline-flex items-center gap-1.5 rounded-sm bg-gray-100 px-2.5 py-1 text-xs font-semibold text-gray-700">
+                      <Icons name="User" size={12}/> {invoice.customer?.name || invoice.customer || "Unknown"}
+                    </span>
+                    <span className="inline-flex items-center gap-1.5 rounded-sm bg-gray-100 px-2.5 py-1 text-xs font-semibold text-gray-700">
+                      <Icons name="Calendar" size={12}/> {invoice.invoiceDate ? new Date(invoice.invoiceDate).toLocaleDateString('en-CA') : new Date(invoice.createdAt).toLocaleDateString('en-CA')}
+                    </span>
+                  </div>
+                </div>
+              </div>
 
-            {/* ── RIGHT (Actions & Details) ── */}
-            <div className="flex flex-col gap-6 print-hidden">
-               <section className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm">
-                 <h3 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-4">
-                    Invoice Summary
-                 </h3>
-                 <div className="flex flex-col gap-3 text-sm">
-                    {Object.entries(detailInfo).map(([key, value]) => (
-                      <div key={key} className="flex justify-between items-center border-b border-gray-50 pb-2 last:border-0 last:pb-0">
-                        <span className="text-gray-500">{key}</span>
-                        <span className="font-medium text-gray-900 text-right">{value}</span>
-                      </div>
-                    ))}
+              {/* Right Side: Actions */}
+              <div className="flex shrink-0 items-center gap-3 flex-wrap">
+                 {/* Status Dropdown Native */}
+                 <div className="relative">
+                    <select 
+                       className="appearance-none bg-white border border-gray-200 text-gray-700 font-semibold text-sm rounded-sm px-3 py-1.5 pr-8 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all cursor-pointer shadow-sm"
+                       value={invoice.status}
+                       onChange={(e) => handleChangeStatus(e.target.value)}
+                    >
+                       <option value="DRAFT">Draft</option>
+                       <option value="SENT">Sent</option>
+                       <option value="PAID">Paid</option>
+                       <option value="OVERDUE">Overdue</option>
+                       <option value="CANCELLED">Cancelled</option>
+                    </select>
+                    <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-500">
+                       <Icons name="ChevronDown" size={14} />
+                    </div>
                  </div>
-               </section>
 
-               <section className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm">
-                 <h3 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3">
-                    Status Actions
-                  </h3>
-                  <div className="flex flex-col gap-2">
-                     <Button variant="outline" size="sm" onClick={() => handleChangeStatus('SENT')} className="justify-center w-full">Mark as Sent</Button>
-                     <Button variant="outline" size="sm" onClick={() => handleChangeStatus('PAID')} className="justify-center w-full text-emerald-600 border-emerald-200 hover:bg-emerald-50">Mark as Paid</Button>
-                     <Button variant="outline" size="sm" onClick={() => handleChangeStatus('CANCELLED')} className="justify-center w-full text-rose-600 border-rose-200 hover:bg-rose-50">Cancel Invoice</Button>
-                  </div>
-               </section>
+                 <Button
+                   variant="outline"
+                   size="sm"
+                   leftIcon={(props) => <Icons name="Layout" {...props} />}
+                   className="rounded-sm border-gray-200 font-semibold"
+                   onClick={() => setIsTemplateModalOpen(true)}
+                 >
+                   Template
+                 </Button>
+
+                <Button
+                  variant="outline"
+                  size="sm"
+                  leftIcon={(props) => <Icons name="Pencil" {...props} />}
+                  className="rounded-sm border-gray-200 font-semibold"
+                  onClick={() => setIsEditOpen(true)}
+                >
+                  Edit
+                </Button>
+
+                <Button
+                  variant="solid"
+                  size="sm"
+                  leftIcon={(props) => <Icons name="Printer" color="white" {...props} />}
+                  className="rounded-sm px-4 shadow-sm shadow-primary/20 hover:shadow-md transition-all font-semibold"
+                  onClick={handlePrint}
+                >
+                  Print / PDF
+                </Button>
+              </div>
+            </div>
+
+          {/* ── BODY (Invoice Information & Template) ───────────────────────────────────────────── */}
+          <div className={`flex-1 overflow-y-auto custom-scrollbar bg-gray-50/50 print:bg-white print:overflow-visible ${isPage ? 'p-4 sm:p-8' : 'p-6'}`}>
+            <div className="max-w-5xl mx-auto space-y-6 print:space-y-0">
                
-               {data.orderId && (
-                <section className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm">
-                  <h3 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3">
-                    Linked Order
-                  </h3>
-                  <div className="flex items-center gap-3 p-3 border border-gray-100 rounded-lg hover:border-primary/30 transition-colors cursor-pointer group" onClick={() => router.push(`/orders/${data.orderId}`)}>
-                    <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary shrink-0">
-                      <Icons name="ShoppingCart" size={18} />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="font-semibold text-sm group-hover:text-primary transition-colors truncate">ORD-{String(data.order?.orderNumber).padStart(6, '0')}</div>
-                      <div className="text-xs text-gray-500 truncate">View source order</div>
-                    </div>
-                    <Icons name="ChevronRight" size={16} className="text-gray-400 shrink-0" />
+               {/* Invoice Info Grid - Hidden on Print */}
+               <div className="grid grid-cols-2 md:grid-cols-4 gap-4 print-hidden">
+                  <div className="bg-white p-4 rounded-sm border border-gray-100 shadow-sm flex flex-col gap-1">
+                     <span className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider">Order Ref</span>
+                     <span className="text-sm font-bold text-gray-900">{invoice.order?.orderNumber ? `ORD-${String(invoice.order.orderNumber).padStart(6, '0')}` : "—"}</span>
                   </div>
-                </section>
-              )}
+                  <div className="bg-white p-4 rounded-sm border border-gray-100 shadow-sm flex flex-col gap-1">
+                     <span className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider">Due Date</span>
+                     <span className="text-sm font-bold text-gray-900">{invoice.dueDate ? new Date(invoice.dueDate).toLocaleDateString('en-CA') : "—"}</span>
+                  </div>
+                  <div className="bg-white p-4 rounded-sm border border-gray-100 shadow-sm flex flex-col gap-1">
+                     <span className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider">Payment Method</span>
+                     <span className="text-sm font-bold text-gray-900">{invoice.paymentMethod || "—"}</span>
+                  </div>
+                  <div className="bg-white p-4 rounded-sm border border-gray-100 shadow-sm flex flex-col gap-1 relative">
+                     <span className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider mb-1">Payment Status</span>
+                     <div className="relative">
+                       <select 
+                         className="appearance-none bg-gray-50 border border-gray-200 text-gray-900 font-bold text-sm rounded-sm px-3 py-1.5 pr-8 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all cursor-pointer w-full"
+                         value={invoice.paymentStatus}
+                         onChange={async (e) => {
+                           try {
+                             await api.put(`/invoices/${invoiceId}`, { paymentStatus: e.target.value });
+                             toast.success("Payment Status updated");
+                             handleUpdated();
+                           } catch (err) {
+                             toast.error("Failed to update payment status");
+                           }
+                         }}
+                       >
+                         <option value="UNPAID">UNPAID</option>
+                         <option value="PARTIAL">PARTIAL</option>
+                         <option value="PAID">PAID</option>
+                       </select>
+                       <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-500">
+                          <Icons name="ChevronDown" size={14} />
+                       </div>
+                     </div>
+                  </div>
+               </div>
+
+               {/* Template Viewer */}
+               <div className="bg-white shadow-sm border border-gray-200/60 rounded-sm print:shadow-none print:border-none print:m-0 print:max-w-none w-full max-w-4xl mx-auto overflow-x-auto">
+                  <div className="min-w-[800px] print:min-w-full">
+                    {renderTemplate()}
+                  </div>
+               </div>
             </div>
           </div>
-        </div>
-      </div>
-    );
+        </>
+      )}
+      
+      {isEditOpen && invoice && (
+        <EditInvoice 
+          open={isEditOpen} 
+          onClose={() => setIsEditOpen(false)} 
+          initialData={invoice}
+          onSuccess={handleUpdated}
+        />
+      )}
+
+      {isTemplateModalOpen && (
+        <TemplateSelectModal
+          open={isTemplateModalOpen}
+          onClose={() => setIsTemplateModalOpen(false)}
+          currentTemplate={selectedTemplate}
+          onSelect={async (newTemplate) => {
+            setSelectedTemplate(newTemplate);
+            setIsTemplateModalOpen(false);
+            if (invoice) {
+               try {
+                  await api.put(`/invoices/${invoice.id}`, { template: newTemplate });
+                  handleUpdated();
+               } catch (e) {
+                  console.error(e);
+               }
+            }
+          }}
+        />
+      )}
+    </div>
+  );
 
   if (isPage) {
-    return (
-      <>
-        {detailPanelContent}
-        {isEditOpen && <EditInvoice open={isEditOpen} onClose={() => setIsEditOpen(false)} initialData={data} onSuccess={onSuccess} />}
-        <TemplateSelectModal open={isTemplateModalOpen} onClose={() => setIsTemplateModalOpen(false)} selected={selectedTemplate} onSelect={setSelectedTemplate} />
-      </>
-    );
+    return detailPanelContent;
   }
 
   return (
-    <>
+    <div
+      className={`fixed inset-x-0 bottom-0 top-16 z-[100] flex items-end justify-center sm:top-16 md:inset-0 md:items-center print-hidden ${
+        open ? "pointer-events-auto" : "pointer-events-none"
+      }`}
+    >
       <div
-        className={`fixed inset-x-0 bottom-0 top-16 z-[1000] flex justify-end md:inset-0 ${
-          open ? "pointer-events-auto" : "pointer-events-none"
+        className={`absolute inset-0 bg-gray-900/40 backdrop-blur-sm transition-opacity ${
+          open ? "opacity-100" : "opacity-0"
         }`}
-        aria-hidden={!open}
-      >
-        <div
-          className={`absolute inset-0 bg-black/40 backdrop-blur-[2px] ${
-            open ? "animate-overlay-in" : "animate-overlay-out"
-          }`}
-          onClick={handleBack}
-        />
-        {detailPanelContent}
-      </div>
-      {isEditOpen && <EditInvoice open={isEditOpen} onClose={() => setIsEditOpen(false)} initialData={data} onSuccess={onSuccess} />}
-      <TemplateSelectModal open={isTemplateModalOpen} onClose={() => setIsTemplateModalOpen(false)} selected={selectedTemplate} onSelect={setSelectedTemplate} />
-    </>
+        onClick={handleClose}
+      />
+      {detailPanelContent}
+    </div>
   );
 };
 

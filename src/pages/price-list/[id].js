@@ -1,57 +1,41 @@
 import { useRouter } from "next/router";
 import PriceListDetail from "@/components/price-list/PriceListDetail";
-import { useEffect, useState } from "react";
-import api from "@/lib/api";
+import Loader from "@/common/Loader";
 
 const PriceListDetailPage = () => {
   const router = useRouter();
   const { id } = router.query;
-  
-  const [item, setItem] = useState(null);
-  const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    if (id) {
-      api.get(`/price-list/${id}`)
-        .then(res => {
-          setItem(res.data.data);
-          setLoading(false);
-        })
-        .catch(err => {
-          console.error("Failed to load item", err);
-          setItem(null);
-          setLoading(false);
-        });
-    }
-  }, [id]);
-
-  if (!id || loading) {
+  if (!router.isReady) {
     return (
-      <div className="flex h-full w-full items-center justify-center bg-white rounded-xl border border-gray-100">
-        <p className="text-sm text-gray-500">Loading item details...</p>
+      <div className="flex flex-col w-full min-h-screen items-center justify-center bg-transparent">
+        <Loader text="Loading..." />
       </div>
     );
   }
 
-  if (!item) {
+  if (!id) {
     return (
       <div className="flex h-full w-full flex-col items-center justify-center bg-white rounded-xl border border-gray-100 p-8 text-center">
-        <h3 className="text-base font-semibold text-gray-950">Item not found</h3>
+        <h3 className="text-base font-bold text-gray-950">Item not found</h3>
         <p className="mt-1 text-sm text-gray-500">
-          The item "{id}" does not exist or has been removed.
+          The price list item details could not be found or the ID is invalid.
         </p>
         <button
-          type="button"
           onClick={() => router.push("/price-list")}
-          className="mt-6 text-sm font-medium text-primary hover:text-primary/80"
+          className="mt-4 rounded-lg bg-primary px-4 py-2 text-xs font-semibold text-white transition-all hover:bg-primary/95"
         >
-          &larr; Back to price list
+          Back to list
         </button>
       </div>
     );
   }
 
-  return <PriceListDetail item={item} open={true} isPage={true} />;
+  return (
+    <div className="w-full min-h-screen">
+      <PriceListDetail open={true} itemId={id} isPage={true} />
+    </div>
+  );
 };
 
 export default PriceListDetailPage;

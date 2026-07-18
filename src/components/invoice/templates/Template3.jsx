@@ -24,7 +24,7 @@ const Template3 = ({ data, detailInfo, settings, items }) => {
 
       <div className="p-12 relative z-10 flex justify-between items-center pb-8 border-b-4 border-orange-500">
         <div>
-           <img src="/image/logo1.png" alt="Logo" className="h-16 object-contain mb-2" />
+           <img src={settings?.logoUrl || "/image/logo1.png"} alt="Logo" className="h-16 object-contain mb-2" />
            {settings?.address && <p className="text-xs text-gray-500 mt-1">{formatAddress(settings.address)}</p>}
         </div>
         <div className="text-right">
@@ -78,8 +78,9 @@ const Template3 = ({ data, detailInfo, settings, items }) => {
             <div className="flex justify-between items-start mb-6 gap-4">
               <div className="grid grid-cols-[100px_1fr] gap-y-2 text-gray-600 flex-1 min-w-0">
                 {settings?.accountNo && <><span className="font-semibold text-gray-800">Account #:</span><span className="break-all">{settings.accountNo}</span></>}
-                <span className="font-semibold text-gray-800">A/C Name:</span><span className="break-words">{settings?.companyName}</span>
+                <span className="font-semibold text-gray-800">A/C Name:</span><span className="break-words">{settings?.companyName || 'Glowison'}</span>
                 {settings?.upiId && <><span className="font-semibold text-gray-800">UPI ID:</span><span className="break-all">{settings.upiId}</span></>}
+                {settings?.gstin && <><span className="font-semibold text-gray-800">GSTIN:</span><span className="break-all">{settings.gstin}</span></>}
               </div>
               {settings?.upiId && (
                 <div className="text-center shrink-0 bg-white p-2 rounded-xl border border-orange-100 shadow-sm mr-4">
@@ -119,7 +120,7 @@ const Template3 = ({ data, detailInfo, settings, items }) => {
             <div className="mt-4 text-right pr-2">
                <p className="text-xs text-blue-900 font-bold mb-1 uppercase tracking-wider">Terms & Conditions</p>
                <p className="text-black text-[10px] leading-relaxed">
-                  {data.notes || 'For any enquiry, reach out via email at javexplastic@gmail.com, call on +91 74879 64767'}
+                  {data.notes || `For any enquiry, reach out via email at ${settings?.email || 'support@glowison.com'}, call on ${settings?.phone || '+91 00000 00000'}`}
                </p>
             </div>
          </div>

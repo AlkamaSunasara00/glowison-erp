@@ -49,11 +49,12 @@ const Template1 = ({ data, detailInfo, settings, items }) => {
         {/* Header Section */}
         <div className="flex justify-between items-center p-4 min-h-[120px]">
           <div className="w-1/4">
-             <img src="/image/logo1.png" alt="Logo" className="max-h-24 object-contain" />
+             <img src={settings?.logoUrl || "/image/logo1.png"} alt="Logo" className="max-h-24 object-contain" />
           </div>
           <div className="w-2/4 text-center">
-             <h2 className="text-xl font-bold uppercase">{settings?.companyName || 'JPG | Javex Plastic Group'}</h2>
-             <p className="text-sm mt-1">{formatAddress(settings?.address) || 'Evera Compound, Chhapi highway, Chhapi, Gujarat, India - 385210'}</p>
+             <h2 className="text-xl font-bold uppercase">{settings?.companyName || 'Glowison'}</h2>
+             <p className="text-sm mt-1">{formatAddress(settings?.address) || 'Glowison Headquarters'}</p>
+             {settings?.gstin && <p className="text-[10px] font-semibold mt-1">GSTIN: {settings.gstin}</p>}
           </div>
           <div className="w-1/4"></div>
         </div>
@@ -74,7 +75,7 @@ const Template1 = ({ data, detailInfo, settings, items }) => {
           
           <div className="w-1/3 border-r border-blue-800 p-2">
             <p className="text-gray-600 mb-1">Shipped From</p>
-            <p className="font-bold text-sm">{settings?.companyName || 'JPG | Javex Plastic Group'}</p>
+            <p className="font-bold text-sm">{settings?.companyName || 'Glowison'}</p>
             {settings?.address && <p>{formatAddress(settings.address)}</p>}
             {settings?.phone && <p>Phone: {settings.phone}</p>}
           </div>
@@ -171,7 +172,13 @@ const Template1 = ({ data, detailInfo, settings, items }) => {
       {/* Footer Section (UPI & Signature) */}
       <div className="flex min-h-[160px]">
          <div className="w-1/2 border-r border-blue-800 p-4 flex flex-col justify-start">
-            <p className="font-bold text-[12px] mb-2">Scan to pay via UPI</p>
+            <p className="font-bold text-[12px] mb-2">Payment Details</p>
+            {settings?.accountNo && (
+               <div className="mb-2 text-[10px] grid grid-cols-[60px_1fr] gap-x-2">
+                  <span className="text-gray-600">A/C Name:</span><span>{settings.companyName || 'Glowison'}</span>
+                  <span className="text-gray-600">A/C No:</span><span>{settings.accountNo}</span>
+               </div>
+            )}
             {settings?.upiId && (
                <>
                   <QRCodeSVG value={`upi://pay?pa=${settings.upiId}&pn=${settings.companyName || 'Company'}&am=${data.grandTotal}`} size={80} className="mb-2" />
@@ -194,7 +201,7 @@ const Template1 = ({ data, detailInfo, settings, items }) => {
       </div>
 
       <div className="border-t border-blue-800 p-1 text-center text-[10px] bg-blue-50">
-         {data.notes || 'For any enquiry, reach out via email at javexplastic@gmail.com, call on +91 74879 64767'}
+         {data.notes || `For any enquiry, reach out via email at ${settings?.email || 'support@glowison.com'}, call on ${settings?.phone || '+91 00000 00000'}`}
       </div>
     </div>
   );

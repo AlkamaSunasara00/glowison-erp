@@ -10,6 +10,9 @@ import StatusBadge from "@/common/StatusBadge";
 import AddInvoice from "./invoiceModal/AddInvoice";
 import EditInvoice from "./invoiceModal/EditInvoice";
 import DeleteConfirmModal from "@/common/DeleteConfirmModal";
+import Loader from "@/common/Loader";
+
+let globalInvoiceCache = null;
 
 const statusOptions = [
   { value: "all", label: "All Statuses" },
@@ -25,16 +28,23 @@ export const Invoice = () => {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [isAddOpen, setIsAddOpen] = useState(false);
-  const [invoices, setInvoices] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [viewMode, setViewMode] = useState(() => {
+    if (typeof window !== "undefined") {
+      return localStorage.getItem("invoiceViewMode") || "table";
+    }
+    return "table";
+  });
+
+  const [invoices, setInvoices] = useState(globalInvoiceCache || []);
+  const [loading, setLoading] = useState(!globalInvoiceCache);
   const [editItem, setEditItem] = useState(null);
   const [deleteItem, setDeleteItem] = useState(null);
 
-  const fetchInvoices = async () => {
+  const fetchInvoices = async (silent = false) => {
     try {
-      setLoading(true);
+      if (!silent && !globalInvoiceCache) setLoading(true);
       const res = await api.get('/invoices?limit=200');
-      setInvoices(res.data.data.map(i => ({
+      const data = res.data.data.map(i => ({
         id: i.id,
         invoiceNumber: i.invoiceNumber,
         orderCode: i.order?.orderNumber ? `ORD-${String(i.order.orderNumber).padStart(6, '0')}` : null,
@@ -43,7 +53,9 @@ export const Invoice = () => {
         dueDate: i.dueDate ? new Date(i.dueDate).toLocaleDateString('en-CA') : "-",
         amount: Number(i.grandTotal),
         status: i.status
-      })));
+      }));
+      globalInvoiceCache = data;
+      setInvoices(data);
     } catch (error) {
       toast.error('Failed to load invoices');
     } finally {
@@ -52,7 +64,7 @@ export const Invoice = () => {
   };
 
   useEffect(() => {
-    fetchInvoices();
+    fetchInvoices(!!globalInvoiceCache);
   }, []);
 
   useEffect(() => {
@@ -123,27 +135,47 @@ export const Invoice = () => {
         </div>
 
         {/* KPIs */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-          <div className="rounded-xl border border-gray-100 bg-white p-4 shadow-sm">
-            <p className="text-sm font-medium text-gray-500">Total Invoiced</p>
-            <p className="mt-1 text-2xl font-bold text-gray-900">Rs. {totalInvoiced.toLocaleString()}</p>
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="bg-white rounded-sm p-5 shadow-sm border border-gray-100 flex items-center gap-4 hover:-translate-y-1 hover:shadow-md transition-all duration-300">
+            <div className="w-12 h-12 rounded-sm bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0 border border-indigo-100">
+              <Icons name="FileText" size={20} />
+            </div>
+            <div className="min-w-0">
+              <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1 truncate">Total Invoiced</p>
+              <h4 className="text-xl font-black text-gray-900 tracking-tight truncate">₹{totalInvoiced.toLocaleString()}</h4>
+            </div>
           </div>
-          <div className="rounded-xl border border-gray-100 bg-white p-4 shadow-sm">
-            <p className="text-sm font-medium text-gray-500">Collected</p>
-            <p className="mt-1 text-2xl font-bold text-emerald-600">Rs. {collected.toLocaleString()}</p>
+          <div className="bg-white rounded-sm p-5 shadow-sm border border-gray-100 flex items-center gap-4 hover:-translate-y-1 hover:shadow-md transition-all duration-300">
+            <div className="w-12 h-12 rounded-sm bg-emerald-50 text-emerald-600 border border-emerald-100 flex items-center justify-center shrink-0">
+              <Icons name="CheckCircle" size={20} />
+            </div>
+            <div className="min-w-0">
+              <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1 truncate">Collected</p>
+              <h4 className="text-xl font-black text-emerald-600 tracking-tight truncate">₹{collected.toLocaleString()}</h4>
+            </div>
           </div>
-          <div className="rounded-xl border border-gray-100 bg-white p-4 shadow-sm">
-            <p className="text-sm font-medium text-gray-500">Outstanding</p>
-            <p className="mt-1 text-2xl font-bold text-amber-600">Rs. {outstanding.toLocaleString()}</p>
+          <div className="bg-white rounded-sm p-5 shadow-sm border border-gray-100 flex items-center gap-4 hover:-translate-y-1 hover:shadow-md transition-all duration-300">
+            <div className="w-12 h-12 rounded-sm bg-amber-50 text-amber-600 border border-amber-100 flex items-center justify-center shrink-0">
+              <Icons name="Clock" size={20} />
+            </div>
+            <div className="min-w-0">
+              <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1 truncate">Outstanding</p>
+              <h4 className="text-xl font-black text-amber-600 tracking-tight truncate">₹{outstanding.toLocaleString()}</h4>
+            </div>
           </div>
-          <div className="rounded-xl border border-gray-100 bg-white p-4 shadow-sm">
-            <p className="text-sm font-medium text-gray-500">Overdue</p>
-            <p className="mt-1 text-2xl font-bold text-rose-600">Rs. {overdue.toLocaleString()}</p>
+          <div className="bg-white rounded-sm p-5 shadow-sm border border-gray-100 flex items-center gap-4 hover:-translate-y-1 hover:shadow-md transition-all duration-300">
+            <div className="w-12 h-12 rounded-sm bg-rose-50 text-rose-600 border border-rose-100 flex items-center justify-center shrink-0">
+              <Icons name="AlertTriangle" size={20} />
+            </div>
+            <div className="min-w-0">
+              <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1 truncate">Overdue</p>
+              <h4 className="text-xl font-black text-rose-600 tracking-tight truncate">₹{overdue.toLocaleString()}</h4>
+            </div>
           </div>
         </div>
 
         {/* Filters */}
-        <div className="bg-white p-3 rounded-lg border border-gray-100 shadow-sm flex flex-col md:flex-row gap-3">
+        <div className="bg-white p-3 rounded-sm border border-gray-100 shadow-sm flex flex-col md:flex-row gap-3">
           <div className="w-full md:w-64">
             <Input
               id="search"
@@ -161,10 +193,37 @@ export const Invoice = () => {
               options={statusOptions}
             />
           </div>
+          <div className="ml-auto flex items-center bg-gray-100 p-1 rounded-md shrink-0 self-start md:self-auto">
+            <button
+              onClick={() => {
+                setViewMode("table");
+                if (typeof window !== "undefined") localStorage.setItem("invoiceViewMode", "table");
+              }}
+              className={`p-1.5 rounded-sm transition-colors ${viewMode === "table" ? "bg-white text-primary shadow-sm" : "text-gray-500 hover:text-gray-900"}`}
+              title="Table View"
+            >
+              <Icons name="List" size={18} />
+            </button>
+            <button
+              onClick={() => {
+                setViewMode("card");
+                if (typeof window !== "undefined") localStorage.setItem("invoiceViewMode", "card");
+              }}
+              className={`p-1.5 rounded-sm transition-colors ${viewMode === "card" ? "bg-white text-primary shadow-sm" : "text-gray-500 hover:text-gray-900"}`}
+              title="Card View"
+            >
+              <Icons name="Grid" size={18} />
+            </button>
+          </div>
         </div>
 
         {/* Content */}
-        {filteredInvoices.length === 0 ? (
+        {/* Content */}
+        {loading ? (
+          <div className="flex-1 bg-white rounded-sm border border-gray-100 shadow-sm overflow-hidden min-h-[400px] flex items-center justify-center">
+            <Loader text="Loading Invoices..." />
+          </div>
+        ) : filteredInvoices.length === 0 ? (
           <EmptyState
             search={search || (hasActiveFilters ? "active filters" : "")}
             entityName="Invoices"
@@ -175,19 +234,19 @@ export const Invoice = () => {
             }}
             addLabel="Create Invoice"
           />
-        ) : (
-          <div className="bg-white rounded-lg border border-gray-100 shadow-sm overflow-hidden flex-1 custom-scrollbar">
+        ) : viewMode === "table" ? (
+          <div className="bg-white rounded-sm border border-gray-100 shadow-sm overflow-hidden flex-1 custom-scrollbar">
             <div className="overflow-x-auto">
               <table className="w-full text-left border-collapse min-w-[900px]">
-                <thead className="bg-gray-50 border-b border-gray-100 text-xs font-semibold text-gray-600">
+                <thead className="bg-primary border-b border-primary/20 text-xs font-semibold text-white">
                   <tr>
-                    <th className="px-4 py-3">Invoice Number</th>
+                    <th className="px-4 py-3 rounded-tl-lg">Invoice Number</th>
                     <th className="px-4 py-3">Customer</th>
                     <th className="px-4 py-3">Invoice Date</th>
                     <th className="px-4 py-3">Due Date</th>
                     <th className="px-4 py-3 text-right">Grand Total</th>
                     <th className="px-4 py-3 text-center">Status</th>
-                    <th className="px-4 py-3 text-right">Actions</th>
+                    <th className="px-4 py-3 text-right rounded-tr-lg">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="text-sm">
@@ -198,14 +257,21 @@ export const Invoice = () => {
                       className="border-b border-gray-50 hover:bg-gray-50/50 cursor-pointer transition-colors"
                     >
                       <td className="px-4 py-3">
-                         <div className="font-semibold text-primary">{invoice.invoiceNumber}</div>
+                         <div className="font-semibold text-gray-900">{invoice.invoiceNumber}</div>
                          {invoice.orderCode && <div className="text-[10px] text-gray-400">Order: {invoice.orderCode}</div>}
                       </td>
-                      <td className="px-4 py-3 font-medium text-gray-900">{invoice.customer}</td>
-                      <td className="px-4 py-3 text-gray-500">{invoice.date}</td>
-                      <td className="px-4 py-3 text-gray-500">{invoice.dueDate}</td>
-                      <td className="px-4 py-3 text-right font-medium text-gray-900">
-                        Rs. {invoice.amount.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-2">
+                           <div className="w-8 h-8 rounded-full bg-indigo-50 text-indigo-600 font-bold flex items-center justify-center shrink-0 border border-indigo-100/50 text-xs">
+                             {invoice.customer.substring(0, 2).toUpperCase()}
+                           </div>
+                           <span className="font-semibold text-gray-900">{invoice.customer}</span>
+                        </div>
+                      </td>
+                      <td className="px-4 py-3 text-gray-600">{invoice.date}</td>
+                      <td className="px-4 py-3 text-gray-600">{invoice.dueDate}</td>
+                      <td className="px-4 py-3 text-right font-bold text-gray-900">
+                        ₹{invoice.amount.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}
                       </td>
                       <td className="px-4 py-3 text-center">
                          <StatusBadge status={invoice.status} />
@@ -219,7 +285,7 @@ export const Invoice = () => {
                               const res = await api.get(`/invoices/${invoice.id}`);
                               setEditItem(res.data.data);
                           }} className="px-2!" title="Edit">
-                            <Icons name="Edit" size={16} className="text-gray-400 hover:text-primary transition-colors" />
+                            <Icons name="Pencil" size={16} className="text-gray-400 hover:text-primary transition-colors" />
                           </Button>
                           <Button variant="ghost" size="sm" onClick={() => handleDuplicate(invoice.id)} className="px-2!" title="Duplicate">
                             <Icons name="Copy" size={16} className="text-gray-400 hover:text-green-500 transition-colors" />
@@ -235,6 +301,57 @@ export const Invoice = () => {
               </table>
             </div>
           </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 flex-1 content-start">
+            {filteredInvoices.map(invoice => (
+              <div 
+                key={invoice.id}
+                onClick={() => handleRowClick(invoice.id)}
+                className="bg-white rounded-sm border border-gray-100 shadow-sm hover:shadow-md transition-shadow cursor-pointer p-4 flex flex-col gap-3 relative group"
+              >
+                <div className="flex justify-between items-start mb-1">
+                   <span className="font-bold text-gray-900">{invoice.invoiceNumber}</span>
+                   <StatusBadge status={invoice.status} />
+                </div>
+                
+                <div className="flex items-center gap-3 py-2 border-y border-gray-50">
+                   <div className="w-10 h-10 rounded-full bg-indigo-50 text-indigo-600 font-bold flex items-center justify-center shrink-0 border border-indigo-100 text-sm">
+                     {invoice.customer.substring(0, 2).toUpperCase()}
+                   </div>
+                   <div className="min-w-0">
+                      <p className="text-[10px] font-semibold uppercase tracking-wider text-gray-400">Customer</p>
+                      <p className="text-sm font-bold text-gray-900 truncate">{invoice.customer}</p>
+                   </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-2 mt-1">
+                  <div className="flex flex-col bg-gray-50 p-2 rounded border border-gray-100">
+                    <span className="text-[10px] font-semibold uppercase tracking-wider text-gray-500">Invoice Date</span>
+                    <span className="text-xs font-bold text-gray-900 mt-0.5 truncate flex items-center gap-1"><Icons name="Calendar" size={10}/> {invoice.date}</span>
+                  </div>
+                  <div className="flex flex-col bg-gray-50 p-2 rounded border border-gray-100">
+                    <span className="text-[10px] font-semibold uppercase tracking-wider text-gray-500">Due Date</span>
+                    <span className="text-xs font-bold text-gray-900 mt-0.5 truncate flex items-center gap-1"><Icons name="Clock" size={10}/> {invoice.dueDate}</span>
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between pt-2 mt-auto">
+                  <span className="text-[11px] text-gray-500 font-semibold uppercase tracking-wider">Amount</span>
+                  <span className="text-lg font-black text-gray-900">₹{invoice.amount.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
+                </div>
+
+                {/* Floating Action Buttons */}
+                <div className="absolute -top-3 -right-3 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity" onClick={(e) => e.stopPropagation()}>
+                   <Button variant="solid" size="sm" onClick={() => handleDuplicate(invoice.id)} className="rounded-full w-8 h-8 p-0 flex items-center justify-center shadow-md bg-green-600 hover:bg-green-700 border-none"><Icons name="Copy" size={14} /></Button>
+                   <Button variant="solid" size="sm" onClick={async () => {
+                       const res = await api.get(`/invoices/${invoice.id}`);
+                       setEditItem(res.data.data);
+                   }} className="rounded-full w-8 h-8 p-0 flex items-center justify-center shadow-md"><Icons name="Pencil" size={14} /></Button>
+                   <Button variant="solid" size="sm" onClick={() => setDeleteItem(invoice)} className="rounded-full w-8 h-8 p-0 flex items-center justify-center shadow-md bg-rose-600 hover:bg-rose-700 border-none"><Icons name="Trash2" size={14} /></Button>
+                </div>
+              </div>
+            ))}
+          </div>
         )}
       </div>
 
@@ -249,7 +366,9 @@ export const Invoice = () => {
             try {
               await api.delete(`/invoices/${deleteItem.id}`);
               toast.success("Invoice deleted");
-              fetchInvoices();
+              const updated = invoices.filter(i => i.id !== deleteItem.id);
+              globalInvoiceCache = updated;
+              setInvoices(updated);
             } catch (err) {
               toast.error("Failed to delete invoice");
             }

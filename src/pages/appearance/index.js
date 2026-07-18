@@ -8,7 +8,7 @@ export default function AppearancePage() {
       <Head>
         <title>Appearance | Glowison ERP</title>
       </Head>
-      <div className="flex-1 h-[calc(100vh-64px)] overflow-hidden">
+      <div className="flex-1 h-[calc(100vh-64px)] overflow-y-auto custom-scrollbar">
         <Appearance />
       </div>
     </>

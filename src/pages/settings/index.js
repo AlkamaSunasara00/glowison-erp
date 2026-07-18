@@ -6,6 +6,7 @@ import Icons from '@/common/Icons';
 import api from '@/lib/api';
 import toast from 'react-hot-toast';
 import SignatureCanvas from 'react-signature-canvas';
+import Loader from '@/common/Loader';
 
 export default function Settings() {
   const [loading, setLoading] = useState(true);
@@ -81,99 +82,164 @@ export default function Settings() {
     }
   };
 
+  if (loading) {
+    return (
+      <div className="flex flex-col min-h-screen items-center justify-center bg-gray-50/50">
+        <Loader text="Loading Settings..." />
+      </div>
+    );
+  }
+
   return (
     <>
       <Head>
         <title>Company Settings | Glowison ERP</title>
       </Head>
       
-      <div className="flex flex-col min-h-screen w-full relative gap-4 p-4 md:p-6 lg:p-8">
-        <div className="max-w-4xl mx-auto w-full">
-          <div className="flex justify-between items-center mb-6">
-            <div>
-              <h1 className="page-header">Company Settings</h1>
-              <p className="page-desc">Manage your company profile and invoice signature</p>
+      <div className="flex flex-col min-h-screen w-full relative bg-transparent overflow-hidden pb-20">
+        
+        {/* PREMIUM HERO HEADER */}
+        <div className="relative overflow-hidden bg-transparent border-b border-gray-200/60 shadow-sm shrink-0">
+          <div className="absolute top-0 right-0 w-[600px] h-[400px] bg-gradient-to-bl from-indigo-500/10 via-purple-500/5 to-transparent rounded-bl-full -z-10 blur-3xl" />
+          <div className="absolute bottom-0 left-0 w-[400px] h-[300px] bg-gradient-to-tr from-blue-500/10 to-transparent rounded-tr-full -z-10 blur-3xl" />
+          
+          <div className="max-w-5xl mx-auto px-6 py-10 lg:px-8">
+            <div className="flex items-center gap-5">
+              <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-600 text-white shadow-lg shadow-indigo-500/30 ring-1 ring-white/20">
+                <Icons name="Settings" size={28} />
+              </div>
+              <div>
+                <h1 className="text-3xl font-black text-gray-900 tracking-tight">Company Settings</h1>
+                <p className="mt-1.5 text-sm font-medium text-gray-500 max-w-xl">
+                  Configure your business profile, financial details, and customized branding for all generated documents and invoices.
+                </p>
+              </div>
             </div>
           </div>
+        </div>
 
-          {loading ? (
-            <div className="flex justify-center p-12"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div></div>
-          ) : (
-            <form onSubmit={handleSubmit} className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-              <div className="p-6 md:p-8 space-y-6">
-                <h3 className="text-lg font-semibold text-gray-900 border-b pb-2">Business Information</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Company Name</label>
-                    <Input name="companyName" value={settings.companyName || ''} onChange={handleChange} required />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">GSTIN</label>
-                    <Input name="gstin" value={settings.gstin || ''} onChange={handleChange} />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
-                    <Input type="email" name="email" value={settings.email || ''} onChange={handleChange} />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Phone</label>
-                    <Input name="phone" value={settings.phone || ''} onChange={handleChange} />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Website</label>
-                    <Input name="website" value={settings.website || ''} onChange={handleChange} />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Account No.</label>
-                    <Input name="accountNo" value={settings.accountNo || ''} onChange={handleChange} placeholder="e.g. 1234567890" />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">UPI ID</label>
-                    <Input name="upiId" value={settings.upiId || ''} onChange={handleChange} placeholder="e.g. name@bank" />
-                  </div>
-                  <div className="md:col-span-2">
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Address</label>
-                    <textarea 
-                      name="address" 
-                      value={settings.address || ''} 
-                      onChange={handleChange} 
-                      rows={3}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent text-sm transition-all shadow-sm bg-white"
-                    />
-                  </div>
-                </div>
+        {/* MAIN FORM */}
+        <div className="max-w-5xl mx-auto w-full px-4 sm:px-6 lg:px-8 mt-8 animate-fade-in-up">
+          <form onSubmit={handleSubmit} className="space-y-8">
+            
+            {/* General Info Section */}
+            <div className="bg-transparent rounded-2xl shadow-sm border border-gray-200/60 overflow-hidden group hover:shadow-md transition-all duration-300">
+               <div className="bg-gradient-to-r from-gray-50 to-white px-6 py-4 border-b border-gray-100 flex items-center gap-3">
+                 <div className="p-2 bg-indigo-50 text-indigo-600 rounded-lg"><Icons name="Building2" size={18} /></div>
+                 <div>
+                    <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wider">Business Identity</h3>
+                    <p className="text-[11px] font-medium text-gray-500">Core details about your organization</p>
+                 </div>
+               </div>
+               <div className="p-6 md:p-8 grid grid-cols-1 md:grid-cols-2 gap-6">
+                 <div>
+                   <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-2">Company Name</label>
+                   <Input name="companyName" value={settings.companyName || ''} onChange={handleChange} required className="h-11 shadow-sm" />
+                 </div>
+                 <div>
+                   <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-2">GSTIN Number</label>
+                   <Input name="gstin" value={settings.gstin || ''} onChange={handleChange} className="h-11 shadow-sm" />
+                 </div>
+                 <div>
+                   <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-2">Email Address</label>
+                   <Input type="email" name="email" value={settings.email || ''} onChange={handleChange} className="h-11 shadow-sm" />
+                 </div>
+                 <div>
+                   <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-2">Phone Number</label>
+                   <Input name="phone" value={settings.phone || ''} onChange={handleChange} className="h-11 shadow-sm" />
+                 </div>
+                 <div>
+                   <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-2">Website</label>
+                   <Input name="website" value={settings.website || ''} onChange={handleChange} className="h-11 shadow-sm" />
+                 </div>
+                 <div>
+                   <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-2">Logo URL (Optional)</label>
+                   <Input name="logoUrl" value={settings.logoUrl || ''} onChange={handleChange} placeholder="https://..." className="h-11 shadow-sm" />
+                 </div>
+                 <div className="md:col-span-2">
+                   <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-2">Registered Address</label>
+                   <textarea 
+                     name="address" 
+                     value={settings.address || ''} 
+                     onChange={handleChange} 
+                     rows={3}
+                     className="w-full px-4 py-3 bg-white border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 text-sm transition-all shadow-sm resize-none"
+                   />
+                 </div>
+               </div>
+            </div>
 
-                <h3 className="text-lg font-semibold text-gray-900 border-b pb-2 mt-8">Authorized Signature</h3>
-                <p className="text-sm text-gray-500 mb-4">This signature will be displayed on your generated invoices.</p>
-                
-                <div className="max-w-md">
-                  {!showSignaturePad && settings.signatureUrl ? (
-                    <div className="border border-gray-200 rounded-lg p-4 bg-gray-50">
-                      <img src={settings.signatureUrl} alt="Signature" className="h-24 object-contain mb-4" />
-                      <Button type="button" variant="outline" size="sm" onClick={handleClearSignature}>
-                        Redraw Signature
-                      </Button>
-                    </div>
-                  ) : (
-                    <div className="border border-gray-300 rounded-lg overflow-hidden">
-                      <SignatureCanvas 
-                        ref={sigCanvas}
-                        penColor="black"
-                        canvasProps={{width: 400, height: 150, className: 'sigCanvas bg-white w-full'}} 
-                      />
-                      <div className="bg-gray-50 p-3 flex justify-end gap-2 border-t">
-                        <Button type="button" variant="outline" size="sm" onClick={handleClearSignature}>Clear</Button>
-                        <Button type="button" size="sm" onClick={handleSaveSignature}>Save Signature</Button>
+            {/* Financial Info Section */}
+            <div className="bg-transparent rounded-2xl shadow-sm border border-gray-200/60 overflow-hidden group hover:shadow-md transition-all duration-300">
+               <div className="bg-gradient-to-r from-gray-50 to-white px-6 py-4 border-b border-gray-100 flex items-center gap-3">
+                 <div className="p-2 bg-emerald-50 text-emerald-600 rounded-lg"><Icons name="CreditCard" size={18} /></div>
+                 <div>
+                    <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wider">Payment Details</h3>
+                    <p className="text-[11px] font-medium text-gray-500">Bank and UPI information for collecting payments</p>
+                 </div>
+               </div>
+               <div className="p-6 md:p-8 grid grid-cols-1 md:grid-cols-2 gap-6">
+                 <div>
+                   <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-2">Bank Account Number</label>
+                   <Input name="accountNo" value={settings.accountNo || ''} onChange={handleChange} placeholder="e.g. 1234567890" className="h-11 shadow-sm" />
+                 </div>
+                 <div>
+                   <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-2">Primary UPI ID</label>
+                   <Input name="upiId" value={settings.upiId || ''} onChange={handleChange} placeholder="e.g. business@bank" className="h-11 shadow-sm" />
+                 </div>
+               </div>
+            </div>
+
+            {/* Signature Section */}
+            <div className="bg-transparent rounded-2xl shadow-sm border border-gray-200/60 overflow-hidden group hover:shadow-md transition-all duration-300">
+               <div className="bg-gradient-to-r from-gray-50 to-white px-6 py-4 border-b border-gray-100 flex items-center gap-3">
+                 <div className="p-2 bg-blue-50 text-blue-600 rounded-lg"><Icons name="PenTool" size={18} /></div>
+                 <div>
+                    <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wider">Authorised Signature</h3>
+                    <p className="text-[11px] font-medium text-gray-500">Draw your signature for use on generated invoices</p>
+                 </div>
+               </div>
+               <div className="p-6 md:p-8">
+                  <div className="max-w-xl mx-auto">
+                    {!showSignaturePad && settings.signatureUrl ? (
+                      <div className="border-2 border-dashed border-gray-200 rounded-2xl p-6 bg-gray-50/50 text-center flex flex-col items-center justify-center transition-all hover:border-blue-200 hover:bg-blue-50/30">
+                        <img src={settings.signatureUrl} alt="Signature" className="h-28 object-contain mb-6 mix-blend-multiply" />
+                        <Button type="button" variant="outline" size="sm" onClick={handleClearSignature} className="bg-white">
+                          <Icons name="RefreshCcw" size={14} className="mr-2" /> Redraw Signature
+                        </Button>
                       </div>
-                    </div>
-                  )}
-                </div>
-              </div>
-              <div className="bg-gray-50 p-4 md:p-6 border-t border-gray-100 flex justify-end">
-                <Button type="submit" isLoading={saving}>Save Changes</Button>
-              </div>
-            </form>
-          )}
+                    ) : (
+                      <div className="border-2 border-dashed border-indigo-200 rounded-2xl overflow-hidden shadow-sm bg-white focus-within:border-indigo-500 focus-within:ring-4 focus-within:ring-indigo-500/10 transition-all">
+                        <SignatureCanvas 
+                          ref={sigCanvas}
+                          penColor="#0f172a"
+                          canvasProps={{className: 'sigCanvas w-full h-48 cursor-crosshair'}} 
+                        />
+                        <div className="bg-gray-50 p-4 flex justify-between items-center border-t border-indigo-100">
+                          <p className="text-xs text-gray-500 font-medium">Draw your signature smoothly above.</p>
+                          <div className="flex items-center gap-3">
+                            <Button type="button" variant="ghost" size="sm" onClick={handleClearSignature} className="text-gray-500 hover:text-rose-600">
+                              Clear
+                            </Button>
+                            <Button type="button" size="sm" onClick={handleSaveSignature} className="bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg px-5 shadow-md shadow-indigo-500/20">
+                              Save Signature
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+               </div>
+            </div>
+
+            {/* Submit Button */}
+            <div className="flex justify-end pt-4 pb-8">
+               <Button type="submit" isLoading={saving}>
+                 Save Changes
+               </Button>
+            </div>
+            
+          </form>
         </div>
       </div>
     </>

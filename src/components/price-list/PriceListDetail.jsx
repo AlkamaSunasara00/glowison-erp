@@ -1,9 +1,10 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
+import { useRouter } from "next/router";
+import api from "@/lib/api";
 import Button from "@/common/Button";
 import Icons from "@/common/Icons";
-import { useRouter } from "next/router";
-import { useState } from "react";
 import EditPriceItem from "./priceListModal/EditPriceItem";
+import Loader from "@/common/Loader";
 
 const categoryOptions = [
   { value: "CARD_DESIGN", label: "Card Design" },
@@ -36,181 +37,248 @@ const formatEnum = (value, options) => {
   return value.split('_').map(word => word.charAt(0) + word.slice(1).toLowerCase()).join(' ');
 };
 
-const PriceListDetail = ({ open, onClose, item, isPage = false }) => {
+const PriceListDetail = ({ open, onClose, itemId, onUpdated, isPage = false }) => {
   const router = useRouter();
+  const [item, setItem] = useState(null);
+  const [loading, setLoading] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
-  const data = item || {};
 
-  const handleBack = () => {
-    if (isPage) {
-      router.push("/price-list");
-    } else {
-      onClose?.();
+  const fetchItem = async () => {
+    try {
+      setLoading(true);
+      const res = await api.get(`/price-list/${itemId}`);
+      setItem(res.data.data);
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setLoading(false);
     }
   };
 
-  const detailInfo = {
-    "Category": data.category === "OTHER" ? data.otherLabel : formatEnum(data.category, categoryOptions),
-    "Size": data.size === "CUSTOM" ? data.sizeOther : formatEnum(data.size, sizeOptions),
-    "Client Price": data.clientPrice || data.price ? `Rs. ${data.clientPrice || data.price}` : "—",
-    "B2B Price": data.b2bPrice ? `Rs. ${data.b2bPrice}` : "—",
-    "Unit": data.priceUnit === "CUSTOM" ? data.unitOther : formatEnum(data.priceUnit, unitOptions),
-    "Notes": data.note || "—",
+  useEffect(() => {
+    if (open && itemId) {
+      fetchItem();
+    }
+  }, [open, itemId]);
+
+  useEffect(() => {
+    if (!isPage) {
+      if (open) {
+        document.body.style.overflow = "hidden";
+      } else {
+        document.body.style.overflow = "unset";
+      }
+      return () => {
+        document.body.style.overflow = "unset";
+      };
+    }
+  }, [open, isPage]);
+
+  if (!open && !isPage) return null;
+
+  const handleClose = () => {
+    if (isPage) {
+      router.push("/price-list");
+    } else {
+      if (onClose) onClose();
+    }
+  };
+
+  const handleUpdated = () => {
+    fetchItem();
+    if (onUpdated) onUpdated();
   };
 
   const detailPanelContent = (
     <div
-      className={isPage ? "flex flex-col gap-4 w-full animate-fade-in" : `relative flex h-full w-full max-w-full flex-col bg-white shadow-2xl md:w-[90%] md:h-screen ${
+      className={isPage ? "flex flex-col w-full min-h-screen bg-transparent animate-fade-in pb-10" : `relative flex h-full w-full max-w-full flex-col bg-gray-50 shadow-2xl md:w-[95%] md:max-w-6xl md:h-[95vh] md:rounded-sm md:my-auto mx-auto overflow-hidden ${
         open ? "animate-slide-in-right" : "animate-slide-out-right"
       }`}
       onClick={(e) => e.stopPropagation()}
     >
-        {/* ── HEADER ─────────────────────────────────────────── */}
-        <div className={isPage ? "flex items-center justify-between py-2" : "flex items-center justify-between px-7 py-4 border-b border-gray-100 bg-white"}>
-        <div className="flex items-center gap-4">
-          <button
-            type="button"
-            onClick={handleBack}
-            className="text-gray-500 hover:text-gray-700 transition-colors shrink-0"
-            title="Go back"
-          >
-            <Icons name="ArrowLeft" size={20} />
-          </button>
-          <div>
-            <h2 className="page-header">
-              {data.name || "Unknown Item"}
-            </h2>
-            <p className="text-xs text-gray-400 mt-0.5">{data.id}</p>
-          </div>
-          <span className="ml-1 text-xs font-semibold px-2.5 py-1 rounded bg-gray-100 text-gray-800">
-            {data.category === "OTHER" ? data.otherLabel : formatEnum(data.category, categoryOptions)}
-          </span>
+      {loading || !item ? (
+        <div className="flex flex-1 w-full h-full min-h-[400px] items-center justify-center bg-transparent">
+          <Loader text="Loading price list details..." />
         </div>
-
-        <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="md"
-              leftIcon={(props) => <Icons name="Pencil" {...props} />}
-              className="rounded-lg px-3! py-1.5! text-xs font-medium"
-              onClick={() => setIsEditOpen(true)}
-            >
-              Edit
-            </Button>
-            {!isPage && (
-              <button onClick={onClose} className="p-2 text-gray-400 hover:text-gray-600 transition-colors hidden md:block rounded-full hover:bg-gray-100 ml-2">
-                 <Icons name="X" size={20} />
+      ) : (
+        <>
+          {/* ── HEADER (Sleek Gradient & Info) ─────────────────────────────── */}
+          <div className="shrink-0 bg-white border-b border-gray-200">
+            <div className="flex items-center justify-between px-6 py-4">
+              <button
+                onClick={handleClose}
+                className="flex items-center gap-2 text-sm font-medium text-gray-500 transition-colors hover:text-gray-900"
+              >
+                <Icons name="ArrowLeft" size={18} />
+                <span>{isPage ? "Back to Price List" : "Close"}</span>
               </button>
-            )}
-        </div>
-        </div>
-
-        {/* ── BODY ───────────────────────────────────────────── */}
-        <div className={isPage ? "" : "flex-1 overflow-hidden"}>
-          <div className={isPage ? "grid grid-cols-1 lg:grid-cols-[1fr_340px] gap-4" : "grid h-full grid-cols-1 lg:grid-cols-[1fr_340px] divide-y lg:divide-y-0 lg:divide-x divide-gray-100"}>
-
-            {/* ── LEFT ── */}
-            <div className={isPage ? "flex flex-col gap-4" : "h-full overflow-y-auto px-7 py-6 space-y-7"}>
-
-              {/* Item Information */}
-              <section className={isPage ? "bg-white border border-slate-200/60 rounded-xl p-6 shadow-sm" : ""}>
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-sm font-bold text-gray-800 tracking-wide uppercase">
-                    Item Information
-                  </h3>
-                </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-3">
-                  {Object.entries(detailInfo).map(([key, value]) => (
-                    <div key={key} className="flex flex-col gap-0.5">
-                      <span className="text-[11px] font-semibold uppercase tracking-wider text-gray-400">
-                        {key}
-                      </span>
-                      <span className="text-sm text-gray-800 font-medium">{value}</span>
-                    </div>
-                  ))}
-                </div>
-              </section>
-
-              {/* Reference Image */}
-              <section className={isPage ? "bg-white border border-slate-200/60 rounded-xl p-6 shadow-sm" : ""}>
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-sm font-bold text-gray-800 tracking-wide uppercase">
-                    Reference Image
-                  </h3>
-                </div>
-                {data.imageUrl ? (
-                   <div className="rounded-lg overflow-hidden border border-gray-200 inline-block shadow-sm">
-                      <a href={data.imageUrl} target="_blank" rel="noopener noreferrer">
-                        <img src={data.imageUrl} alt={data.name} className="w-full max-w-md h-auto object-cover hover:opacity-90 transition-opacity cursor-pointer" />
-                      </a>
-                   </div>
-                ) : (
-                   <div className="rounded-lg border border-dashed border-gray-300 bg-gray-50 flex flex-col items-center justify-center p-8 text-center w-full max-w-md">
-                     <Icons name="Image" size={32} className="text-gray-400 mb-2" />
-                     <p className="text-sm font-medium text-gray-600">No image available</p>
-                     <p className="text-xs text-gray-400 mt-1">Upload a reference image in edit mode</p>
-                   </div>
-                )}
-              </section>
-
             </div>
 
-            {/* ── RIGHT ── */}
-            <div className={isPage ? "flex flex-col gap-4" : "h-full overflow-y-auto px-6 py-6 space-y-6 bg-gray-50/40"}>
-
-              {/* Pricing Summary */}
-              <section className={isPage ? "bg-white border border-slate-200/60 rounded-xl p-6 shadow-sm" : ""}>
-                <h3 className="text-sm font-bold text-gray-800 tracking-wide uppercase mb-4">
-                  Pricing Summary
-                </h3>
-                <div className="bg-primary/5 border border-primary/10 rounded-xl p-6 flex flex-col gap-4 shadow-sm">
-                   <div className="flex flex-col items-center justify-center text-center">
-                     <span className="text-sm font-semibold text-primary/80 mb-1">Client Price ({data.priceUnit === "CUSTOM" ? data.unitOther : formatEnum(data.priceUnit, unitOptions)})</span>
-                     <span className="text-3xl font-bold text-primary">Rs. {data.clientPrice || data.price}</span>
-                   </div>
-                   {data.b2bPrice && (
-                     <div className="flex flex-col items-center justify-center text-center border-t border-primary/10 pt-4">
-                       <span className="text-sm font-semibold text-primary/80 mb-1">B2B Price ({data.priceUnit === "CUSTOM" ? data.unitOther : formatEnum(data.priceUnit, unitOptions)})</span>
-                       <span className="text-3xl font-bold text-primary">Rs. {data.b2bPrice}</span>
-                     </div>
-                   )}
+            <div className="flex flex-col gap-6 px-6 pb-6 md:flex-row md:items-start md:justify-between">
+              {/* Left Side: Avatar & Titles */}
+              <div className="flex items-center gap-5">
+                <div className="flex h-20 w-20 shrink-0 items-center justify-center rounded-sm bg-gradient-to-br from-indigo-50 to-white text-3xl font-black text-indigo-600 shadow-sm border border-indigo-100/50 relative overflow-hidden">
+                   {item.name.substring(0, 2).toUpperCase()}
+                   <div className="absolute inset-0 ring-1 ring-inset ring-black/10 rounded-sm"></div>
                 </div>
-              </section>
+                <div>
+                  <h1 className="text-2xl font-black text-gray-900 tracking-tight flex items-center gap-3">
+                    {item.name}
+                  </h1>
+                  <div className="mt-1 flex items-center gap-3">
+                    <span className="inline-flex items-center gap-1.5 rounded-sm bg-gray-100 px-2.5 py-1 text-xs font-semibold text-gray-700">
+                      <Icons name="Tag" size={12}/> {item.category === "OTHER" ? item.otherLabel : formatEnum(item.category, categoryOptions)}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Right Side: Actions */}
+              <div className="flex shrink-0 items-center gap-3">
+                <Button
+                  variant="solid"
+                  size="sm"
+                  leftIcon={(props) => <Icons name="Pencil" color="white" {...props} />}
+                  className="rounded-sm px-3 py-2 text-xs font-semibold shadow-sm shadow-primary/20 hover:shadow-md hover:shadow-primary/30 transition-all"
+                  onClick={() => setIsEditOpen(true)}
+                >
+                  Edit Item
+                </Button>
+              </div>
             </div>
           </div>
-        </div>
+
+          {/* ── BODY ───────────────────────────────────────────── */}
+          <div className={`flex-1 overflow-y-auto custom-scrollbar ${isPage ? '' : 'p-6'}`}>
+            <div className={`grid grid-cols-1 lg:grid-cols-12 gap-4 w-full h-full ${isPage ? 'mt-4' : ''}`}>
+
+              {/* ── LEFT COL ── */}
+              <div className="lg:col-span-8 flex flex-col gap-4">
+
+                {/* Pricing Overview */}
+                <section className="bg-white rounded-sm p-5 shadow-sm border border-gray-100/80">
+                  <h3 className="text-xs font-bold text-gray-900 tracking-wider uppercase flex items-center gap-2 mb-5">
+                    <Icons name="IndianRupee" size={16} className="text-primary"/> Pricing Details
+                  </h3>
+                  
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="bg-gray-50/80 rounded-md p-4 border border-gray-100 hover:shadow-md transition-shadow relative overflow-hidden group">
+                      <div className="absolute top-0 right-0 w-16 h-16 bg-gradient-to-br from-gray-500/5 to-transparent rounded-bl-full -z-10 group-hover:scale-110 transition-transform duration-500"></div>
+                      <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Client Price</p>
+                      <div className="flex items-end gap-2">
+                        <p className="text-2xl font-bold text-gray-900"><span className="text-sm font-semibold opacity-70 mr-1">₹</span>{Number(item.clientPrice || item.price).toLocaleString()}</p>
+                        <p className="text-xs font-medium text-gray-400 mb-1">/ {item.priceUnit === "CUSTOM" ? item.unitOther : formatEnum(item.priceUnit, unitOptions)}</p>
+                      </div>
+                    </div>
+                    
+                    <div className="bg-emerald-50/50 rounded-md p-4 border border-emerald-100 hover:shadow-md transition-shadow relative overflow-hidden group">
+                      <div className="absolute top-0 right-0 w-16 h-16 bg-gradient-to-br from-emerald-500/10 to-transparent rounded-bl-full -z-10 group-hover:scale-110 transition-transform duration-500"></div>
+                      <p className="text-xs font-semibold text-emerald-600 uppercase tracking-wider mb-2">B2B Price</p>
+                      <div className="flex items-end gap-2">
+                         {item.b2bPrice ? (
+                           <>
+                             <p className="text-2xl font-bold text-emerald-700"><span className="text-sm font-semibold opacity-70 mr-1">₹</span>{Number(item.b2bPrice).toLocaleString()}</p>
+                             <p className="text-xs font-medium text-emerald-600/70 mb-1">/ {item.priceUnit === "CUSTOM" ? item.unitOther : formatEnum(item.priceUnit, unitOptions)}</p>
+                           </>
+                         ) : (
+                           <p className="text-sm font-medium text-emerald-700">Not configured</p>
+                         )}
+                      </div>
+                    </div>
+                  </div>
+                </section>
+
+                {/* Specification Information */}
+                <section className="bg-white rounded-sm p-5 shadow-sm border border-gray-100/80 relative overflow-hidden group">
+                  <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-primary/5 to-transparent rounded-bl-full -z-10 group-hover:scale-110 transition-transform duration-500"></div>
+                  <div className="flex items-center justify-between mb-6">
+                    <h3 className="text-xs font-bold text-gray-900 tracking-wider uppercase flex items-center gap-2">
+                      <Icons name="Info" size={16} className="text-primary"/> Item Specifications
+                    </h3>
+                  </div>
+                  
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-6">
+                    <div className="flex flex-col gap-0.5">
+                      <span className="text-[11px] font-semibold uppercase tracking-wider text-gray-400">Dimensions / Size</span>
+                      <span className="text-sm text-gray-800 font-medium">
+                         {item.size === "CUSTOM" ? item.sizeOther : formatEnum(item.size, sizeOptions)}
+                      </span>
+                    </div>
+                    <div className="flex flex-col gap-0.5">
+                      <span className="text-[11px] font-semibold uppercase tracking-wider text-gray-400">Notes / Description</span>
+                      <span className="text-sm text-gray-800 font-medium whitespace-pre-wrap">{item.note || "No notes provided."}</span>
+                    </div>
+                  </div>
+                </section>
+              </div>
+
+              {/* ── RIGHT COL ── */}
+              <div className="lg:col-span-4 flex flex-col gap-4">
+                 
+                 {/* Visual Reference */}
+                 <section className="bg-white rounded-sm p-5 shadow-sm border border-gray-100/80 flex-1">
+                  <h3 className="text-xs font-bold text-gray-900 tracking-wider uppercase flex items-center gap-2 mb-5">
+                    <Icons name="Image" size={16} className="text-primary"/> Visual Reference
+                  </h3>
+                  
+                  {item.imageUrl ? (
+                    <div className="flex flex-col gap-4">
+                      <div className="aspect-[4/3] w-full bg-gray-50 rounded-sm border border-gray-200 flex items-center justify-center overflow-hidden p-2 relative group">
+                         <img src={item.imageUrl} alt="Reference" className="w-full h-full object-contain transition-transform duration-500 group-hover:scale-105" />
+                      </div>
+                      <Button 
+                        variant="outline" 
+                        className="w-full" 
+                        onClick={() => window.open(item.imageUrl, '_blank')}
+                        leftIcon={(props) => <Icons name="ExternalLink" {...props} />}
+                      >
+                        Open Full Image
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="py-12 flex flex-col items-center justify-center text-center bg-gray-50 rounded-sm border border-gray-100 border-dashed">
+                      <Icons name="ImageOff" size={32} className="text-gray-300 mb-2" />
+                      <p className="text-sm font-medium text-gray-500">No image attached.</p>
+                    </div>
+                  )}
+                </section>
+
+              </div>
+            </div>
+          </div>
+        </>
+      )}
+      
+      {isEditOpen && item && (
+        <EditPriceItem 
+          open={isEditOpen} 
+          onClose={() => setIsEditOpen(false)} 
+          initialData={item}
+          onSuccess={handleUpdated}
+        />
+      )}
     </div>
   );
 
   if (isPage) {
-    return (
-      <>
-        {detailPanelContent}
-        {isEditOpen && <EditPriceItem open={isEditOpen} onClose={() => setIsEditOpen(false)} initialData={data} />}
-      </>
-    );
+    return detailPanelContent;
   }
 
   return (
-    <>
+    <div
+      className={`fixed inset-x-0 bottom-0 top-16 z-[100] flex items-end justify-center sm:top-16 md:inset-0 md:items-center ${
+        open ? "pointer-events-auto" : "pointer-events-none"
+      }`}
+    >
       <div
-        className={`fixed inset-x-0 bottom-0 top-16 z-[1000] flex justify-end md:inset-0 ${
-          open ? "pointer-events-auto" : "pointer-events-none"
+        className={`absolute inset-0 bg-gray-900/40 backdrop-blur-sm transition-opacity ${
+          open ? "opacity-100" : "opacity-0"
         }`}
-        aria-hidden={!open}
-      >
-        <div
-          className={`absolute inset-0 bg-black/40 backdrop-blur-[2px] ${
-            open ? "animate-overlay-in" : "animate-overlay-out"
-          }`}
-          onClick={handleBack}
-        />
-        {detailPanelContent}
-      </div>
-      {isEditOpen && <EditPriceItem open={isEditOpen} onClose={() => setIsEditOpen(false)} initialData={data} />}
-    </>
+        onClick={onClose}
+      />
+      {detailPanelContent}
+    </div>
   );
 };
 
 export default PriceListDetail;
-

@@ -20,8 +20,8 @@ const Template2 = ({ data, detailInfo, settings, items }) => {
     <div className="print-area bg-white max-w-[800px] mx-auto text-gray-800">
       <div className="flex">
         <div className="bg-[#1f2937] text-white p-8 w-[60%] clip-path-header">
-           <img src="/image/logo1.png" alt="Logo" className="h-12 object-contain mb-2 bg-white p-1 rounded" />
-           <p className="text-xs text-gray-300 uppercase tracking-widest">{settings?.website || 'COMPANY TAGLINE HERE'}</p>
+           <img src={settings?.logoUrl || "/image/logo1.png"} alt="Logo" className="h-12 object-contain mb-2 bg-white p-1 rounded" />
+           <p className="text-xs text-gray-300 uppercase tracking-widest">{settings?.website || 'GLOWISON ERP'}</p>
         </div>
         <div className="w-[40%] flex flex-col items-end justify-center pr-12">
            <h1 className="text-5xl font-bold text-[#84cc16] mb-2 tracking-wide">INVOICE</h1>
@@ -46,7 +46,7 @@ const Template2 = ({ data, detailInfo, settings, items }) => {
         </div>
         <div className="w-1/2">
            <p className="text-[#84cc16] font-semibold text-sm mb-2">Invoice From:</p>
-           <h2 className="text-xl font-bold text-gray-900 mb-1">{settings?.companyName}</h2>
+           <h2 className="text-xl font-bold text-gray-900 mb-1">{settings?.companyName || 'Glowison'}</h2>
            <div className="text-xs text-gray-600 space-y-1">
              {settings?.address && <p>{formatAddress(settings.address)}</p>}
              {settings?.phone && <p>Phone: {settings.phone}</p>}
@@ -89,7 +89,7 @@ const Template2 = ({ data, detailInfo, settings, items }) => {
             <div className="flex justify-between items-start mb-6 gap-4">
               <div className="grid grid-cols-[100px_1fr] gap-y-1 font-medium flex-1 min-w-0">
                 {settings?.accountNo && <><span className="text-gray-500">Account No:</span><span className="text-gray-900 break-all">{settings.accountNo}</span></>}
-                <span>Account Name:</span><span className="text-gray-900 break-words">{settings?.companyName}</span>
+                <span>Account Name:</span><span className="text-gray-900 break-words">{settings?.companyName || 'Glowison'}</span>
                 {settings?.upiId && <><span className="text-gray-500">UPI ID:</span><span className="text-gray-900 break-all">{settings.upiId}</span></>}
                 {settings?.gstin && <><span className="text-gray-500">GSTIN:</span><span className="text-gray-900 break-all">{settings.gstin}</span></>}
               </div>
@@ -103,7 +103,7 @@ const Template2 = ({ data, detailInfo, settings, items }) => {
 
             <p className="text-[#84cc16] font-semibold text-sm mb-2">Terms & Conditions:</p>
             <p className="text-gray-500 leading-relaxed">
-              {data.notes || 'For any enquiry, reach out via email at javexplastic@gmail.com, call on +91 74879 64767'}
+              {data.notes || `For any enquiry, reach out via email at ${settings?.email || 'support@glowison.com'}, call on ${settings?.phone || '+91 00000 00000'}`}
             </p>
          </div>
          <div className="w-5/12 pl-4">
