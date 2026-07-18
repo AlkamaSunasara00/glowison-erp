@@ -20,7 +20,17 @@ const handler = async (req, res) => {
       return res.status(200).json({ success: true, message: 'Catalog item deleted successfully' });
     }
 
-    res.setHeader('Allow', ['PUT', 'DELETE']);
+    if (req.method === 'GET') {
+      const item = await prisma.catalogItem.findUnique({
+        where: { id },
+      });
+      if (!item) {
+        return res.status(404).json({ success: false, message: 'Catalog item not found' });
+      }
+      return res.status(200).json({ success: true, data: item });
+    }
+
+    res.setHeader('Allow', ['GET', 'PUT', 'DELETE']);
     return res.status(405).end(`Method ${req.method} Not Allowed`);
   } catch (error) {
     console.error(error);

@@ -10,6 +10,10 @@ import StatusBadge from "@/common/StatusBadge";
 import AddExpense from "./expenseModal/AddExpense";
 import EditExpense from "./expenseModal/EditExpense";
 import DeleteConfirmModal from "@/common/DeleteConfirmModal";
+import Loader from "@/common/Loader";
+
+let globalExpensesCache = null;
+let globalExpenseStatsCache = null;
 
 const categoryOptions = [
   { value: "", label: "All Categories" },
@@ -39,18 +43,18 @@ export const Expense = () => {
   const [editItem, setEditItem] = useState(null);
   const [deleteItem, setDeleteItem] = useState(null);
   
-  const [expenses, setExpenses] = useState([]);
-  const [stats, setStats] = useState({
+  const [expenses, setExpenses] = useState(globalExpensesCache || []);
+  const [stats, setStats] = useState(globalExpenseStatsCache || {
     totalAmount: 0,
     dueAmount: 0,
     paidAmount: 0,
     categoryBreakdown: {}
   });
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(!globalExpensesCache);
 
-  const fetchExpenses = async () => {
+  const fetchExpenses = async (silent = false) => {
     try {
-      setLoading(true);
+      if (!silent && !globalExpensesCache) setLoading(true);
       const res = await api.get('/expenses', {
         params: {
           limit: 200,
@@ -60,8 +64,10 @@ export const Expense = () => {
           includeStats: true
         }
       });
+      globalExpensesCache = res.data.data;
       setExpenses(res.data.data);
       if (res.data.stats) {
+        globalExpenseStatsCache = res.data.stats;
         setStats(res.data.stats);
       }
     } catch (error) {
@@ -107,27 +113,47 @@ export const Expense = () => {
         </div>
 
         {/* KPIs */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-          <div className="rounded-xl border border-gray-100 bg-white p-4 shadow-sm">
-            <p className="text-sm font-medium text-gray-500">Total Expenses</p>
-            <p className="mt-1 text-2xl font-bold text-gray-900">Rs. {stats.totalAmount.toLocaleString()}</p>
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="bg-white rounded-sm p-5 shadow-sm border border-gray-100 flex items-center gap-4 hover:-translate-y-1 hover:shadow-md transition-all duration-300">
+            <div className="w-12 h-12 rounded-sm bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0 border border-indigo-100">
+              <Icons name="TrendingDown" size={20} />
+            </div>
+            <div className="min-w-0">
+              <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1 truncate">Total Expenses</p>
+              <h4 className="text-xl font-black text-gray-900 tracking-tight truncate">₹{stats.totalAmount.toLocaleString()}</h4>
+            </div>
           </div>
-          <div className="rounded-xl border border-gray-100 bg-white p-4 shadow-sm">
-            <p className="text-sm font-medium text-gray-500">Paid Amount</p>
-            <p className="mt-1 text-2xl font-bold text-emerald-600">Rs. {stats.paidAmount.toLocaleString()}</p>
+          <div className="bg-white rounded-sm p-5 shadow-sm border border-gray-100 flex items-center gap-4 hover:-translate-y-1 hover:shadow-md transition-all duration-300">
+            <div className="w-12 h-12 rounded-sm bg-emerald-50 text-emerald-600 border-emerald-100 flex items-center justify-center shrink-0 border">
+              <Icons name="CheckCircle" size={20} />
+            </div>
+            <div className="min-w-0">
+              <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1 truncate">Paid Amount</p>
+              <h4 className="text-xl font-black text-emerald-600 tracking-tight truncate">₹{stats.paidAmount.toLocaleString()}</h4>
+            </div>
           </div>
-          <div className="rounded-xl border border-gray-100 bg-white p-4 shadow-sm">
-            <p className="text-sm font-medium text-gray-500">Due Amount</p>
-            <p className="mt-1 text-2xl font-bold text-rose-600">Rs. {stats.dueAmount.toLocaleString()}</p>
+          <div className="bg-white rounded-sm p-5 shadow-sm border border-gray-100 flex items-center gap-4 hover:-translate-y-1 hover:shadow-md transition-all duration-300">
+            <div className="w-12 h-12 rounded-sm bg-rose-50 text-rose-600 border border-rose-100 flex items-center justify-center shrink-0">
+              <Icons name="AlertCircle" size={20} />
+            </div>
+            <div className="min-w-0">
+              <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1 truncate">Due Amount</p>
+              <h4 className="text-xl font-black text-rose-600 tracking-tight truncate">₹{stats.dueAmount.toLocaleString()}</h4>
+            </div>
           </div>
-          <div className="rounded-xl border border-gray-100 bg-white p-4 shadow-sm">
-            <p className="text-sm font-medium text-gray-500">Highest Category</p>
-            <p className="mt-1 text-xl font-bold text-indigo-600 truncate">{topCategory[0]} <span className="text-sm font-medium text-gray-500 block truncate">Rs. {topCategory[1].toLocaleString()}</span></p>
+          <div className="bg-white rounded-sm p-5 shadow-sm border border-gray-100 flex items-center gap-4 hover:-translate-y-1 hover:shadow-md transition-all duration-300">
+            <div className="w-12 h-12 rounded-sm bg-sky-50 text-sky-600 border border-sky-100 flex items-center justify-center shrink-0">
+              <Icons name="PieChart" size={20} />
+            </div>
+            <div className="min-w-0">
+              <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1 truncate">Highest: {topCategory[0]}</p>
+              <h4 className="text-xl font-black text-sky-600 tracking-tight truncate">₹{topCategory[1].toLocaleString()}</h4>
+            </div>
           </div>
         </div>
 
         {/* Filters */}
-        <div className="bg-white p-3 rounded-lg border border-gray-100 shadow-sm flex flex-col md:flex-row gap-3">
+        <div className="bg-white p-3 rounded-sm border border-gray-100 shadow-sm flex flex-col md:flex-row gap-3">
           <div className="w-full md:w-64">
             <Input
               id="search"
@@ -157,8 +183,8 @@ export const Expense = () => {
 
         {/* Content */}
         {loading ? (
-           <div className="flex-1 flex items-center justify-center p-12">
-             <div className="h-8 w-8 animate-spin rounded-full border-b-2 border-primary"></div>
+           <div className="flex-1 bg-white rounded-sm border border-gray-100 shadow-sm overflow-hidden min-h-[400px] flex items-center justify-center">
+             <Loader text="Loading Expenses..." />
            </div>
         ) : expenses.length === 0 ? (
           <EmptyState
@@ -174,18 +200,17 @@ export const Expense = () => {
             onAdd={() => setIsAddOpen(true)}
           />
         ) : (
-          <div className="bg-white rounded-lg border border-gray-100 shadow-sm overflow-hidden flex-1 custom-scrollbar">
+          <div className="bg-white rounded-sm border border-gray-100 shadow-sm overflow-hidden flex-1 custom-scrollbar">
             <div className="overflow-x-auto">
               <table className="w-full text-left border-collapse min-w-[900px]">
-                <thead className="bg-gray-50 border-b border-gray-100 text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                <thead className="bg-primary border-b border-primary/20 text-xs font-semibold text-white">
                   <tr>
-                    <th className="px-4 py-3">Expense No</th>
-                    <th className="px-4 py-3">Date</th>
+                    <th className="px-4 py-3 rounded-tl-lg">Expense No & Date</th>
                     <th className="px-4 py-3">Paid To</th>
                     <th className="px-4 py-3">Category</th>
-                    <th className="px-4 py-3 text-right">Amount</th>
+                    <th className="px-4 py-3">Amount</th>
                     <th className="px-4 py-3">Status</th>
-                    <th className="px-4 py-3 text-center">Actions</th>
+                    <th className="px-4 py-3 text-center rounded-tr-lg">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="text-sm">
@@ -196,20 +221,29 @@ export const Expense = () => {
                         className="border-b border-gray-50 hover:bg-gray-50/50 transition-colors cursor-pointer"
                         onClick={() => router.push(`/expense/${expense.id}`)}
                       >
-                        <td className="px-4 py-3 font-medium text-primary">{expense.expenseNumber}</td>
-                        <td className="px-4 py-3 text-gray-500 font-medium">
-                          {new Date(expense.spentOn).toLocaleDateString('en-CA')}
+                        <td className="px-4 py-3">
+                          <div className="font-semibold text-gray-900">{expense.expenseNumber}</div>
+                          <div className="text-xs text-gray-500 flex items-center gap-1 mt-0.5"><Icons name="Calendar" size={10} /> {new Date(expense.spentOn).toLocaleDateString('en-CA')}</div>
                         </td>
-                        <td className="px-4 py-3 font-semibold text-gray-900">
-                          {expense.paidToType === 'SUPPLIER' && expense.supplier 
-                            ? expense.supplier.name 
-                            : (expense.paidToName || "N/A")}
+                        <td className="px-4 py-3">
+                          <div className="flex items-center gap-2">
+                             <div className="w-8 h-8 rounded-full bg-gray-100 text-gray-600 font-bold flex items-center justify-center shrink-0 border border-gray-200 text-xs">
+                               {(expense.paidToType === 'SUPPLIER' && expense.supplier ? expense.supplier.name : (expense.paidToName || "N/A")).substring(0, 2).toUpperCase()}
+                             </div>
+                             <span className="font-medium text-gray-900">
+                               {expense.paidToType === 'SUPPLIER' && expense.supplier 
+                                 ? expense.supplier.name 
+                                 : (expense.paidToName || "N/A")}
+                             </span>
+                          </div>
                         </td>
                         <td className="px-4 py-3 text-gray-600">
-                          {expense.category === 'OTHER' ? expense.categoryOther : expense.category.replace('_', ' ')}
+                          <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium bg-gray-50 border border-gray-100 text-gray-700">
+                            {expense.category === 'OTHER' ? expense.categoryOther : expense.category.replace('_', ' ')}
+                          </span>
                         </td>
-                        <td className="px-4 py-3 text-right font-medium text-gray-900">
-                          Rs. {parseFloat(expense.amount).toLocaleString()}
+                        <td className="px-4 py-3 font-semibold text-gray-900">
+                          ₹{parseFloat(expense.amount).toLocaleString()}
                         </td>
                         <td className="px-4 py-3">
                            <StatusBadge status={expense.status} />
