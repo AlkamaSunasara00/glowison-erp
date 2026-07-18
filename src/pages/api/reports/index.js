@@ -165,6 +165,32 @@ const handler = async (req, res) => {
         expensesByCategory[exp.category] = (expensesByCategory[exp.category] || 0) + Number(exp.amount);
     });
 
+    // 6. Associates Data
+    const associatesCount = await prisma.associate.count({
+        where: dateFilter
+    });
+
+    const associateProjects = await prisma.associateProject.findMany({
+        where: {
+            date: dateFilter.createdAt
+        },
+        select: {
+            totalAmount: true,
+            paidAmount: true,
+            status: true
+        }
+    });
+
+    let totalAssociateProjectAmount = 0;
+    let totalAssociatePaidAmount = 0;
+    let completedProjectsCount = 0;
+    
+    associateProjects.forEach(p => {
+        totalAssociateProjectAmount += Number(p.totalAmount);
+        totalAssociatePaidAmount += Number(p.paidAmount);
+        if (p.status === 'COMPLETED') completedProjectsCount++;
+    });
+
     return res.status(200).json({
       success: true,
       data: {
@@ -192,6 +218,14 @@ const handler = async (req, res) => {
          expenses: {
              total: totalExpenses,
              byCategory: Object.keys(expensesByCategory).map(key => ({ name: key, value: expensesByCategory[key] })),
+         },
+         associates: {
+             totalCount: associatesCount,
+             projectsCount: associateProjects.length,
+             completedProjectsCount,
+             totalProjectAmount: totalAssociateProjectAmount,
+             totalPaidAmount: totalAssociatePaidAmount,
+             dueAmount: totalAssociateProjectAmount - totalAssociatePaidAmount
          }
       }
     });
