@@ -102,8 +102,9 @@ const EditPurchase = ({ open, onClose, initialData }) => {
             });
             setInvoiceUrl(initialData.invoiceUrl || "");
             
-            if (initialData.items && Array.isArray(initialData.items)) {
-              setItems(initialData.items.map(item => ({
+            const initialItems = Array.isArray(initialData.items) ? initialData.items : (initialData.itemsData || []);
+            if (initialItems && initialItems.length > 0) {
+              setItems(initialItems.map(item => ({
                 id: item.id || Date.now() + Math.random(),
                 inventoryItemId: item.inventoryItemId || 'MANUAL',
                 itemName: item.itemName || "",

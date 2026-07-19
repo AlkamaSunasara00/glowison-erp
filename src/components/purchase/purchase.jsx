@@ -27,6 +27,8 @@ const statusOptions = [
   { value: "CANCELLED", label: "Cancelled" },
 ];
 
+let globalPurchasesCache = null;
+
 export const Purchase = () => {
   const router = useRouter();
   const [search, setSearch] = useState("");
@@ -38,14 +40,14 @@ export const Purchase = () => {
   const [editItem, setEditItem] = useState(null);
   const [deleteItem, setDeleteItem] = useState(null);
   
-  const [purchases, setPurchases] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [purchases, setPurchases] = useState(globalPurchasesCache || []);
+  const [loading, setLoading] = useState(!globalPurchasesCache);
 
-  const fetchPurchases = async () => {
+  const fetchPurchases = async (silent = false) => {
     try {
-      setLoading(true);
+      if (!silent && !globalPurchasesCache) setLoading(true);
       const res = await api.get('/purchases?limit=200');
-      setPurchases(res.data.data.map(p => ({
+      const mapped = res.data.data.map(p => ({
         ...p,
         id: p.purchaseNumber,
         originalId: p.id,
@@ -57,7 +59,9 @@ export const Purchase = () => {
         total: p.grandTotal,
         paymentStatus: p.paymentStatus,
         status: p.status
-      })));
+      }));
+      globalPurchasesCache = mapped;
+      setPurchases(mapped);
     } catch (error) {
       toast.error('Failed to load purchases');
     } finally {
@@ -266,8 +270,8 @@ export const Purchase = () => {
         )}
       </div>
 
-      {isAddOpen && <AddPurchase open={isAddOpen} onClose={() => { setIsAddOpen(false); fetchPurchases(); }} />}
-      {editItem && <EditPurchase open={!!editItem} onClose={() => { setEditItem(null); fetchPurchases(); }} initialData={editItem} />}
+      {isAddOpen && <AddPurchase open={isAddOpen} onClose={() => { setIsAddOpen(false); fetchPurchases(true); }} />}
+      {editItem && <EditPurchase open={!!editItem} onClose={() => { setEditItem(null); fetchPurchases(true); }} initialData={editItem} />}
       {deleteItem && (
         <DeleteConfirmModal
           open={!!deleteItem}

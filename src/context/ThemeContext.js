@@ -11,6 +11,46 @@ export const themes = {
     two: "#1F3C88",
     three: "#F5A623"
   },
+  "Modern SaaS": {
+    primary: "#4F46E5",
+    secondary: "#EEF2FF",
+    secondaryLight: "#FFFFFF",
+    one: "#1E1B4B",
+    two: "#3730A3",
+    three: "#F59E0B"
+  },
+  "Midnight Teal": {
+    primary: "#0D9488",
+    secondary: "#F0FDFA",
+    secondaryLight: "#FFFFFF",
+    one: "#042F2E",
+    two: "#115E59",
+    three: "#F59E0B"
+  },
+  "Nordic Sky": {
+    primary: "#0284C7",
+    secondary: "#F0F9FF",
+    secondaryLight: "#FFFFFF",
+    one: "#082F49",
+    two: "#0369A1",
+    three: "#EA580C"
+  },
+  "Royal Violet": {
+    primary: "#9333EA",
+    secondary: "#FAF5FF",
+    secondaryLight: "#FFFFFF",
+    one: "#3B0764",
+    two: "#7E22CE",
+    three: "#10B981"
+  },
+  "Charcoal Gold": {
+    primary: "#D97706",
+    secondary: "#FFFBEB",
+    secondaryLight: "#FFFFFF",
+    one: "#18181B",
+    two: "#3F3F46",
+    three: "#EF4444"
+  },
   Aubergine: {
     primary: "#4A154B",
     secondary: "#F4EDE4",

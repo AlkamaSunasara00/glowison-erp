@@ -8,7 +8,7 @@ import {
     Boxes,
     Library,
     Truck,
-    ShoppingBasket,
+    ShoppingBag,
     Wallet,
     UserCog,
     Tags,
@@ -35,7 +35,7 @@ const menuItems = [
     { name: "Inventory", icon: Boxes, path: "/inventory" },
     { name: "Catalogue", icon: Library, path: "/catalog" },
     { name: "Suppliers", icon: Truck, path: "/suppliers" },
-    { name: "Purchase", icon: ShoppingBasket, path: "/purchase" },
+    { name: "Purchase", icon: ShoppingBag, path: "/purchase" },
     { name: "Expense", icon: Wallet, path: "/expense" },
     { name: "Associates", icon: UserCog, path: "/associates" },
     { name: "Price List", icon: Tags, path: "/price-list" },
@@ -235,18 +235,22 @@ const Sidebar = ({ setMobileOpen, isMobileOpen, isDesktopCollapsed, setDesktopCo
                             <div key={index} className="flex flex-col">
                                 <button
                                     onClick={() => toggleMenu(item.name)}
-                                    title={collapsed ? item.name : ""}
-                                    className={`group flex items-center w-full transition-all duration-200 rounded-xl
-                                        ${collapsed ? "justify-center px-0 py-3" : "justify-between px-3 py-2.5"}
+                                    className={`group flex items-center w-full transition-all duration-200 rounded-xl relative
+                                        ${collapsed ? "justify-center px-0 py-3" : "justify-between px-3 py-3"}
                                         ${isActive ? "bg-white/20 text-white shadow-sm" : isOpen ? "bg-white/10 text-white" : "text-white/70 hover:text-white hover:bg-white/10"}`}
                                 >
-                                    <div className={`flex items-center ${collapsed ? "" : "gap-3"}`}>
-                                        <div className={`flex-shrink-0 flex items-center justify-center w-8 h-8 rounded-lg transition-all duration-200 ${isActive ? "bg-white/25 shadow-inner" : "group-hover:bg-white/10"}`}>
-                                            <Icon size={17} />
+                                    {collapsed && (
+                                        <div className="absolute left-14 px-2.5 py-1.5 bg-gray-900 text-white text-xs font-medium rounded-md shadow-xl opacity-0 group-hover:opacity-100 pointer-events-none whitespace-nowrap z-[100] transition-opacity duration-200 border border-gray-700">
+                                            {item.name}
                                         </div>
-                                        {!collapsed && <span className={`text-[13px] tracking-wide whitespace-nowrap ${isActive ? "font-semibold" : "font-medium"}`}>{item.name}</span>}
+                                    )}
+                                    <div className={`flex items-center ${collapsed ? "" : "gap-3"}`}>
+                                        <div className={`flex-shrink-0 flex items-center justify-center w-9 h-9 rounded-lg transition-all duration-200 ${isActive ? "bg-white/25 shadow-inner" : "group-hover:bg-white/10"}`}>
+                                            <Icon size={19} />
+                                        </div>
+                                        {!collapsed && <span className={`text-sm tracking-wide whitespace-nowrap ${isActive ? "font-bold" : "font-semibold"}`}>{item.name}</span>}
                                     </div>
-                                    {!collapsed && <ChevronRight size={14} className={`transition-all duration-300 opacity-60 ${isOpen ? "rotate-90" : ""}`} />}
+                                    {!collapsed && <ChevronRight size={15} className={`transition-all duration-300 opacity-60 ${isOpen ? "rotate-90" : ""}`} />}
                                 </button>
                                 {!collapsed && (
                                     <div className={`overflow-hidden transition-all duration-300 ${isOpen ? "max-h-[400px] opacity-100" : "max-h-0 opacity-0"}`}>
@@ -256,7 +260,7 @@ const Sidebar = ({ setMobileOpen, isMobileOpen, isDesktopCollapsed, setDesktopCo
                                                 return (
                                                     <Link key={childIdx} href={child.path} className="relative group flex items-center">
                                                         <div className={`absolute -left-[17px] w-2 h-2 rounded-full border transition-all ${childActive ? "bg-white border-white" : "bg-primary border-white/40 group-hover:border-white/70"}`} />
-                                                        <span className={`text-[12px] py-1.5 px-1 rounded-lg w-full transition-all whitespace-nowrap ${childActive ? "text-white font-semibold" : "text-white/65 hover:text-white font-medium"}`}>{child.name}</span>
+                                                        <span className={`text-[13px] py-1.5 px-1 rounded-lg w-full transition-all whitespace-nowrap ${childActive ? "text-white font-bold" : "text-white/65 hover:text-white font-semibold"}`}>{child.name}</span>
                                                     </Link>
                                                 );
                                             })}
@@ -271,23 +275,27 @@ const Sidebar = ({ setMobileOpen, isMobileOpen, isDesktopCollapsed, setDesktopCo
                         <Link
                             key={index}
                             href={item.path}
-                            title={collapsed ? item.name : ""}
                             onClick={() => setOpenMenus([])}
-                            className={`group flex items-center transition-all duration-200 rounded-xl
-                                ${collapsed ? "justify-center px-0 py-3" : "gap-3 px-3 py-2.5"}
+                            className={`group flex items-center transition-all duration-200 rounded-xl relative
+                                ${collapsed ? "justify-center px-0 py-2" : "gap-3 px-3 py-2"}
                                 ${isActive
-                                    ? "bg-white/20 text-white font-semibold shadow-sm"
-                                    : "text-white/70 hover:text-white hover:bg-white/10 font-medium"
+                                    ? "bg-white/20 text-white font-bold shadow-sm"
+                                    : "text-white/70 hover:text-white hover:bg-white/10 font-semibold"
                                 }`}
                         >
+                            {collapsed && (
+                                <div className="absolute left-14 px-2.5 py-1.5 bg-gray-900 text-white text-xs font-medium rounded-md shadow-xl opacity-0 group-hover:opacity-100 pointer-events-none whitespace-nowrap z-[100] transition-opacity duration-200 border border-gray-700">
+                                    {item.name}
+                                </div>
+                            )}
                             {/* Active indicator bar */}
                             {isActive && !collapsed && (
                                 <div className="absolute left-2 w-0.5 h-6 rounded-full bg-white opacity-80" />
                             )}
-                            <div className={`flex-shrink-0 flex items-center justify-center w-8 h-8 rounded-lg transition-all duration-200 ${isActive ? "bg-white/25 shadow-inner" : "group-hover:bg-white/10"}`}>
-                                <Icon size={17} />
+                            <div className={`flex-shrink-0 flex items-center justify-center w-9 h-9 rounded-lg transition-all duration-200 ${isActive ? "bg-white/25 shadow-inner" : "group-hover:bg-white/10"}`}>
+                                <Icon size={19} />
                             </div>
-                            {!collapsed && <span className="text-[13px] tracking-wide whitespace-nowrap">{item.name}</span>}
+                            {!collapsed && <span className="text-sm tracking-wide whitespace-nowrap">{item.name}</span>}
                         </Link>
                     );
                 })}
