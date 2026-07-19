@@ -52,6 +52,7 @@ export const Associates = () => {
 
   const fetchAssociates = async (silent = false) => {
     try {
+      // Only show spinner on the very first load (no cache at all)
       if (!silent && !globalAssociatesCache) setLoading(true);
       const res = await api.get('/associates', {
         params: {
@@ -75,10 +76,21 @@ export const Associates = () => {
     }
   };
 
+  // On initial mount, use cache immediately — only fetch if filters change or cache is empty
   useEffect(() => {
+    // If there's cached data and no filters active, use cache and silently refresh in background
+    if (globalAssociatesCache && !search && !categoryFilter && !statusFilter) {
+      setAssociates(globalAssociatesCache);
+      if (globalAssociateStatsCache) setStats(globalAssociateStatsCache);
+      setLoading(false);
+      // Silently refresh in background without spinner
+      fetchAssociates(true);
+      return;
+    }
+    // No cache, or filters active — debounced fetch
     const delayDebounceFn = setTimeout(() => {
       fetchAssociates();
-    }, 300);
+    }, search ? 300 : 0);
     return () => clearTimeout(delayDebounceFn);
   }, [search, categoryFilter, statusFilter]);
 
@@ -241,13 +253,25 @@ export const Associates = () => {
                         <td className="px-4 py-3">
                            <StatusBadge status={associate.status} />
                         </td>
-                        <td className="px-4 py-3 text-center" onClick={(e) => e.stopPropagation()}>
-                          <Button variant="ghost" size="sm" onClick={() => setEditItem(associate)} className="px-2!">
-                            <Icons name="Pencil" size={16} className="text-gray-500 hover:text-primary" />
-                          </Button>
-                          <Button variant="ghost" size="sm" onClick={() => setDeleteItem(associate)} className="px-2!">
-                            <Icons name="Trash2" size={16} className="text-gray-400 hover:text-rose-500 transition-colors" />
-                          </Button>
+                        <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
+                          <div className="flex items-center justify-center gap-1.5">
+                            {associate.phone && (
+                               <>
+                                 <a href={`tel:${associate.phone}`} className="w-7 h-7 rounded-md bg-blue-50 text-blue-600 flex items-center justify-center hover:bg-blue-100 transition-colors" title="Call">
+                                   <Icons name="Phone" size={12} />
+                                 </a>
+                                 <a href={`https://wa.me/${associate.phone.replace(/\\D/g,'')}`} target="_blank" rel="noreferrer" className="w-7 h-7 rounded-md bg-emerald-50 text-emerald-600 flex items-center justify-center hover:bg-emerald-100 transition-colors" title="WhatsApp">
+                                   <Icons name="MessageCircle" size={12} />
+                                 </a>
+                               </>
+                            )}
+                            <Button variant="ghost" size="sm" onClick={() => setEditItem(associate)} className="px-1.5! py-1.5! h-7! w-7!">
+                              <Icons name="Pencil" size={14} className="text-gray-500 hover:text-primary" />
+                            </Button>
+                            <Button variant="ghost" size="sm" onClick={() => setDeleteItem(associate)} className="px-1.5! py-1.5! h-7! w-7!">
+                              <Icons name="Trash2" size={14} className="text-gray-400 hover:text-rose-500 transition-colors" />
+                            </Button>
+                          </div>
                         </td>
                       </tr>
                      );
@@ -259,8 +283,8 @@ export const Associates = () => {
         )}
       </div>
 
-      {isAddOpen && <AddAssociate open={isAddOpen} onClose={() => { setIsAddOpen(false); fetchAssociates(); }} />}
-      {editItem && <EditAssociate open={!!editItem} onClose={() => { setEditItem(null); fetchAssociates(); }} initialData={editItem} />}
+      {isAddOpen && <AddAssociate open={isAddOpen} onClose={() => { setIsAddOpen(false); fetchAssociates(true); }} />}
+      {editItem && <EditAssociate open={!!editItem} onClose={() => { setEditItem(null); fetchAssociates(true); }} initialData={editItem} />}
       {deleteItem && (
         <DeleteConfirmModal
           open={!!deleteItem}

@@ -99,7 +99,10 @@ const AddAssociate = ({ open, onClose }) => {
 
               <div className="space-y-1.5">
                 <label className="label">Mobile Number</label>
-                <Input name="phone" value={formData.phone} onChange={handleChange} placeholder="+91 XXXXX XXXXX" />
+                <Input name="phone" value={formData.phone} onChange={(e) => {
+                  const val = e.target.value.replace(/\D/g, '');
+                  if(val.length <= 10) handleChange({ target: { name: 'phone', value: val } });
+                }} placeholder="10 digit mobile number" pattern="\d{10}" title="Must be exactly 10 digits" maxLength={10} />
               </div>
 
               <div className="space-y-1.5">

@@ -343,11 +343,24 @@ export const Customers = () => {
                   </div>
                 </div>
 
-                {/* Footer */}
+                {/* Footer with Quick Actions */}
                 <div className="flex items-center justify-between pt-3 border-t border-gray-50 mt-auto">
                    <div className="flex flex-col">
                      <span className="text-[10px] text-gray-500 font-medium uppercase tracking-wider">Total Value</span>
                      <span className="text-sm font-semibold text-emerald-600">{customer.totalValue}</span>
+                   </div>
+                   <div className="flex gap-1.5" onClick={(e) => e.stopPropagation()}>
+                     <a href={`tel:${customer.phone}`} className="w-7 h-7 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center hover:bg-blue-100 transition-colors" title="Call">
+                       <Icons name="Phone" size={12} />
+                     </a>
+                     <a href={`https://wa.me/${customer.phone.replace(/\\D/g,'')}`} target="_blank" rel="noreferrer" className="w-7 h-7 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center hover:bg-emerald-100 transition-colors" title="WhatsApp">
+                       <Icons name="MessageCircle" size={12} />
+                     </a>
+                     {customer.email && (
+                       <a href={`mailto:${customer.email}`} className="w-7 h-7 rounded-full bg-rose-50 text-rose-600 flex items-center justify-center hover:bg-rose-100 transition-colors" title="Email">
+                         <Icons name="Mail" size={12} />
+                       </a>
+                     )}
                    </div>
                 </div>
               </div>

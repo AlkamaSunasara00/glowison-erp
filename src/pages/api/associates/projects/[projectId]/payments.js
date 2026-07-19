@@ -62,7 +62,36 @@ const handler = async (req, res) => {
       });
     }
 
-    res.setHeader('Allow', ['GET', 'POST']);
+    if (req.method === 'DELETE') {
+      const { paymentId } = req.query;
+      if (!paymentId) return res.status(400).json({ success: false, message: 'paymentId is required' });
+
+      await prisma.projectPayment.delete({ where: { id: paymentId } });
+
+      // Recalculate project payment totals
+      const allPayments = await prisma.projectPayment.findMany({
+        where: { projectId },
+        select: { amount: true }
+      });
+      const totalPaid = allPayments.reduce((sum, p) => sum + parseFloat(p.amount), 0);
+      const project = await prisma.associateProject.findUnique({
+        where: { id: projectId },
+        select: { totalAmount: true }
+      });
+      const totalAmount = parseFloat(project?.totalAmount || 0);
+      const dueAmount = Math.max(0, totalAmount - totalPaid);
+      let paymentStatus = 'UNPAID';
+      if (totalPaid >= totalAmount && totalAmount > 0) paymentStatus = 'PAID';
+      else if (totalPaid > 0) paymentStatus = 'PARTIAL';
+      await prisma.associateProject.update({
+        where: { id: projectId },
+        data: { paidAmount: totalPaid, dueAmount, paymentStatus }
+      });
+
+      return res.status(200).json({ success: true, message: 'Payment deleted' });
+    }
+
+    res.setHeader('Allow', ['GET', 'POST', 'DELETE']);
     return res.status(405).end(`Method ${req.method} Not Allowed`);
   } catch (error) {
     console.error(error);

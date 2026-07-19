@@ -5,8 +5,8 @@ const handler = async (req, res) => {
   const { id } = req.query;
 
   try {
-    const isGlw = typeof id === 'string' && id.toLowerCase().startsWith('glw-');
-    const whereClause = isGlw ? { orderNumber: parseInt(id.replace(/glw-/i, ''), 10) } : { id };
+    const isOrd = typeof id === 'string' && (id.toLowerCase().startsWith('ord-') || id.toLowerCase().startsWith('glw-'));
+    const whereClause = isOrd ? { orderNumber: parseInt(id.replace(/ord-|glw-/i, ''), 10) } : { id };
 
     if (req.method === 'GET') {
       const order = await prisma.order.findUnique({

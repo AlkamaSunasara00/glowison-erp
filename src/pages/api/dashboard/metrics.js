@@ -24,15 +24,19 @@ const handler = async (req, res) => {
       where: { status: 'NEW' }
     });
     
+    const activeAssociates = await prisma.associate.count({
+      where: { status: 'ACTIVE' }
+    });
+    
     const allInventory = await prisma.inventoryItem.findMany({
-      select: { id: true, name: true, sku: true, stockQty: true, reorderThreshold: true, baseUnit: true }
+      select: { id: true, name: true, sku: true, currentPurchaseStock: true, minimumStock: true, purchaseUnit: true }
     });
     
     const lowStockItems = allInventory
-      .filter(item => Number(item.stockQty) <= Number(item.reorderThreshold))
+      .filter(item => Number(item.currentPurchaseStock) <= Number(item.minimumStock))
       .slice(0, 5); // Limit to top 5 for alerts
       
-    const lowStockCount = allInventory.filter(item => Number(item.stockQty) <= Number(item.reorderThreshold)).length;
+    const lowStockCount = allInventory.filter(item => Number(item.currentPurchaseStock) <= Number(item.minimumStock)).length;
 
     
     return res.status(200).json({
@@ -42,8 +46,16 @@ const handler = async (req, res) => {
         activeOrders,
         pendingInvoices,
         newLeads,
+        activeAssociates,
         lowStockCount,
-        lowStockItems
+        lowStockItems: lowStockItems.map(item => ({
+            id: item.id,
+            name: item.name,
+            sku: item.sku,
+            stockQty: item.currentPurchaseStock,
+            reorderThreshold: item.minimumStock,
+            baseUnit: item.purchaseUnit
+        }))
       }
     });
   } catch (error) {

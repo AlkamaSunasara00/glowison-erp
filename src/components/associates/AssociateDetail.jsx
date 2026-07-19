@@ -7,6 +7,7 @@ import Icons from '@/common/Icons';
 import StatusBadge from '@/common/StatusBadge';
 import EditAssociate from './associateModal/EditAssociate';
 import AddProject from './associateModal/AddProject';
+import EditProject from './associateModal/EditProject';
 import DeleteConfirmModal from '@/common/DeleteConfirmModal';
 import Loader from '@/common/Loader';
 
@@ -16,18 +17,19 @@ const AssociateDetail = ({ open, itemId, onClose, onUpdated, isPage = false }) =
   const [loading, setLoading] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [isAddProjectOpen, setIsAddProjectOpen] = useState(false);
+  const [editProject, setEditProject] = useState(null);
   const [deleteProject, setDeleteProject] = useState(null);
 
-  const fetchAssociate = async () => {
+  const fetchAssociate = async (silent = false) => {
     try {
-      setLoading(true);
+      if (!silent) setLoading(true);
       const res = await api.get(`/associates/${itemId}`);
       setAssociate(res.data.data);
     } catch (error) {
       console.error(error);
       toast.error("Failed to load associate details");
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   };
 
@@ -101,14 +103,22 @@ const AssociateDetail = ({ open, itemId, onClose, onUpdated, isPage = false }) =
                     {associate.name}
                     <StatusBadge status={associate.status} />
                   </h1>
-                  <div className="mt-1 flex flex-wrap items-center gap-3">
+                  <div className="mt-2 flex flex-wrap items-center gap-3">
                     <span className="inline-flex items-center gap-1.5 rounded-sm bg-gray-100 px-2.5 py-1 text-xs font-semibold text-gray-700">
                       <Icons name="Wrench" size={12}/> {associate.category?.replace('_', ' ')}
                     </span>
                     {associate.phone && (
-                      <span className="inline-flex items-center gap-1.5 rounded-sm bg-gray-100 px-2.5 py-1 text-xs font-semibold text-gray-700">
-                        <Icons name="Phone" size={12}/> {associate.phone}
-                      </span>
+                      <div className="flex items-center gap-2">
+                        <span className="inline-flex items-center gap-1.5 rounded-sm bg-gray-100 px-2.5 py-1 text-xs font-semibold text-gray-700">
+                          <Icons name="Phone" size={12}/> {associate.phone}
+                        </span>
+                        <a href={`tel:${associate.phone}`} className="w-7 h-7 rounded-sm bg-blue-50 text-blue-600 flex items-center justify-center hover:bg-blue-100 transition-colors border border-blue-100" title="Call">
+                          <Icons name="Phone" size={12} />
+                        </a>
+                        <a href={`https://wa.me/${associate.phone.replace(/\\D/g,'')}`} target="_blank" rel="noreferrer" className="w-7 h-7 rounded-sm bg-emerald-50 text-emerald-600 flex items-center justify-center hover:bg-emerald-100 transition-colors border border-emerald-100" title="WhatsApp">
+                          <Icons name="MessageCircle" size={12} />
+                        </a>
+                      </div>
                     )}
                   </div>
                 </div>
@@ -205,7 +215,7 @@ const AssociateDetail = ({ open, itemId, onClose, onUpdated, isPage = false }) =
                             <td className="px-4 py-3 text-gray-600">
                               {project.order ? (
                                 <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium bg-blue-50 border border-blue-100 text-blue-700">
-                                  #{project.order.orderNumber}
+                                  ORD-{String(project.order.orderNumber).padStart(6, '0')}
                                 </span>
                               ) : '—'}
                             </td>
@@ -214,9 +224,14 @@ const AssociateDetail = ({ open, itemId, onClose, onUpdated, isPage = false }) =
                             <td className="px-4 py-3 text-right text-rose-600 font-semibold">₹{parseFloat(project.dueAmount).toLocaleString()}</td>
                             <td className="px-4 py-3"><StatusBadge status={project.status} /></td>
                             <td className="px-4 py-3 text-center" onClick={(e) => e.stopPropagation()}>
-                              <Button variant="ghost" size="sm" onClick={() => setDeleteProject(project)} className="px-2!">
-                                <Icons name="Trash2" size={16} className="text-gray-400 hover:text-rose-500 transition-colors" />
-                              </Button>
+                              <div className="flex items-center justify-center gap-1">
+                                <Button variant="ghost" size="sm" onClick={() => setEditProject(project)} className="px-2!">
+                                  <Icons name="Pencil" size={16} className="text-gray-400 hover:text-primary transition-colors" />
+                                </Button>
+                                <Button variant="ghost" size="sm" onClick={() => setDeleteProject(project)} className="px-2!">
+                                  <Icons name="Trash2" size={16} className="text-gray-400 hover:text-rose-500 transition-colors" />
+                                </Button>
+                              </div>
                             </td>
                           </tr>
                         ))}
@@ -251,16 +266,23 @@ const AssociateDetail = ({ open, itemId, onClose, onUpdated, isPage = false }) =
       {isEditOpen && (
         <EditAssociate
           open={isEditOpen}
-          onClose={() => { setIsEditOpen(false); handleUpdated(); }}
+          onClose={() => { setIsEditOpen(false); fetchAssociate(true); }}
           initialData={associate}
         />
       )}
       {isAddProjectOpen && (
         <AddProject
           open={isAddProjectOpen}
-          onClose={() => { setIsAddProjectOpen(false); handleUpdated(); }}
+          onClose={() => { setIsAddProjectOpen(false); fetchAssociate(true); }}
           associateId={itemId}
           associateName={associate?.name}
+        />
+      )}
+      {editProject && (
+        <EditProject
+          open={!!editProject}
+          onClose={() => { setEditProject(null); fetchAssociate(true); }}
+          project={editProject}
         />
       )}
       {deleteProject && (

@@ -77,7 +77,7 @@ export const Orders = () => {
       const res = await api.get('/orders?limit=100');
       const mapped = res.data.data.map(o => ({
         ...o,
-        id: `GLW-${o.orderNumber}`,
+        id: `ORD-${String(o.orderNumber).padStart(6, '0')}`,
         originalId: o.id,
         type: o.type === 'ONLINE' ? 'Online' : (o.customer?.type === 'DEALER' ? 'Dealer' : 'Retail'),
         source: o.onlineSource || 'Website',

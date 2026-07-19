@@ -49,7 +49,7 @@ const OrderDetail = ({ open, onClose, order, isPage = false, onOrderUpdated }) =
   };
 
   const detailInfo = {
-    "Order ID": data.orderNumber ? `GLW-${data.orderNumber}` : (data.id || "—"),
+    "Order ID": data.orderNumber ? `ORD-${String(data.orderNumber).padStart(6, '0')}` : (data.id || "—"),
     "Customer": data.customer ? (typeof data.customer === 'string' ? data.customer : data.customer.name) : (data.buyerName || "—"),
     "Phone": data.customer?.phone || data.buyerContact || "—",
     "Order Type": data.type === 'RETAIL_DEALER' ? 'Retail/Dealer' : (data.type || "—"),
@@ -77,7 +77,7 @@ const OrderDetail = ({ open, onClose, order, isPage = false, onOrderUpdated }) =
           </button>
           <div>
             <h2 className="page-header flex items-center gap-2">
-              {data.orderNumber ? `GLW-${data.orderNumber}` : (data.id || "Order Details")}
+              {data.orderNumber ? `ORD-${String(data.orderNumber).padStart(6, '0')}` : (data.id || "Order Details")}
               <StatusBadge status={data.status} />
               <StatusBadge status={data.paymentStatus} />
             </h2>

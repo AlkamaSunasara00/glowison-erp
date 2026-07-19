@@ -84,7 +84,7 @@ const Template1 = ({ data, detailInfo, settings, items }) => {
              <table className="w-full h-full text-[11px]">
                <tbody>
                  <tr className="border-b border-blue-100">
-                   <td className="p-1 pl-2 text-gray-600">Invoice No</td>
+                   <td className="p-1 pl-2 text-gray-600">Invoice #</td>
                    <td className="p-1 font-bold">{data.invoiceNumber}</td>
                  </tr>
                  <tr className="border-b border-blue-100">

@@ -125,17 +125,38 @@ const CustomerDetail = ({ open, onClose, customer, isPage = false, onCustomerUpd
                 <div className="space-y-6">
                   <div className="flex items-start gap-3">
                     <div className="p-2 bg-gray-50/80 border border-gray-100 rounded-sm text-gray-500 shrink-0"><Icons name="Phone" size={16} /></div>
-                    <div className="mt-0.5 min-w-0">
+                    <div className="mt-0.5 min-w-0 flex-1">
                       <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-0.5">Phone Number</p>
-                      <p className="text-sm font-semibold text-gray-900">{data.phone || "—"}</p>
+                      <div className="flex items-center justify-between">
+                        <p className="text-sm font-semibold text-gray-900">{data.phone || "—"}</p>
+                        {data.phone && (
+                          <div className="flex gap-1.5">
+                            <a href={`tel:${data.phone}`} className="w-7 h-7 rounded-md bg-blue-50 text-blue-600 flex items-center justify-center hover:bg-blue-100 transition-colors" title="Call">
+                              <Icons name="Phone" size={12} />
+                            </a>
+                            <a href={`https://wa.me/${data.phone.replace(/\\D/g,'')}`} target="_blank" rel="noreferrer" className="w-7 h-7 rounded-md bg-emerald-50 text-emerald-600 flex items-center justify-center hover:bg-emerald-100 transition-colors" title="WhatsApp">
+                              <Icons name="MessageCircle" size={12} />
+                            </a>
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </div>
                   
                   <div className="flex items-start gap-3">
                     <div className="p-2 bg-gray-50/80 border border-gray-100 rounded-sm text-gray-500 shrink-0"><Icons name="Mail" size={16} /></div>
-                    <div className="mt-0.5 min-w-0">
+                    <div className="mt-0.5 min-w-0 flex-1">
                       <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-0.5">Email Address</p>
-                      <p className="text-sm font-semibold text-gray-900 break-all">{data.email || "—"}</p>
+                      <div className="flex items-center justify-between">
+                        <p className="text-sm font-semibold text-gray-900 break-all">{data.email || "—"}</p>
+                        {data.email && (
+                          <div className="flex gap-1.5 shrink-0 ml-2">
+                            <a href={`mailto:${data.email}`} className="w-7 h-7 rounded-md bg-rose-50 text-rose-600 flex items-center justify-center hover:bg-rose-100 transition-colors" title="Email">
+                              <Icons name="Mail" size={12} />
+                            </a>
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </div>
 
@@ -229,9 +250,9 @@ const CustomerDetail = ({ open, onClose, customer, isPage = false, onCustomerUpd
                         {(data.orders || []).length === 0 ? (
                           <tr><td colSpan="4" className="text-center py-16 text-gray-400 font-medium">No orders found for this customer.</td></tr>
                         ) : (data.orders || []).map(item => (
-                          <tr key={item.id} onClick={() => router.push(`/orders/GLW-${item.orderNumber}`)} className="group hover:bg-gray-50/60 cursor-pointer transition-colors">
+                          <tr key={item.id} onClick={() => router.push(`/orders/ORD-${String(item.orderNumber).padStart(6, '0')}`)} className="group hover:bg-gray-50/60 cursor-pointer transition-colors">
                             <td className="px-8 py-4.5">
-                              <span className="font-bold text-gray-900 group-hover:text-primary transition-colors">GLW-{item.orderNumber}</span>
+                              <span className="font-bold text-gray-900 group-hover:text-primary transition-colors">ORD-{String(item.orderNumber).padStart(6, '0')}</span>
                             </td>
                             <td className="px-8 py-4.5 text-gray-500 font-medium">{formatDate(item.createdAt)}</td>
                             <td className="px-8 py-4.5 font-bold text-gray-800">Rs. {item.total}</td>

@@ -88,7 +88,7 @@ const Template2 = ({ data, detailInfo, settings, items }) => {
             <p className="text-[#84cc16] font-semibold text-sm mb-3">Payment Method:</p>
             <div className="flex justify-between items-start mb-6 gap-4">
               <div className="grid grid-cols-[100px_1fr] gap-y-1 font-medium flex-1 min-w-0">
-                {settings?.accountNo && <><span className="text-gray-500">Account No:</span><span className="text-gray-900 break-all">{settings.accountNo}</span></>}
+                {settings?.accountNo && <><span className="text-gray-500">Account #:</span><span className="text-gray-900 break-all">{settings.accountNo}</span></>}
                 <span>Account Name:</span><span className="text-gray-900 break-words">{settings?.companyName || 'Glowison'}</span>
                 {settings?.upiId && <><span className="text-gray-500">UPI ID:</span><span className="text-gray-900 break-all">{settings.upiId}</span></>}
                 {settings?.gstin && <><span className="text-gray-500">GSTIN:</span><span className="text-gray-900 break-all">{settings.gstin}</span></>}

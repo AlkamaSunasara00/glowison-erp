@@ -20,7 +20,15 @@ const handler = async (req, res) => {
     }
 
     if (req.method === 'PUT') {
-      const { projectName, orderId, customerName, location, description, date, status } = req.body;
+      const { projectName, orderId, customerName, location, description, date, status, totalAmount } = req.body;
+
+      const currentProject = await prisma.associateProject.findUnique({ where: { id: projectId } });
+      const newTotal = totalAmount !== undefined ? parseFloat(totalAmount) : parseFloat(currentProject.totalAmount);
+      const totalPaid = parseFloat(currentProject.paidAmount);
+      const dueAmount = Math.max(0, newTotal - totalPaid);
+      let paymentStatus = 'UNPAID';
+      if (totalPaid >= newTotal && newTotal > 0) paymentStatus = 'PAID';
+      else if (totalPaid > 0) paymentStatus = 'PARTIAL';
 
       const project = await prisma.associateProject.update({
         where: { id: projectId },
@@ -31,7 +39,10 @@ const handler = async (req, res) => {
           location: location !== undefined ? (location || null) : undefined,
           description: description !== undefined ? (description || null) : undefined,
           date: date ? new Date(date) : undefined,
-          status: status || undefined
+          status: status || undefined,
+          totalAmount: newTotal,
+          dueAmount: dueAmount,
+          paymentStatus: paymentStatus
         }
       });
 

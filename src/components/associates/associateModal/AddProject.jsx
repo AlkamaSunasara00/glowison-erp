@@ -31,7 +31,8 @@ const AddProject = ({ open, onClose, associateId, associateName }) => {
       api.get('/orders', { params: { limit: 200 } }).then(res => {
         const orderList = (res.data.data || []).map(o => ({
           value: o.id,
-          label: `#${o.orderNumber} — ${o.customer?.name || o.buyerName || 'N/A'}`
+          label: `ORD-${String(o.orderNumber).padStart(6, '0')} — ${o.customer?.name || o.buyerName || 'N/A'}`,
+          customerName: o.customer?.name || o.buyerName || 'N/A'
         }));
         setOrders(orderList);
       }).catch(console.error);
@@ -50,6 +51,18 @@ const AddProject = ({ open, onClose, associateId, associateName }) => {
   const handleChange = (event) => {
     const { name, value } = event.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
+    
+    // Auto-fill project name and customer name if an order is selected
+    if (name === "orderId" && value) {
+      const selectedOrder = orders.find(o => o.value === value);
+      if (selectedOrder && selectedOrder.customerName !== 'N/A') {
+        setFormData((prev) => ({
+          ...prev,
+          projectName: prev.projectName || selectedOrder.customerName,
+          customerName: prev.customerName || selectedOrder.customerName
+        }));
+      }
+    }
   };
 
   const handleSubmit = async (event) => {
@@ -60,7 +73,6 @@ const AddProject = ({ open, onClose, associateId, associateName }) => {
       const payload = {
         ...formData,
         orderId: linkOrder ? formData.orderId : null,
-        projectName: linkOrder ? (orders.find(o => o.value === formData.orderId)?.label || formData.projectName) : formData.projectName,
       };
 
       if (!payload.projectName?.trim()) {
@@ -126,17 +138,23 @@ const AddProject = ({ open, onClose, associateId, associateName }) => {
                 </div>
               </div>
 
-              {linkOrder ? (
+              {linkOrder && (
                 <div className="space-y-1.5 md:col-span-2">
                   <label className="label">Select Order <span className="required">*</span></label>
                   <Input type="select" name="orderId" value={formData.orderId} onChange={handleChange} options={[{ value: "", label: "Select an order" }, ...orders]} required />
                 </div>
-              ) : (
-                <div className="space-y-1.5 md:col-span-2">
-                  <label className="label">Project Name <span className="required">*</span></label>
-                  <Input name="projectName" value={formData.projectName} onChange={handleChange} placeholder="e.g. Signage Installation at Ahmedabad" required />
-                </div>
               )}
+
+              <div className="space-y-1.5 md:col-span-2">
+                <label className="label">Project Name <span className="required">*</span></label>
+                <Input
+                  name="projectName"
+                  value={formData.projectName}
+                  onChange={handleChange}
+                  placeholder="e.g. Kitchen Installation - Juhu"
+                  required
+                />
+              </div>
 
               <div className="space-y-1.5">
                 <label className="label">Date <span className="required">*</span></label>

@@ -37,7 +37,23 @@ const handler = async (req, res) => {
       where: {
         spentOn: { gte: startDate, lte: endDate }
       },
-      select: { amount: true, spentOn: true }
+      select: { amount: true, spentOn: true, category: true }
+    });
+    
+    // Fetch Leads
+    const leads = await prisma.lead.findMany({
+      where: {
+        createdAt: { gte: startDate, lte: endDate }
+      },
+      select: { source: true }
+    });
+
+    // Fetch Associate Projects
+    const associateProjects = await prisma.associateProject.findMany({
+      where: {
+        createdAt: { gte: startDate, lte: endDate }
+      },
+      select: { status: true }
     });
     
     // Fetch Order Status for the dynamic pie chart
@@ -97,11 +113,50 @@ const handler = async (req, res) => {
       { name: 'Cancelled', value: statusCounts.CANCELLED }
     ].filter(item => item.value > 0);
 
+    // Aggregate Expense by Category
+    const expensesByCategory = {};
+    expenses.forEach(exp => {
+        const cat = exp.category || 'Other';
+        expensesByCategory[cat] = (expensesByCategory[cat] || 0) + Number(exp.amount);
+    });
+    const expenseData = Object.keys(expensesByCategory).map(key => ({ name: key, value: expensesByCategory[key] }));
+
+    // Aggregate Leads by Source
+    const leadsBySource = {};
+    leads.forEach(lead => {
+        const src = lead.source || 'Other';
+        leadsBySource[src] = (leadsBySource[src] || 0) + 1;
+    });
+    const leadsData = Object.keys(leadsBySource).map(key => ({ name: key, value: leadsBySource[key] }));
+
+    // Aggregate Associate Projects by Status
+    const projectCounts = {
+      PENDING: 0,
+      IN_PROGRESS: 0,
+      COMPLETED: 0,
+      CANCELLED: 0
+    };
+    associateProjects.forEach(project => {
+      if (projectCounts[project.status] !== undefined) {
+        projectCounts[project.status]++;
+      }
+    });
+
+    const associateProjectsData = [
+      { name: 'Pending', value: projectCounts.PENDING },
+      { name: 'In Progress', value: projectCounts.IN_PROGRESS },
+      { name: 'Completed', value: projectCounts.COMPLETED },
+      { name: 'Cancelled', value: projectCounts.CANCELLED }
+    ].filter(item => item.value > 0);
+
     return res.status(200).json({ 
       success: true, 
       data: {
         chartData,
-        orderStatusData
+        orderStatusData,
+        expenseData,
+        leadsData,
+        associateProjectsData
       } 
     });
   } catch (error) {
