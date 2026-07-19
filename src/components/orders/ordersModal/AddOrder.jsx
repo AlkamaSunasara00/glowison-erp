@@ -270,19 +270,19 @@ const AddOrder = ({ open, onClose, isPage = false }) => {
                          </div>
                          <div className="space-y-1.5">
                            <label className="text-xs font-semibold text-gray-600">Price / {item.unit === 'sqft' ? 'Sq Ft' : item.unit === 'piece' ? 'Piece' : item.unit === 'feet' ? 'Feet' : 'Inch'} (Info)</label>
-                           <Input size="md" type="number" min="0" placeholder="e.g. 15" value={item.pricePerUnit} onChange={(e) => handleLineItemChange(item.id, 'pricePerUnit', e.target.value)} />
+                           <Input size="md" type="number" min="0" step="any" placeholder="e.g. 15" value={item.pricePerUnit} onChange={(e) => handleLineItemChange(item.id, 'pricePerUnit', e.target.value)} />
                          </div>
                          <div className="space-y-1.5">
                            <label className="text-xs font-semibold text-gray-600">Qty <span className="text-red-500">*</span></label>
-                           <Input size="md" type="number" min="1" placeholder="1" value={item.qty} onChange={(e) => handleLineItemChange(item.id, 'qty', e.target.value)} required />
+                           <Input size="md" type="number" min="0.001" step="any" placeholder="1" value={item.qty} onChange={(e) => handleLineItemChange(item.id, 'qty', e.target.value)} required />
                          </div>
                          <div className="space-y-1.5">
                            <label className="text-xs font-semibold text-gray-600">Unit Price <span className="text-red-500">*</span></label>
-                           <Input size="md" type="number" min="0" placeholder="0.00" value={item.price} onChange={(e) => { handleLineItemChange(item.id, 'priceType', 'Custom'); handleLineItemChange(item.id, 'price', e.target.value); }} required />
+                           <Input size="md" type="number" min="0" step="any" placeholder="0.00" value={item.price} onChange={(e) => { handleLineItemChange(item.id, 'priceType', 'Custom'); handleLineItemChange(item.id, 'price', e.target.value); }} required />
                          </div>
                          <div className="w-full space-y-1.5">
                            <label className="text-xs font-semibold text-gray-600">Tax %</label>
-                           <Input size="md" type="number" min="0" placeholder="e.g. 18" value={item.taxPercent} onChange={(e) => handleLineItemChange(item.id, 'taxPercent', e.target.value)} />
+                           <Input size="md" type="number" min="0" step="any" placeholder="e.g. 18" value={item.taxPercent} onChange={(e) => handleLineItemChange(item.id, 'taxPercent', e.target.value)} />
                          </div>
                        </div>
                        
