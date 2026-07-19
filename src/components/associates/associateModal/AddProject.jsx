@@ -31,7 +31,7 @@ const AddProject = ({ open, onClose, associateId, associateName }) => {
       api.get('/orders', { params: { limit: 200 } }).then(res => {
         const orderList = (res.data.data || []).map(o => ({
           value: o.id,
-          label: `ORD-${String(o.orderNumber).padStart(6, '0')} — ${o.customer?.name || o.buyerName || 'N/A'}`,
+          label: `${String(o.orderNumber).startsWith('ORD-') ? o.orderNumber : `ORD-${String(o.orderNumber).padStart(6, '0')}`} — ${o.customer?.name || o.buyerName || 'N/A'}`,
           customerName: o.customer?.name || o.buyerName || 'N/A'
         }));
         setOrders(orderList);
@@ -58,8 +58,8 @@ const AddProject = ({ open, onClose, associateId, associateName }) => {
       if (selectedOrder && selectedOrder.customerName !== 'N/A') {
         setFormData((prev) => ({
           ...prev,
-          projectName: prev.projectName || selectedOrder.customerName,
-          customerName: prev.customerName || selectedOrder.customerName
+          projectName: selectedOrder.customerName,
+          customerName: selectedOrder.customerName
         }));
       }
     }

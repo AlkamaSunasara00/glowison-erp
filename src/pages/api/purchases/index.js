@@ -1,5 +1,6 @@
 import prisma from '@/lib/prisma';
 import { withAuth } from '@/lib/auth';
+import { generateDocumentNumber } from '@/lib/generateNumber';
 
 const handler = async (req, res) => {
   try {
@@ -93,9 +94,10 @@ const handler = async (req, res) => {
         }
 
         // 1. Create Purchase and PurchaseItems
+        const generatedPurchaseNumber = await generateDocumentNumber(prisma.purchase, 'PUR');
         const purchase = await tx.purchase.create({
           data: {
-            purchaseNumber: purchaseNumber || `PUR-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+            purchaseNumber: generatedPurchaseNumber,
             referenceNumber,
             purchaseType: purchaseType || 'CASH',
             supplierId: supplierId || null,

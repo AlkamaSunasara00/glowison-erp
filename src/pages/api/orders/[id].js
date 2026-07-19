@@ -5,8 +5,19 @@ const handler = async (req, res) => {
   const { id } = req.query;
 
   try {
-    const isOrd = typeof id === 'string' && (id.toLowerCase().startsWith('ord-') || id.toLowerCase().startsWith('glw-'));
-    const whereClause = isOrd ? { orderNumber: parseInt(id.replace(/ord-|glw-/i, ''), 10) } : { id };
+    // Support lookups by orderNumber string (ORD-190726-1, GLW-5, ORD-000005) or by UUID id
+    const isOrderNum = typeof id === 'string' && (id.toLowerCase().startsWith('ord-') || id.toLowerCase().startsWith('glw-'));
+    let whereClause;
+    if (isOrderNum) {
+      // Try as a string first (new format: ORD-190726-1)
+      whereClause = { orderNumber: id };
+      // If it's an old GLW- format, convert to the stored integer string
+      if (id.toLowerCase().startsWith('glw-')) {
+        whereClause = { orderNumber: id.replace(/glw-/i, '') };
+      }
+    } else {
+      whereClause = { id };
+    }
 
     if (req.method === 'GET') {
       const order = await prisma.order.findUnique({

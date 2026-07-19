@@ -77,7 +77,7 @@ export const Orders = () => {
       const res = await api.get('/orders?limit=100');
       const mapped = res.data.data.map(o => ({
         ...o,
-        id: `ORD-${String(o.orderNumber).padStart(6, '0')}`,
+        id: String(o.orderNumber).startsWith('ORD-') ? o.orderNumber : `ORD-${String(o.orderNumber).padStart(6, '0')}`,
         originalId: o.id,
         type: o.type === 'ONLINE' ? 'Online' : (o.customer?.type === 'DEALER' ? 'Dealer' : 'Retail'),
         source: o.onlineSource || 'Website',
@@ -266,7 +266,7 @@ export const Orders = () => {
         ) : (
           <div className="bg-white rounded-sm border border-gray-100 shadow-sm overflow-hidden flex-1 custom-scrollbar min-h-[400px]">
             <div className="overflow-x-auto">
-              <table className="w-full text-left border-collapse min-w-[900px]">
+              <table className="w-full text-left border-collapse min-w-[900px] whitespace-nowrap">
                 <thead className="bg-primary border-b border-primary/20 text-xs font-semibold text-white">
                   <tr>
                     <th className="px-4 py-3 rounded-tl-sm">Order ID</th>

@@ -292,7 +292,7 @@ model Customer {
 
 model Order {
   id                String        @id @default(uuid())
-  orderNumber       Int           @unique @default(autoincrement())
+  orderNumber       String        @unique
   type              OrderType
   customer          Customer?     @relation(fields: [customerId], references: [id])
   customerId        String?

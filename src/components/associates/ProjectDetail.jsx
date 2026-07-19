@@ -222,7 +222,7 @@ const ProjectDetail = ({ projectId }) => {
                 </span>
                 {project.order && (
                   <span className="inline-flex items-center gap-1.5 rounded-sm bg-blue-50 px-2.5 py-1 text-xs font-semibold text-blue-700 border border-blue-100">
-                    <Icons name="Package" size={12}/> Order ORD-{String(project.order.orderNumber).padStart(6, '0')}
+                    <Icons name="Package" size={12}/> Order {String(project.order.orderNumber).startsWith('ORD-') ? project.order.orderNumber : `ORD-${String(project.order.orderNumber).padStart(6, '0')}`}
                   </span>
                 )}
               </div>
@@ -357,7 +357,7 @@ const ProjectDetail = ({ projectId }) => {
                 </div>
                 {/* Desktop: table */}
                 <div className="hidden sm:block overflow-x-auto">
-                  <table className="w-full text-left border-collapse min-w-[700px]">
+                  <table className="w-full text-left border-collapse min-w-[700px] whitespace-nowrap">
                     <thead className="bg-gray-50 text-[10px] font-bold text-gray-400 uppercase tracking-wider">
                       <tr>
                         <th className="px-4 py-3 w-40">Type</th>
@@ -462,7 +462,7 @@ const ProjectDetail = ({ projectId }) => {
               </div>
             ) : (
               <div className="overflow-x-auto">
-                <table className="w-full text-left border-collapse min-w-[500px]">
+                <table className="w-full text-left border-collapse min-w-[500px] whitespace-nowrap">
                   <thead className="bg-gray-50 text-[10px] font-bold text-gray-400 uppercase tracking-wider">
                     <tr>
                       <th className="px-4 sm:px-5 py-3">Date</th>

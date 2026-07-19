@@ -1,5 +1,6 @@
 import prisma from '@/lib/prisma';
 import { withAuth } from '@/lib/auth';
+import { generateDocumentNumber } from '@/lib/generateNumber';
 
 const handler = async (req, res) => {
   try {
@@ -52,9 +53,11 @@ const handler = async (req, res) => {
 
     if (req.method === 'POST') {
       const { items, ...orderData } = req.body;
+      const orderNumber = await generateDocumentNumber(prisma.order, 'ORD');
       const order = await prisma.order.create({
         data: {
           ...orderData,
+          orderNumber,
           items: {
             create: items
           }

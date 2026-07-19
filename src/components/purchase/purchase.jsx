@@ -10,6 +10,7 @@ import StatusBadge from "@/common/StatusBadge";
 import AddPurchase from "./purchaseModal/AddPurchase";
 import EditPurchase from "./purchaseModal/EditPurchase";
 import DeleteConfirmModal from "@/common/DeleteConfirmModal";
+import Loader from "@/common/Loader";
 
 
 
@@ -104,6 +105,7 @@ export const Purchase = () => {
               leftIcon={(props) => (
                 <Icons name="Plus" color="white" {...props} />
               )}
+              className="rounded-sm px-4 py-2.5 text-sm font-semibold shadow-md shadow-primary/20 hover:shadow-lg hover:shadow-primary/30 transition-all"
             >
               Record Purchase
             </Button>
@@ -111,22 +113,45 @@ export const Purchase = () => {
         </div>
 
         {/* KPIs */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-          <div className="rounded-xl border border-gray-100 bg-white p-4 shadow-sm">
-            <p className="text-sm font-medium text-gray-500">Total POs</p>
-            <p className="mt-1 text-2xl font-bold text-gray-900">{totalPurchases}</p>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="bg-white rounded-sm p-5 shadow-sm border border-gray-100 flex flex-col justify-center gap-3 hover:-translate-y-1 hover:shadow-md transition-all duration-300">
+            <div className="w-10 h-10 rounded-sm bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0 border border-indigo-100">
+              <Icons name="ShoppingCart" size={20} />
+            </div>
+            <div>
+              <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-1">Total POs</p>
+              <h4 className="text-2xl font-black text-gray-900 tracking-tight">{totalPurchases}</h4>
+            </div>
           </div>
-          <div className="rounded-xl border border-gray-100 bg-white p-4 shadow-sm">
-            <p className="text-sm font-medium text-gray-500">Total Paid</p>
-            <p className="mt-1 text-2xl font-bold text-emerald-600">Rs. {totalPaid.toLocaleString()}</p>
+          
+          <div className="bg-white rounded-sm p-5 shadow-sm border border-gray-100 flex flex-col justify-center gap-3 hover:-translate-y-1 hover:shadow-md transition-all duration-300">
+            <div className="w-10 h-10 rounded-sm bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0 border border-emerald-100">
+              <Icons name="TrendingUp" size={20} />
+            </div>
+            <div>
+              <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-1">Total Paid</p>
+              <h4 className="text-2xl font-black text-emerald-600 tracking-tight">Rs. {totalPaid.toLocaleString()}</h4>
+            </div>
           </div>
-          <div className="rounded-xl border border-gray-100 bg-white p-4 shadow-sm">
-            <p className="text-sm font-medium text-gray-500">Total Outstanding</p>
-            <p className="mt-1 text-2xl font-bold text-rose-600">Rs. {totalOutstanding.toLocaleString()}</p>
+
+          <div className="bg-white rounded-sm p-5 shadow-sm border border-gray-100 flex flex-col justify-center gap-3 hover:-translate-y-1 hover:shadow-md transition-all duration-300">
+            <div className="w-10 h-10 rounded-sm bg-rose-50 text-rose-600 flex items-center justify-center shrink-0 border border-rose-100">
+              <Icons name="Activity" size={20} />
+            </div>
+            <div>
+              <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-1">Total Outstanding</p>
+              <h4 className="text-2xl font-black text-rose-600 tracking-tight">Rs. {totalOutstanding.toLocaleString()}</h4>
+            </div>
           </div>
-          <div className="rounded-xl border border-gray-100 bg-white p-4 shadow-sm">
-            <p className="text-sm font-medium text-gray-500">Pending Deliveries</p>
-            <p className="mt-1 text-2xl font-bold text-amber-600">{pendingDeliveries}</p>
+
+          <div className="bg-white rounded-sm p-5 shadow-sm border border-gray-100 flex flex-col justify-center gap-3 hover:-translate-y-1 hover:shadow-md transition-all duration-300">
+            <div className="w-10 h-10 rounded-sm bg-amber-50 text-amber-600 flex items-center justify-center shrink-0 border border-amber-100">
+              <Icons name="Clock" size={20} />
+            </div>
+            <div>
+              <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-1">Pending Deliveries</p>
+              <h4 className="text-2xl font-black text-amber-600 tracking-tight">{pendingDeliveries}</h4>
+            </div>
           </div>
         </div>
 
@@ -165,7 +190,11 @@ export const Purchase = () => {
         </div>
 
         {/* Content */}
-        {filteredPurchases.length === 0 ? (
+        {loading ? (
+          <div className="bg-white rounded-sm border border-gray-100 shadow-sm overflow-hidden flex-1 min-h-[400px] flex items-center justify-center">
+            <Loader text="Loading Purchases..." />
+          </div>
+        ) : filteredPurchases.length === 0 ? (
           <EmptyState
             search={search || (hasActiveFilters ? "active filters" : "")}
             entityName="Purchases"
@@ -179,12 +208,12 @@ export const Purchase = () => {
             addLabel="Record Purchase"
           />
         ) : (
-          <div className="bg-white rounded-lg border border-gray-100 shadow-sm overflow-hidden flex-1 custom-scrollbar">
+          <div className="bg-white rounded-sm border border-gray-100 shadow-sm overflow-hidden flex-1 custom-scrollbar min-h-[400px]">
             <div className="overflow-x-auto">
-              <table className="w-full text-left border-collapse min-w-[900px]">
-                <thead className="bg-gray-50 border-b border-gray-100 text-xs font-semibold text-gray-600">
+              <table className="w-full text-left border-collapse min-w-[900px] whitespace-nowrap">
+                <thead className="bg-primary border-b border-primary/20 text-xs font-semibold text-white">
                   <tr>
-                    <th className="px-4 py-3">Purchase Number</th>
+                    <th className="px-4 py-3 rounded-tl-sm">Purchase Number</th>
                     <th className="px-4 py-3">Supplier</th>
                     <th className="px-4 py-3">Type</th>
                     <th className="px-4 py-3">Items Summary</th>
@@ -192,7 +221,7 @@ export const Purchase = () => {
                     <th className="px-4 py-3 text-right">Amount</th>
                     <th className="px-4 py-3">Payment</th>
                     <th className="px-4 py-3">Status</th>
-                    <th className="px-4 py-3 text-center">Actions</th>
+                    <th className="px-4 py-3 text-center rounded-tr-sm">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="text-sm">

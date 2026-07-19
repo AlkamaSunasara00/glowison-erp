@@ -56,7 +56,7 @@ const Template2 = ({ data, detailInfo, settings, items }) => {
       </div>
 
       <div className="px-12 mb-8">
-        <table className="w-full text-left border-collapse">
+        <table className="w-full text-left border-collapse whitespace-nowrap">
           <thead>
             <tr className="text-white text-xs uppercase tracking-wider bg-[#1f2937]">
               <th className="bg-[#84cc16] py-3 px-4 w-12 text-center">No.</th>

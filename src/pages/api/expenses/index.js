@@ -1,5 +1,6 @@
 import prisma from '@/lib/prisma';
 import { withAuth } from '@/lib/auth';
+import { generateDocumentNumber } from '@/lib/generateNumber';
 
 const handler = async (req, res) => {
   try {
@@ -104,15 +105,7 @@ const handler = async (req, res) => {
         note,
       } = req.body;
 
-      const lastExpense = await prisma.expense.findFirst({
-        orderBy: { createdAt: 'desc' }
-      });
-      let nextNumber = 1;
-      if (lastExpense && lastExpense.expenseNumber && lastExpense.expenseNumber.startsWith('EXP-')) {
-        const lastNum = parseInt(lastExpense.expenseNumber.split('-')[1]);
-        if (!isNaN(lastNum)) nextNumber = lastNum + 1;
-      }
-      const expenseNumber = `EXP-${nextNumber.toString().padStart(5, '0')}`;
+      const expenseNumber = await generateDocumentNumber(prisma.expense, 'EXP');
 
       const totalAmt = parseFloat(amount || 0);
       let pAmount = 0;

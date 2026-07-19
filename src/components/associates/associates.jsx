@@ -210,7 +210,7 @@ export const Associates = () => {
         ) : (
           <div className="bg-white rounded-sm border border-gray-100 shadow-sm overflow-hidden flex-1 custom-scrollbar">
             <div className="overflow-x-auto">
-              <table className="w-full text-left border-collapse min-w-[1000px]">
+              <table className="w-full text-left border-collapse min-w-[1000px] whitespace-nowrap">
                 <thead className="bg-primary border-b border-primary/20 text-xs font-semibold text-white">
                   <tr>
                     <th className="px-4 py-3 rounded-tl-lg">Associate</th>

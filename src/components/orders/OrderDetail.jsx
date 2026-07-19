@@ -49,7 +49,7 @@ const OrderDetail = ({ open, onClose, order, isPage = false, onOrderUpdated }) =
   };
 
   const detailInfo = {
-    "Order ID": data.orderNumber ? `ORD-${String(data.orderNumber).padStart(6, '0')}` : (data.id || "—"),
+    "Order ID": data.orderNumber ? (String(data.orderNumber).startsWith('ORD-') ? data.orderNumber : `ORD-${String(data.orderNumber).padStart(6, '0')}`) : (data.id || "—"),
     "Customer": data.customer ? (typeof data.customer === 'string' ? data.customer : data.customer.name) : (data.buyerName || "—"),
     "Phone": data.customer?.phone || data.buyerContact || "—",
     "Order Type": data.type === 'RETAIL_DEALER' ? 'Retail/Dealer' : (data.type || "—"),
@@ -77,7 +77,7 @@ const OrderDetail = ({ open, onClose, order, isPage = false, onOrderUpdated }) =
           </button>
           <div>
             <h2 className="page-header flex items-center gap-2">
-              {data.orderNumber ? `ORD-${String(data.orderNumber).padStart(6, '0')}` : (data.id || "Order Details")}
+              {data.orderNumber ? (String(data.orderNumber).startsWith('ORD-') ? data.orderNumber : `ORD-${String(data.orderNumber).padStart(6, '0')}`) : (data.id || "Order Details")}
               <StatusBadge status={data.status} />
               <StatusBadge status={data.paymentStatus} />
             </h2>
@@ -138,7 +138,7 @@ const OrderDetail = ({ open, onClose, order, isPage = false, onOrderUpdated }) =
                   Line Items
                 </h3>
                 <div className="rounded-sm border border-gray-100 overflow-hidden">
-                   <table className="w-full text-left border-collapse">
+                   <table className="w-full text-left border-collapse whitespace-nowrap">
                       <thead className="bg-primary border-b border-primary/20 text-xs font-semibold text-white">
                         <tr>
                           <th className="px-4 py-3 w-16">Image</th>

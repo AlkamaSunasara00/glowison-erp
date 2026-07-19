@@ -250,9 +250,9 @@ const CustomerDetail = ({ open, onClose, customer, isPage = false, onCustomerUpd
                         {(data.orders || []).length === 0 ? (
                           <tr><td colSpan="4" className="text-center py-16 text-gray-400 font-medium">No orders found for this customer.</td></tr>
                         ) : (data.orders || []).map(item => (
-                          <tr key={item.id} onClick={() => router.push(`/orders/ORD-${String(item.orderNumber).padStart(6, '0')}`)} className="group hover:bg-gray-50/60 cursor-pointer transition-colors">
+                          <tr key={item.id} onClick={() => router.push(`/orders/${String(item.orderNumber).startsWith('ORD-') ? item.orderNumber : `ORD-${String(item.orderNumber).padStart(6, '0')}`}`)} className="group hover:bg-gray-50/60 cursor-pointer transition-colors">
                             <td className="px-8 py-4.5">
-                              <span className="font-bold text-gray-900 group-hover:text-primary transition-colors">ORD-{String(item.orderNumber).padStart(6, '0')}</span>
+                              <span className="font-bold text-gray-900 group-hover:text-primary transition-colors">{String(item.orderNumber).startsWith('ORD-') ? item.orderNumber : `ORD-${String(item.orderNumber).padStart(6, '0')}`}</span>
                             </td>
                             <td className="px-8 py-4.5 text-gray-500 font-medium">{formatDate(item.createdAt)}</td>
                             <td className="px-8 py-4.5 font-bold text-gray-800">Rs. {item.total}</td>

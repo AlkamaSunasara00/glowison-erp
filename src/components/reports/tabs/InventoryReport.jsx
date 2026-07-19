@@ -37,7 +37,7 @@ const InventoryReport = ({ data }) => {
          
          {data.lowStockItems.length > 0 ? (
             <div className="overflow-x-auto">
-                <table className="w-full text-left border-collapse min-w-[600px]">
+                <table className="w-full text-left border-collapse min-w-[600px] whitespace-nowrap">
                   <thead className="bg-gray-50 border-b border-gray-100 text-xs font-semibold text-gray-500">
                     <tr>
                       <th className="px-4 py-3">Item Name</th>

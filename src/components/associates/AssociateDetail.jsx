@@ -188,7 +188,7 @@ const AssociateDetail = ({ open, itemId, onClose, onUpdated, isPage = false }) =
                   </div>
                 ) : (
                   <div className="overflow-x-auto">
-                    <table className="w-full text-left border-collapse min-w-[800px]">
+                    <table className="w-full text-left border-collapse min-w-[800px] whitespace-nowrap">
                       <thead className="bg-gray-50 text-xs font-semibold text-gray-500 uppercase tracking-wider">
                         <tr>
                           <th className="px-4 py-3">Date</th>
@@ -215,7 +215,7 @@ const AssociateDetail = ({ open, itemId, onClose, onUpdated, isPage = false }) =
                             <td className="px-4 py-3 text-gray-600">
                               {project.order ? (
                                 <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium bg-blue-50 border border-blue-100 text-blue-700">
-                                  ORD-{String(project.order.orderNumber).padStart(6, '0')}
+                                  {String(project.order.orderNumber).startsWith('ORD-') ? project.order.orderNumber : `ORD-${String(project.order.orderNumber).padStart(6, '0')}`}
                                 </span>
                               ) : '—'}
                             </td>

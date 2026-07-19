@@ -6,6 +6,7 @@ import Icons from "@/common/Icons";
 import Input from "@/common/Input";
 import { X, Plus } from "lucide-react";
 import ImageUpload from "@/common/ImageUpload";
+import Loader from "@/common/Loader";
 
 const paymentMethods = [
   { value: "CASH", label: "Cash" },
@@ -313,12 +314,8 @@ const EditPurchase = ({ open, onClose, initialData }) => {
             <X size={20} />
           </button>
         </div>
+        {isSubmitting && <Loader fullScreen text="Saving Changes..." />}
 
-        {loadingInitial ? (
-          <div className="flex-1 flex items-center justify-center">
-            <div className="h-8 w-8 animate-spin rounded-full border-b-2 border-primary"></div>
-          </div>
-        ) : (
           <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0">
             <div className="flex-1 overflow-y-auto px-6 py-6 custom-scrollbar space-y-8">
               
@@ -350,84 +347,76 @@ const EditPurchase = ({ open, onClose, initialData }) => {
                     Split Total Price
                   </Button>
                 </div>
-                <div className="overflow-x-auto rounded-lg border border-gray-200">
-                  <table className="w-full text-sm text-left">
-                    <thead className="bg-gray-50 border-b border-gray-200 text-gray-600 font-medium">
-                      <tr>
-                        <th className="px-3 py-2 w-[40px] text-center">
-                          <input type="checkbox" onChange={(e) => {
-                            const val = e.target.checked;
-                            setItems(items.map(i => ({ ...i, selected: val })));
-                          }} checked={items.length > 0 && items.every(i => i.selected)} />
-                        </th>
-                        <th className="px-3 py-2 w-[250px]">Item</th>
-                        <th className="px-3 py-2 w-[100px]">Unit</th>
-                        <th className="px-3 py-2 w-[100px]">Qty</th>
-                        <th className="px-3 py-2 w-[120px]">Price</th>
-                        <th className="px-3 py-2 w-[100px]">Disc.</th>
-                        <th className="px-3 py-2 w-[100px]">Tax (%)</th>
-                        <th className="px-3 py-2 w-[120px] text-right">Total</th>
-                        <th className="px-3 py-2 w-[50px] text-center"></th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {items.map((item, index) => (
-                        <tr key={item.id} className="border-b border-gray-100 last:border-0">
-                          <td className="p-2 text-center">
-                            <input type="checkbox" checked={item.selected || false} onChange={(e) => handleItemChange(index, 'selected', e.target.checked)} />
-                          </td>
-                          <td className="p-2">
-                            <div className="flex flex-col gap-1">
-                              <select 
-                                className="input text-sm py-1.5 px-2 w-full"
-                                value={item.inventoryItemId}
-                                onChange={(e) => handleItemChange(index, 'inventoryItemId', e.target.value)}
+                <div className="space-y-3 mt-2">
+                  {items.map((item, index) => (
+                    <div key={item.id} className="relative bg-gray-50/50 p-4 md:p-5 rounded-sm border border-gray-200 mb-4 group shadow-sm">
+                      <div className="absolute -left-3 -top-3 bg-primary text-white border border-primary rounded-full w-7 h-7 flex items-center justify-center text-xs font-bold shadow-sm">
+                        {index + 1}
+                      </div>
+                      <button type="button" onClick={() => removeItem(index)} className="absolute right-2 top-2 p-1.5 text-gray-400 hover:text-red-500 rounded-md hover:bg-red-50 transition-colors" disabled={items.length === 1}>
+                        <X size={16} />
+                      </button>
+
+                      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4 pr-6">
+                        <div className="space-y-1.5 md:col-span-2">
+                          <label className="text-xs font-semibold text-gray-600">Inventory Item <span className="text-red-500">*</span></label>
+                          <div className="flex flex-col gap-1">
+                            <select 
+                              className="input text-sm py-1.5 px-2 w-full"
+                              value={item.inventoryItemId}
+                              onChange={(e) => handleItemChange(index, 'inventoryItemId', e.target.value)}
+                              required
+                            >
+                              <option value="">Select Item</option>
+                              <option value="MANUAL" className="font-semibold text-primary">+ Create New Inventory Item</option>
+                              {inventoryItems.map(i => (
+                                <option key={i.id} value={i.id}>{i.name} ({i.category})</option>
+                              ))}
+                            </select>
+                            {item.inventoryItemId === 'MANUAL' && (
+                              <Input 
+                                value={item.itemName}
+                                onChange={(e) => handleItemChange(index, 'itemName', e.target.value)}
+                                placeholder="Enter item name..."
                                 required
-                              >
-                                <option value="">Select Item</option>
-                                <option value="MANUAL" className="font-semibold text-primary">+ Create New Inventory Item</option>
-                                {inventoryItems.map(i => (
-                                  <option key={i.id} value={i.id}>{i.name} ({i.category})</option>
-                                ))}
-                              </select>
-                              {item.inventoryItemId === 'MANUAL' && (
-                                <Input 
-                                  value={item.itemName}
-                                  onChange={(e) => handleItemChange(index, 'itemName', e.target.value)}
-                                  placeholder="Enter item name..."
-                                  required
-                                  className="text-sm py-1.5 px-2 bg-blue-50/50"
-                                />
-                              )}
-                            </div>
-                          </td>
-                          <td className="p-2">
-                            <Input value={item.purchaseUnit} onChange={(e) => handleItemChange(index, 'purchaseUnit', e.target.value)} placeholder="e.g. Box, Roll" disabled={item.inventoryItemId !== 'MANUAL'} className={`text-sm py-1.5 px-2 ${item.inventoryItemId !== 'MANUAL' ? 'bg-gray-50' : ''}`} />
-                          </td>
-                          <td className="p-2">
-                            <Input type="number" step="0.01" min="0.01" value={item.purchaseQuantity} onChange={(e) => handleItemChange(index, 'purchaseQuantity', e.target.value)} required className="text-sm py-1.5 px-2" />
-                          </td>
-                          <td className="p-2">
-                            <Input type="number" step="0.01" min="0" value={item.purchasePrice} onChange={(e) => handleItemChange(index, 'purchasePrice', e.target.value)} required className="text-sm py-1.5 px-2" />
-                          </td>
-                          <td className="p-2">
-                            <Input type="number" step="0.01" min="0" value={item.discount} onChange={(e) => handleItemChange(index, 'discount', e.target.value)} className="text-sm py-1.5 px-2" />
-                          </td>
-                          <td className="p-2">
-                            <Input type="number" step="0.01" min="0" value={item.tax} onChange={(e) => handleItemChange(index, 'tax', e.target.value)} className="text-sm py-1.5 px-2" />
-                          </td>
-                          <td className="p-2 text-right font-medium text-gray-800">
-                            {item.total.toFixed(2)}
-                          </td>
-                          <td className="p-2 text-center">
-                            <button type="button" onClick={() => removeItem(index)} className="p-1 text-gray-400 hover:text-rose-500 rounded transition-colors" disabled={items.length === 1}>
-                              <X size={16} />
-                            </button>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                                className="text-sm py-1.5 px-2 bg-blue-50/50 mt-2"
+                              />
+                            )}
+                          </div>
+                        </div>
+                        <div className="space-y-1.5">
+                          <label className="text-xs font-semibold text-gray-600">Unit</label>
+                          <Input value={item.purchaseUnit} onChange={(e) => handleItemChange(index, 'purchaseUnit', e.target.value)} placeholder="e.g. Box, Roll" disabled={item.inventoryItemId !== 'MANUAL'} className={`text-sm py-1.5 px-2 ${item.inventoryItemId !== 'MANUAL' ? 'bg-gray-100' : ''}`} />
+                        </div>
+                        <div className="space-y-1.5">
+                          <label className="text-xs font-semibold text-gray-600">Qty <span className="text-red-500">*</span></label>
+                          <Input type="number" step="0.01" min="0.01" value={item.purchaseQuantity} onChange={(e) => handleItemChange(index, 'purchaseQuantity', e.target.value)} required className="text-sm py-1.5 px-2" />
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        <div className="space-y-1.5">
+                          <label className="text-xs font-semibold text-gray-600">Unit Price <span className="text-red-500">*</span></label>
+                          <Input type="number" step="0.01" min="0" value={item.purchasePrice} onChange={(e) => handleItemChange(index, 'purchasePrice', e.target.value)} required className="text-sm py-1.5 px-2" />
+                        </div>
+                        <div className="space-y-1.5">
+                          <label className="text-xs font-semibold text-gray-600">Discount</label>
+                          <Input type="number" step="0.01" min="0" value={item.discount} onChange={(e) => handleItemChange(index, 'discount', e.target.value)} className="text-sm py-1.5 px-2" />
+                        </div>
+                        <div className="space-y-1.5">
+                          <label className="text-xs font-semibold text-gray-600">Tax (%)</label>
+                          <Input type="number" step="0.01" min="0" value={item.tax} onChange={(e) => handleItemChange(index, 'tax', e.target.value)} className="text-sm py-1.5 px-2" />
+                        </div>
+                        <div className="space-y-1.5 flex flex-col justify-end">
+                          <label className="text-xs font-semibold text-gray-600">Total Price</label>
+                          <div className="text-base font-bold text-gray-800 py-1.5 flex items-center gap-2">
+                             Rs. {item.total.toFixed(2)}
+                             <input type="checkbox" className="ml-auto" title="Select for split total" checked={item.selected || false} onChange={(e) => handleItemChange(index, 'selected', e.target.checked)} />
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
                 </div>
                 <Button type="button" variant="outline" size="sm" onClick={addItem} leftIcon={(props) => <Icons name="Plus" {...props} size={14} />}>
                   Add Item
@@ -536,7 +525,6 @@ const EditPurchase = ({ open, onClose, initialData }) => {
               </Button>
             </div>
           </form>
-        )}
       </div>
 
       {/* Split Total Modal */}

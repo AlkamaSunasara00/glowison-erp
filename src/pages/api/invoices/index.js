@@ -1,5 +1,6 @@
 import prisma from '@/lib/prisma';
 import { withAuth } from '@/lib/auth';
+import { generateDocumentNumber } from '@/lib/generateNumber';
 
 const handler = async (req, res) => {
   try {
@@ -38,20 +39,7 @@ const handler = async (req, res) => {
     if (req.method === 'POST') {
       const { items, ...invoiceData } = req.body;
       
-      // Auto-generate Invoice Number
-      const lastInvoice = await prisma.invoice.findFirst({
-        orderBy: { createdAt: 'desc' }
-      });
-      
-      let nextNumber = 1;
-      if (lastInvoice && lastInvoice.invoiceNumber) {
-        const lastNumMatch = lastInvoice.invoiceNumber.match(/\d+$/);
-        if (lastNumMatch) {
-          nextNumber = parseInt(lastNumMatch[0]) + 1;
-        }
-      }
-      
-      const invoiceNumber = `INV-${String(nextNumber).padStart(6, '0')}`;
+      const invoiceNumber = await generateDocumentNumber(prisma.invoice, 'INV');
       
       // Prepare invoice data
       const dataToSave = {

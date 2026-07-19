@@ -384,7 +384,7 @@ export const Dashboard = () => {
             
             {metrics.lowStockItems?.length > 0 ? (
                <div className="overflow-x-auto">
-                 <table className="w-full text-left border-collapse">
+                 <table className="w-full text-left border-collapse whitespace-nowrap">
                    <thead className="bg-gray-50 text-[10px] font-bold text-gray-400 uppercase tracking-wider border-b border-gray-100">
                      <tr>
                        <th className="px-5 py-3">Item Name</th>

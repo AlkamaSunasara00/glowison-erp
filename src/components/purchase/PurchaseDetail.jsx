@@ -6,6 +6,7 @@ import api from "@/lib/api";
 import StatusBadge from "@/common/StatusBadge";
 import EditPurchase from "./purchaseModal/EditPurchase";
 import { formatDate } from "@/utils/formatters";
+import Loader from "@/common/Loader";
 
 const PurchaseDetail = ({ itemId }) => {
   const router = useRouter();
@@ -35,42 +36,41 @@ const PurchaseDetail = ({ itemId }) => {
     router.push('/purchase');
   };
 
-  if (loading || !data) {
-    return (
-      <div className="flex h-[calc(100vh-80px)] items-center justify-center">
-        <div className="h-8 w-8 animate-spin rounded-full border-b-2 border-primary"></div>
-      </div>
-    );
-  }
-
   return (
-    <div className="flex flex-col min-h-screen w-full relative gap-4 pb-10">
+    <div className="flex flex-col w-full min-h-screen bg-transparent animate-fade-in pb-10">
+      {(loading || !data) ? (
+        <div className="flex flex-1 w-full h-full min-h-[400px] items-center justify-center bg-transparent">
+          <Loader text="Loading purchase details..." />
+        </div>
+      ) : (<>
       {/* ── HEADER ─────────────────────────────────────────── */}
-      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 bg-white p-5 rounded-lg border border-gray-100 shadow-sm">
+      <div className="flex items-center justify-between pb-6">
         <div className="flex items-center gap-4">
           <button
             type="button"
             onClick={handleBack}
-            className="p-2 text-gray-500 hover:text-primary hover:bg-primary/5 rounded-full transition-colors shrink-0"
+            className="text-gray-500 hover:text-gray-700 transition-colors shrink-0"
             title="Go back"
           >
             <Icons name="ArrowLeft" size={20} />
           </button>
           <div>
-            <h2 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
+            <h2 className="page-header flex items-center gap-2">
               Purchase {data.purchaseNumber ? `#${data.purchaseNumber}` : ''}
               <StatusBadge status={data.status} />
               <StatusBadge status={data.paymentStatus} />
             </h2>
-            <p className="text-sm text-gray-500 mt-0.5">Purchased on {formatDate(data.purchaseDate)}</p>
+            <p className="text-xs text-gray-400 mt-0.5">Purchased on {formatDate(data.purchaseDate)}</p>
           </div>
         </div>
 
         <div className="flex items-center gap-2">
           <Button
             variant="outline"
+            size="md"
             leftIcon={(props) => <Icons name="Pencil" {...props} />}
             onClick={() => setIsEditOpen(true)}
+            className="hidden sm:flex rounded-sm px-3! py-1.5! text-xs font-medium"
           >
             Edit Purchase
           </Button>
@@ -78,11 +78,12 @@ const PurchaseDetail = ({ itemId }) => {
       </div>
 
       {/* ── BODY ───────────────────────────────────────────── */}
-      <div className="grid grid-cols-1 lg:grid-cols-[1fr_400px] gap-4 items-start">
-        {/* ── LEFT (Line Items) ── */}
-        <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-6 space-y-8">
-          <section>
-            <h3 className="text-sm font-bold text-gray-800 tracking-wide uppercase mb-5 border-b pb-2">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 pb-20">
+        {/* ── LEFT (Main Info & Items) ── */}
+        <div className="lg:col-span-8 flex flex-col gap-6">
+          <section className="bg-white border border-gray-100/80 rounded-sm p-6 shadow-sm relative overflow-hidden group">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-bl from-indigo-500/5 to-transparent rounded-bl-full opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
+            <h3 className="text-base font-semibold text-gray-900 mb-4">
               Supplier & Terms
             </h3>
             
@@ -123,20 +124,21 @@ const PurchaseDetail = ({ itemId }) => {
             </div>
           </section>
 
-          <section>
-            <h3 className="text-sm font-bold text-gray-800 tracking-wide uppercase mb-5 border-b pb-2">
+          <section className="bg-white border border-gray-100/80 rounded-sm p-6 shadow-sm relative overflow-hidden group">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-bl from-indigo-500/5 to-transparent rounded-bl-full opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
+            <h3 className="text-base font-semibold text-gray-900 mb-4">
               Line Items
             </h3>
             
-            <div className="overflow-x-auto rounded-lg border border-gray-200">
-              <table className="w-full text-left text-sm whitespace-nowrap">
-                <thead className="bg-gray-50 border-b border-gray-200 text-gray-600 font-medium">
+            <div className="rounded-sm border border-gray-100 overflow-hidden">
+              <table className="w-full text-left border-collapse whitespace-nowrap">
+                <thead className="bg-primary border-b border-primary/20 text-xs font-semibold text-white">
                   <tr>
-                    <th className="px-4 py-3">Item</th>
+                    <th className="px-4 py-3 rounded-tl-sm">Item</th>
                     <th className="px-4 py-3 text-right">Qty</th>
                     <th className="px-4 py-3">Unit</th>
                     <th className="px-4 py-3 text-right">Price</th>
-                    <th className="px-4 py-3 text-right">Total</th>
+                    <th className="px-4 py-3 text-right rounded-tr-sm">Total</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100 bg-white">
@@ -175,9 +177,10 @@ const PurchaseDetail = ({ itemId }) => {
         </div>
 
         {/* ── RIGHT (Summary & Attachment) ── */}
-        <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-6 space-y-8 h-full">
-          <section className="space-y-4">
-            <h3 className="text-sm font-bold text-gray-800 tracking-wide uppercase mb-4 border-b pb-2">
+        <div className="lg:col-span-4 flex flex-col gap-6">
+          <section className="bg-white border border-gray-100/80 rounded-sm p-6 shadow-sm relative overflow-hidden group">
+            <div className="absolute top-0 right-0 w-24 h-24 bg-gradient-to-bl from-emerald-500/5 to-transparent rounded-bl-full opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
+            <h3 className="text-base font-semibold text-gray-900 mb-3 relative">
               Invoice Summary
             </h3>
             
@@ -224,8 +227,9 @@ const PurchaseDetail = ({ itemId }) => {
           </section>
 
           {data.invoiceUrl && (
-            <section className="space-y-4">
-              <h3 className="text-sm font-bold text-gray-800 tracking-wide uppercase mb-4 border-b pb-2">
+            <section className="bg-white border border-gray-100/80 rounded-sm p-6 shadow-sm relative overflow-hidden group">
+              <div className="absolute top-0 right-0 w-24 h-24 bg-gradient-to-bl from-sky-500/5 to-transparent rounded-bl-full opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
+              <h3 className="text-base font-semibold text-gray-900 mb-3 relative">
                 Invoice Attachment
               </h3>
               {data.invoiceUrl.endsWith('.pdf') ? (
@@ -255,6 +259,7 @@ const PurchaseDetail = ({ itemId }) => {
           initialData={data} 
         />
       )}
+      </>)}
     </div>
   );
 };

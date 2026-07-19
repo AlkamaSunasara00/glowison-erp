@@ -81,7 +81,7 @@ const Template1 = ({ data, detailInfo, settings, items }) => {
           </div>
 
           <div className="w-1/3 p-0">
-             <table className="w-full h-full text-[11px]">
+             <table className="w-full h-full text-[11px] whitespace-nowrap">
                <tbody>
                  <tr className="border-b border-blue-100">
                    <td className="p-1 pl-2 text-gray-600">Invoice #</td>
@@ -111,7 +111,7 @@ const Template1 = ({ data, detailInfo, settings, items }) => {
 
       {/* Items Table */}
       <div className="w-full border-b border-blue-800">
-        <table className="w-full text-left border-collapse text-[11px]">
+        <table className="w-full text-left border-collapse text-[11px] whitespace-nowrap">
           <thead>
             <tr className="border-b border-blue-800">
                <th className="border-r border-blue-800 p-1 w-6 text-center"></th>
