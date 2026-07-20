@@ -56,7 +56,7 @@ const PurchaseDetail = ({ itemId }) => {
           </button>
           <div>
             <h2 className="page-header flex items-center gap-2">
-              Purchase {data.purchaseNumber ? `#${data.purchaseNumber}` : ''}
+              {data.purchaseNumber ? `#${data.purchaseNumber}` : ''}
               <StatusBadge status={data.status} />
               <StatusBadge status={data.paymentStatus} />
             </h2>
@@ -124,43 +124,43 @@ const PurchaseDetail = ({ itemId }) => {
             </div>
           </section>
 
-          <section className="bg-white border border-gray-100/80 rounded-sm p-6 shadow-sm relative overflow-hidden group">
+          <section className="relative overflow-hidden group">
             <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-bl from-indigo-500/5 to-transparent rounded-bl-full opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
             <h3 className="text-base font-semibold text-gray-900 mb-4">
               Line Items
             </h3>
             
-            <div className="rounded-sm border border-gray-100 overflow-hidden">
-              <table className="w-full text-left border-collapse whitespace-nowrap">
+            <div className="rounded-sm border border-gray-100 overflow-x-auto w-full custom-scrollbar">
+              <table className="w-full text-left border-collapse whitespace-nowrap min-w-[600px]">
                 <thead className="bg-primary border-b border-primary/20 text-xs font-semibold text-white">
                   <tr>
-                    <th className="px-4 py-3 rounded-tl-sm">Item</th>
-                    <th className="px-4 py-3 text-right">Qty</th>
-                    <th className="px-4 py-3">Unit</th>
-                    <th className="px-4 py-3 text-right">Price</th>
-                    <th className="px-4 py-3 text-right rounded-tr-sm">Total</th>
+                    <th className="px-2 sm:px-4 py-3 rounded-tl-sm">Item</th>
+                    <th className="px-2 sm:px-4 py-3 text-right">Qty</th>
+                    <th className="px-2 sm:px-4 py-3">Unit</th>
+                    <th className="px-2 sm:px-4 py-3 text-right">Price</th>
+                    <th className="px-2 sm:px-4 py-3 text-right rounded-tr-sm">Total</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-100 bg-white">
+                <tbody className="divide-y divide-gray-100 bg-white text-sm">
                   {data.items?.map((item) => (
                     <tr key={item.id} className="hover:bg-gray-50/50 transition-colors">
-                      <td className="px-4 py-4 font-medium text-gray-900">
+                      <td className="px-2 sm:px-4 py-4 font-medium text-gray-900">
                         {item.inventoryItem ? item.inventoryItem.name : (
                           <span className="flex items-center gap-1">
                             {item.itemName} <span className="text-[10px] bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded">Manual</span>
                           </span>
                         )}
                       </td>
-                      <td className="px-4 py-4 text-right">
+                      <td className="px-2 sm:px-4 py-4 text-right">
                         <div className="text-gray-900 font-medium">{Number(item.purchaseQuantity)} {item.purchaseUnit}</div>
                         <div className="text-xs text-gray-500">= {Number(item.usageQuantity)} {item.usageUnit}</div>
                       </td>
-                      <td className="px-4 py-4 text-gray-500">{item.purchaseUnit}</td>
-                      <td className="px-4 py-4 text-right">
+                      <td className="px-2 sm:px-4 py-4 text-gray-500">{item.purchaseUnit}</td>
+                      <td className="px-2 sm:px-4 py-4 text-right">
                         <div className="text-gray-900 font-medium">Rs. {Number(item.purchasePrice).toLocaleString()}</div>
                         <div className="text-[10px] text-gray-500">Rs. {Number(item.unitCost).toLocaleString()} / {item.usageUnit}</div>
                       </td>
-                      <td className="px-4 py-4 text-right font-medium text-gray-900">Rs. {Number(item.total).toLocaleString()}</td>
+                      <td className="px-2 sm:px-4 py-4 text-right font-medium text-gray-900">Rs. {Number(item.total).toLocaleString()}</td>
                     </tr>
                   ))}
                 </tbody>

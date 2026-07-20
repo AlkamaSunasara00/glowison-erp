@@ -271,7 +271,7 @@ const SupplierDetail = ({ open, onClose, itemId, onUpdated, isPage = false }) =>
                           <div className="absolute left-0 top-0 bottom-0 w-1 bg-indigo-500/20 group-hover:bg-indigo-500 transition-colors"></div>
                           <div className="flex items-start justify-between">
                             <p className="text-sm font-bold text-gray-900 group-hover:text-primary transition-colors">
-                              #{purchase.invoiceNumber}
+                              #{purchase.invoiceNumber || purchase.purchaseNumber || purchase.id || 'N/A'}
                             </p>
                             <StatusBadge status={purchase.paymentStatus} />
                           </div>
