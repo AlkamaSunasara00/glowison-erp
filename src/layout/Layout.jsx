@@ -1,17 +1,30 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Sidebar from "./Sidebar";
 import { Menu, X } from "lucide-react";
 
 const Layout = ({ children }) => {
     const [isMobileOpen, setIsMobileOpen] = useState(false);
     const [isDesktopCollapsed, setIsDesktopCollapsed] = useState(false);
+    const [currentTime, setCurrentTime] = useState("");
+
+    useEffect(() => {
+        // Initial set
+        const now = new Date();
+        setCurrentTime(now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
+        
+        const timer = setInterval(() => {
+            const date = new Date();
+            setCurrentTime(date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
+        }, 1000);
+        return () => clearInterval(timer);
+    }, []);
 
     return (
         <div className="flex h-screen w-full overflow-hidden bg-[#f0f4f8] relative">
 
             {/* ── MOBILE HEADER ─────────────────────────────── */}
             <header className="lg:hidden absolute top-0 left-0 right-0 h-16 flex items-center justify-between px-4 z-[155] transition-all duration-300"
-                style={{ background: `linear-gradient(to right, var(--color-two), var(--color-three))` }}
+                style={{ background: `var(--color-primary)` }}
             >
                 <div className="flex items-center gap-3">
                     <button onClick={() => setIsMobileOpen(!isMobileOpen)} className="p-1.5 rounded-sm bg-white/15 hover:bg-white/25 transition-all duration-300 relative overflow-hidden">
@@ -24,6 +37,11 @@ const Layout = ({ children }) => {
                     </button>
                     <span className="text-base font-semibold tracking-wide text-white">Glowison ERP</span>
                 </div>
+                {currentTime && (
+                    <div className="text-white font-medium text-sm tracking-wide">
+                        {currentTime}
+                    </div>
+                )}
             </header>
 
             {/* ── MOBILE BACKDROP ───────────────────────────── */}

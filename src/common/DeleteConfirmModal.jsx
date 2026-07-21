@@ -42,22 +42,19 @@ const DeleteConfirmModal = ({ open, onClose, onConfirm, entityName = "this item"
 
   return (
     <div
-      className={`fixed inset-0 z-[2000] flex items-center justify-center p-4 ${
-        open ? "pointer-events-auto" : "pointer-events-none"
-      }`}
+      className={`fixed inset-0 z-[2000] flex items-center justify-center p-4 ${open ? "pointer-events-auto" : "pointer-events-none"
+        }`}
       aria-hidden={!open}
     >
       <div
-        className={`absolute inset-0 bg-black/50 backdrop-blur-sm ${
-          open ? "animate-overlay-in" : "animate-overlay-out"
-        }`}
+        className={`absolute inset-0 bg-black/50 backdrop-blur-sm ${open ? "animate-overlay-in" : "animate-overlay-out"
+          }`}
         onClick={onClose}
       />
 
       <div
-        className={`relative flex w-full max-w-sm flex-col overflow-hidden rounded-sm bg-white shadow-2xl border border-gray-100 ${
-          open ? "animate-modal-in" : "animate-modal-out"
-        }`}
+        className={`relative flex w-full max-w-sm flex-col overflow-hidden rounded-sm bg-white shadow-2xl border border-gray-100 ${open ? "animate-modal-in" : "animate-modal-out"
+          }`}
       >
         {isDeleting && <Loader fullScreen text="Deleting..." />}
         <div className="flex flex-col items-center justify-center p-6 text-center">
@@ -70,15 +67,15 @@ const DeleteConfirmModal = ({ open, onClose, onConfirm, entityName = "this item"
           </p>
 
           <div className="w-full rounded-lg border border-gray-200 bg-gray-50 p-4 mb-6">
-             <p className="text-xs font-semibold text-gray-600 mb-2 uppercase tracking-wide">Enter code to confirm:</p>
-             <div className="text-xl font-bold tracking-widest text-gray-900 mb-3 select-none">{confirmCode}</div>
-             <Input 
-                value={inputCode} 
-                onChange={(e) => setInputCode(e.target.value)} 
-                placeholder="Type the 4-digit code" 
-                className="text-center font-semibold tracking-widest"
-                maxLength={4}
-             />
+            <p className="text-xs font-semibold text-gray-600 mb-2 uppercase tracking-wide">Enter code to confirm:</p>
+            <div className="text-xl font-bold tracking-widest text-gray-900 mb-3 select-none">{confirmCode}</div>
+            <Input
+              value={inputCode}
+              onChange={(e) => setInputCode(e.target.value)}
+              placeholder="Type the 4-digit code"
+              className="text-center font-semibold tracking-widest"
+              maxLength={4}
+            />
           </div>
 
           <div className="flex w-full gap-3">

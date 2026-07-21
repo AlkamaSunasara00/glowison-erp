@@ -7,8 +7,10 @@ import api from '@/lib/api';
 import toast from 'react-hot-toast';
 import SignatureCanvas from 'react-signature-canvas';
 import Loader from '@/common/Loader';
+import { useInstall } from '@/context/InstallContext';
 
 export default function Settings() {
+  const { deferredPrompt, isAppInstalled, installApp } = useInstall();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [settings, setSettings] = useState({
@@ -106,6 +108,14 @@ export default function Settings() {
               Configure your business profile, financial details, and customized branding for all generated documents and invoices.
             </p>
           </div>
+
+          {!isAppInstalled && deferredPrompt && (
+            <div className="flex-shrink-0">
+              <Button type="button" variant="solid" onClick={installApp}>
+                <Icons name="Download" size={16} className="mr-2" /> Install App
+              </Button>
+            </div>
+          )}
         </div>
 
         {/* MAIN FORM */}

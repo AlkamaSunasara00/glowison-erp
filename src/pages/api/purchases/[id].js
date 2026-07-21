@@ -233,6 +233,7 @@ const handler = async (req, res) => {
         if (existing.status === 'RECEIVED') {
           // Reverse stock
           for (const pItem of existing.items) {
+            if (!pItem.inventoryItemId) continue;
             const invItem = await tx.inventoryItem.findUnique({ where: { id: pItem.inventoryItemId } });
             if (!invItem) continue;
 

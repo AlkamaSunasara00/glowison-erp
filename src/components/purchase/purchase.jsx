@@ -83,7 +83,7 @@ export const Purchase = () => {
       const res = await api.get('/purchases', {
         params: {
           page,
-          limit: 1,
+          limit: 10,
           search: debouncedSearch,
           paymentStatus: paymentFilter,
           status: statusFilter,

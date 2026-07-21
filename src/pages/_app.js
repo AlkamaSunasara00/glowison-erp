@@ -3,6 +3,7 @@ import Layout from "@/layout/Layout";
 import { useRouter } from "next/router";
 import { ThemeProvider } from "@/context/ThemeContext";
 import { AuthProvider, useAuth } from "@/context/AuthContext";
+import { InstallProvider } from "@/context/InstallContext";
 import { Toaster } from 'react-hot-toast';
 
 import Image from "next/image";
@@ -64,18 +65,20 @@ export default function App({ Component, pageProps }) {
 
   return (
     <AuthProvider>
-      <ThemeProvider>
-        <Toaster position="top-right" />
-        {isNoLayout ? (
-          <Component {...pageProps} />
-        ) : (
-          <ProtectedRoute>
-            <Layout>
-              <Component {...pageProps} />
-            </Layout>
-          </ProtectedRoute>
-        )}
-      </ThemeProvider>
+      <InstallProvider>
+        <ThemeProvider>
+          <Toaster position="top-right" />
+          {isNoLayout ? (
+            <Component {...pageProps} />
+          ) : (
+            <ProtectedRoute>
+              <Layout>
+                <Component {...pageProps} />
+              </Layout>
+            </ProtectedRoute>
+          )}
+        </ThemeProvider>
+      </InstallProvider>
     </AuthProvider>
   );
 }
