@@ -106,7 +106,7 @@ const Sidebar = ({ setMobileOpen, isMobileOpen, isDesktopCollapsed, setDesktopCo
     if (isMobile) {
         return (
             <div
-                className="w-[280px] h-screen text-white flex flex-col py-4 pl-2 pr-0 overflow-hidden"
+                className="w-[330px] h-screen text-white flex flex-col py-4 pl-2 pr-0 overflow-hidden"
                 style={{ background: `linear-gradient(135deg, var(--color-one) 0%, var(--color-primary) 60%, var(--color-one) 100%)` }}
             >
                 {/* Logo & Close */}
