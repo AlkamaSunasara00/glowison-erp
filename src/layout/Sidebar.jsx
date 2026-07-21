@@ -171,7 +171,7 @@ const Sidebar = ({ setMobileOpen, isMobileOpen, isDesktopCollapsed, setDesktopCo
 
                 {/* User & Install */}
                 <div className="mt-3 pt-3 pr-2 flex-shrink-0 border-t border-white/10 flex flex-col gap-2">
-                    {!isAppInstalled && deferredPrompt && (
+                    {!isAppInstalled && (
                         <button
                             onClick={installApp}
                             className="flex items-center gap-2 justify-center bg-primary/40 hover:bg-primary/60 border border-white/20 p-2 rounded-sm transition-all"

@@ -1,4 +1,5 @@
 import React, { createContext, useState, useEffect, useContext } from 'react';
+import toast from 'react-hot-toast';
 
 const InstallContext = createContext();
 
@@ -31,7 +32,13 @@ export const InstallProvider = ({ children }) => {
   }, []);
 
   const installApp = async () => {
-    if (!deferredPrompt) return;
+    if (!deferredPrompt) {
+      toast("To install the app: Tap your browser's menu (⋮) and select 'Install App' or 'Add to Home screen'.", {
+        icon: '📱',
+        duration: 6000,
+      });
+      return;
+    }
     
     deferredPrompt.prompt();
     const { outcome } = await deferredPrompt.userChoice;

@@ -109,7 +109,7 @@ export default function Settings() {
             </p>
           </div>
 
-          {!isAppInstalled && deferredPrompt && (
+          {!isAppInstalled && (
             <div className="flex-shrink-0">
               <Button type="button" variant="solid" onClick={installApp}>
                 <Icons name="Download" size={16} className="mr-2" /> Install App
