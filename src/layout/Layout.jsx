@@ -1,23 +1,10 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import Sidebar from "./Sidebar";
 import { Menu, X } from "lucide-react";
 
 const Layout = ({ children }) => {
     const [isMobileOpen, setIsMobileOpen] = useState(false);
     const [isDesktopCollapsed, setIsDesktopCollapsed] = useState(false);
-    const [currentTime, setCurrentTime] = useState("");
-
-    useEffect(() => {
-        // Initial set
-        const now = new Date();
-        setCurrentTime(now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
-        
-        const timer = setInterval(() => {
-            const date = new Date();
-            setCurrentTime(date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
-        }, 1000);
-        return () => clearInterval(timer);
-    }, []);
 
     return (
         <div className="flex h-screen w-full overflow-hidden bg-[#f0f4f8] relative">
@@ -37,11 +24,6 @@ const Layout = ({ children }) => {
                     </button>
                     <span className="text-base font-semibold tracking-wide text-white">Glowison ERP</span>
                 </div>
-                {currentTime && (
-                    <div className="text-white font-medium text-sm tracking-wide">
-                        {currentTime}
-                    </div>
-                )}
             </header>
 
             {/* ── MOBILE BACKDROP ───────────────────────────── */}

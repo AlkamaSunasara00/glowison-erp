@@ -26,6 +26,8 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/router";
 import { useAuth } from "@/context/AuthContext";
+import { useInstall } from "@/context/InstallContext";
+import { Download } from "lucide-react";
 
 const menuItems = [
     { name: "Dashboard", icon: LayoutDashboard, path: "/" },
@@ -48,6 +50,7 @@ const menuItems = [
 const Sidebar = ({ setMobileOpen, isMobileOpen, isDesktopCollapsed, setDesktopCollapsed, isMobile }) => {
     const router = useRouter();
     const { user, logout } = useAuth();
+    const { deferredPrompt, isAppInstalled, installApp } = useInstall();
     const [openMenus, setOpenMenus] = useState([]);
     const [showLogoutModal, setShowLogoutModal] = useState(false);
     const [hoveredItem, setHoveredItem] = useState(null);
@@ -166,8 +169,17 @@ const Sidebar = ({ setMobileOpen, isMobileOpen, isDesktopCollapsed, setDesktopCo
                     })}
                 </div>
 
-                {/* User */}
-                <div className="mt-3 pt-3 pr-2 flex-shrink-0 border-t border-white/10">
+                {/* User & Install */}
+                <div className="mt-3 pt-3 pr-2 flex-shrink-0 border-t border-white/10 flex flex-col gap-2">
+                    {!isAppInstalled && deferredPrompt && (
+                        <button
+                            onClick={installApp}
+                            className="flex items-center gap-2 justify-center bg-primary/40 hover:bg-primary/60 border border-white/20 p-2 rounded-sm transition-all"
+                        >
+                            <Download size={16} className="text-white" />
+                            <span className="text-sm font-semibold text-white">Install App</span>
+                        </button>
+                    )}
                     <div className="flex items-center justify-between bg-secondary/10 p-2 rounded-sm border border-secondary/20">
                         <div className="flex items-center gap-3">
                             <div className="w-10 h-10 flex-shrink-0 rounded-full bg-secondary/20 text-white flex items-center justify-center text-sm font-semibold border border-white/10 uppercase">
