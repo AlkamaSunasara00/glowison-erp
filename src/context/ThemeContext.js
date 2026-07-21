@@ -194,6 +194,17 @@ export const ThemeProvider = ({ children }) => {
     root.style.setProperty("--color-one", theme.one);
     root.style.setProperty("--color-two", theme.two);
     root.style.setProperty("--color-three", theme.three);
+
+    // Update browser/PWA theme color
+    let metaThemeColor = document.querySelector("meta[name=theme-color]");
+    if (metaThemeColor) {
+      metaThemeColor.content = theme.primary;
+    } else {
+      metaThemeColor = document.createElement("meta");
+      metaThemeColor.name = "theme-color";
+      metaThemeColor.content = theme.primary;
+      document.head.appendChild(metaThemeColor);
+    }
   };
 
   return (

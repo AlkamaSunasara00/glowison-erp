@@ -5,6 +5,7 @@ import { ThemeProvider } from "@/context/ThemeContext";
 import { AuthProvider, useAuth } from "@/context/AuthContext";
 import { InstallProvider } from "@/context/InstallContext";
 import { Toaster } from 'react-hot-toast';
+import { useEffect } from "react";
 
 import Image from "next/image";
 
@@ -57,6 +58,16 @@ const ProtectedRoute = ({ children }) => {
 
 export default function App({ Component, pageProps }) {
   const router = useRouter();
+
+  useEffect(() => {
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', function () {
+        navigator.serviceWorker.register('/sw.js').catch(function (err) {
+          console.error('Service Worker registration failed: ', err);
+        });
+      });
+    }
+  }, []);
 
   // 🔥 pages WITHOUT layout
   const noLayoutRoutes = ["/login"];
