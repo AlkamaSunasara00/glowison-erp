@@ -37,7 +37,7 @@ const Layout = ({ children }) => {
             {/* ── MOBILE SIDEBAR (drawer) ────────────────────── */}
             <div className={`
                 fixed top-0 left-0 h-full z-[2000] lg:hidden
-                w-[280px] flex-shrink-0
+                w-[330px] flex-shrink-0
                 transition-transform duration-300 ease-in-out
                 ${isMobileOpen ? "translate-x-0 shadow-2xl" : "-translate-x-full"}
             `}>
