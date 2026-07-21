@@ -27,8 +27,16 @@ const handler = async (req, res) => {
           lt: new Date(d.setHours(23,59,59,999))
         };
       }
+      
+      const { paymentStatus } = req.query;
+      if (paymentStatus && paymentStatus !== 'all') {
+        if (paymentStatus === 'paid') where.paymentStatus = 'PAID';
+        if (paymentStatus === 'partially paid') where.paymentStatus = 'PARTIALLY_PAID';
+        if (paymentStatus === 'unpaid') where.paymentStatus = 'UNPAID';
+      }
 
-      const [total, orders] = await Promise.all([
+      // Stats calculation on the filtered dataset
+      const [total, orders, statsAggr, pendingAggr] = await Promise.all([
         prisma.order.count({ where }),
         prisma.order.findMany({
           where,
@@ -36,12 +44,29 @@ const handler = async (req, res) => {
           take: parseInt(limit),
           include: { customer: { select: { id: true, name: true, phone: true } }, items: true },
           orderBy: { createdAt: 'desc' }
+        }),
+        prisma.order.aggregate({
+          where,
+          _sum: { total: true, amountPaid: true }
+        }),
+        prisma.order.count({
+          where: { ...where, status: { in: ['PENDING', 'PROCESSING'] } }
         })
       ]);
+
+      const totalValue = statsAggr._sum.total || 0;
+      const amountPaid = statsAggr._sum.amountPaid || 0;
+      const unpaidValue = Math.max(0, totalValue - amountPaid);
 
       return res.status(200).json({
         success: true,
         data: orders,
+        stats: {
+          totalOrders: total,
+          totalValue,
+          pendingCount: pendingAggr,
+          unpaidValue
+        },
         pagination: {
           total,
           page: parseInt(page),

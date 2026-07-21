@@ -17,7 +17,7 @@ const handler = async (req, res) => {
       }
       if (type && type !== 'all') where.type = type;
 
-      const [total, customers] = await Promise.all([
+      const [total, customers, statsAggr, newAggr] = await Promise.all([
         prisma.customer.count({ where }),
         prisma.customer.findMany({
           where,
@@ -30,8 +30,22 @@ const handler = async (req, res) => {
               select: { total: true }
             }
           }
+        }),
+        prisma.customer.groupBy({
+          by: ['type'],
+          where,
+          _count: { _all: true }
+        }),
+        prisma.customer.count({
+          where: {
+            ...where,
+            createdAt: { gte: new Date(new Date().setDate(1)) } // beginning of month
+          }
         })
       ]);
+      
+      const retailCount = statsAggr.find(s => s.type === 'RETAIL')?._count._all || 0;
+      const dealerCount = statsAggr.find(s => s.type === 'DEALER')?._count._all || 0;
 
       const customersWithTotals = customers.map(c => {
         const totalValue = c.orders.reduce((sum, order) => sum + Number(order.total || 0), 0);
@@ -45,6 +59,12 @@ const handler = async (req, res) => {
       return res.status(200).json({
         success: true,
         data: customersWithTotals,
+        stats: {
+          totalCustomers: total,
+          retailCount,
+          dealerCount,
+          newCustomers: newAggr
+        },
         pagination: {
           total,
           page: parseInt(page),

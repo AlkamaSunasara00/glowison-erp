@@ -10,8 +10,8 @@ import EditOrder from "./ordersModal/EditOrder";
 import DeleteConfirmModal from "@/common/DeleteConfirmModal";
 import toast from "react-hot-toast";
 import { formatDate } from "@/utils/formatters";
-
-
+import Loader from "@/common/Loader";
+import Pagination from "@/common/Pagination";
 
 const typeOptions = [
   { value: "all", label: "All Types" },
@@ -36,45 +36,64 @@ const paymentOptions = [
   { value: "paid", label: "Paid" },
 ];
 
-let inMemoryCache = null;
-
-const getCachedOrders = () => {
-  if (inMemoryCache) return inMemoryCache;
-  if (typeof window !== 'undefined') {
-    const saved = sessionStorage.getItem('ordersCache');
-    if (saved) {
-      try {
-        inMemoryCache = JSON.parse(saved);
-        return inMemoryCache;
-      } catch (e) {}
-    }
-  }
-  return null;
-};
-
-const setCachedOrders = (data) => {
-  inMemoryCache = data;
-  if (typeof window !== 'undefined') {
-    sessionStorage.setItem('ordersCache', JSON.stringify(data));
-  }
-};
-
 export const Orders = () => {
   const router = useRouter();
   const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
   const [paymentFilter, setPaymentFilter] = useState("all");
   const [monthFilter, setMonthFilter] = useState("");
-  const [orders, setOrders] = useState(getCachedOrders() || []);
+  
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [stats, setStats] = useState({ totalOrders: 0, totalValue: 0, pendingCount: 0, unpaidValue: 0 });
+
+  const [orders, setOrders] = useState([]);
   const [editItem, setEditItem] = useState(null);
   const [deleteItem, setDeleteItem] = useState(null);
-  const [loading, setLoading] = useState(!getCachedOrders());
+  const [loading, setLoading] = useState(true);
+  const [isInitialized, setIsInitialized] = useState(false);
+
+  // Initialize from URL query
+  useEffect(() => {
+    if (router.isReady && !isInitialized) {
+      if (router.query.page) setPage(parseInt(router.query.page) || 1);
+      if (router.query.search) {
+        setSearch(router.query.search);
+        setDebouncedSearch(router.query.search);
+      }
+      if (router.query.type) setTypeFilter(router.query.type);
+      if (router.query.status) setStatusFilter(router.query.status);
+      if (router.query.payment) setPaymentFilter(router.query.payment);
+      if (router.query.month) setMonthFilter(router.query.month);
+      setIsInitialized(true);
+    }
+  }, [router.isReady, isInitialized, router.query]);
+
+  // Debounce search
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedSearch(search);
+      if (search !== debouncedSearch) setPage(1);
+    }, 500);
+    return () => clearTimeout(handler);
+  }, [search, debouncedSearch]);
 
   const fetchOrders = async (silent = false) => {
     try {
-      if (!silent && !getCachedOrders()) setLoading(true);
-      const res = await api.get('/orders?limit=100');
+      if (!silent) setLoading(true);
+      const res = await api.get('/orders', {
+        params: {
+          page,
+          limit: 10,
+          search: debouncedSearch,
+          type: typeFilter,
+          status: statusFilter,
+          paymentStatus: paymentFilter,
+          date: monthFilter
+        }
+      });
       const mapped = res.data.data.map(o => ({
         ...o,
         id: String(o.orderNumber).startsWith('ORD-') ? o.orderNumber : `ORD-${String(o.orderNumber).padStart(6, '0')}`,
@@ -86,13 +105,14 @@ export const Orders = () => {
         itemsCount: o.items.length,
         items: o.items,
         total: `Rs. ${Number(o.totalAmount || o.total || 0).toLocaleString()}`,
-        balance: `Rs. ${Math.max(0, Number(o.total || 0) - Number(o.amountPaid || 0)).toLocaleString()}`,
+        balance: `Rs. ${Math.max(0, Number(o.totalAmount || o.total || 0) - Number(o.amountPaid || 0)).toLocaleString()}`,
         status: o.status.toLowerCase(),
         paymentStatus: o.paymentStatus.toLowerCase().replace('_', ' '),
         date: formatDate(o.createdAt)
       }));
-      setCachedOrders(mapped);
       setOrders(mapped);
+      if (res.data.stats) setStats(res.data.stats);
+      if (res.data.pagination) setTotalPages(res.data.pagination.totalPages);
     } catch (error) {
       toast.error('Failed to load orders');
     } finally {
@@ -101,36 +121,22 @@ export const Orders = () => {
   };
 
   useEffect(() => {
-    fetchOrders(!!getCachedOrders());
-  }, []);
+    if (!isInitialized) return;
+    
+    fetchOrders();
 
-  // Filters
-  const hasActiveFilters = typeFilter !== "all" || statusFilter !== "all" || paymentFilter !== "all";
-  const filteredOrders = orders.filter((order) => {
-    const query = search.trim().toLowerCase();
-    const matchesSearch = query.length === 0 || order.id.toLowerCase().includes(query) || order.customer.toLowerCase().includes(query);
-    const matchesType = typeFilter === "all" || order.type === typeFilter;
-    const matchesStatus = statusFilter === "all" || order.status === statusFilter;
-    const matchesPayment = paymentFilter === "all" || order.paymentStatus === paymentFilter;
-    const matchesMonth = !monthFilter || order.date.startsWith(monthFilter);
+    const query = {};
+    if (page > 1) query.page = page;
+    if (debouncedSearch) query.search = debouncedSearch;
+    if (typeFilter !== 'all') query.type = typeFilter;
+    if (statusFilter !== 'all') query.status = statusFilter;
+    if (paymentFilter !== 'all') query.payment = paymentFilter;
+    if (monthFilter) query.month = monthFilter;
 
-    return matchesSearch && matchesType && matchesStatus && matchesPayment && matchesMonth;
-  });
+    router.replace({ pathname: router.pathname, query }, undefined, { shallow: true });
+  }, [page, debouncedSearch, typeFilter, statusFilter, paymentFilter, monthFilter, isInitialized]);
 
-  // KPIs
-  const totalOrders = orders.length;
-  // Calculate total value - parse numeric
-  const totalValue = orders.reduce((sum, o) => {
-      const val = parseFloat(o.total.replace(/Rs.\s|,/g, ''));
-      return sum + (isNaN(val) ? 0 : val);
-  }, 0);
-  
-  const pendingCount = orders.filter(o => o.status === "pending" || o.status === "processing").length;
-  
-  const unpaidValue = orders.reduce((sum, o) => {
-      const val = parseFloat(o.balance.replace(/Rs.\s|,/g, ''));
-      return sum + (isNaN(val) ? 0 : val);
-  }, 0);
+  const hasActiveFilters = typeFilter !== "all" || statusFilter !== "all" || paymentFilter !== "all" || debouncedSearch !== "" || monthFilter !== "";
 
   const handleRowClick = (order) => {
     router.push(`/orders/${order.id}`);
@@ -169,7 +175,7 @@ export const Orders = () => {
             </div>
             <div>
               <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-1">Total Orders</p>
-              <h4 className="text-2xl font-black text-gray-900 tracking-tight">{totalOrders}</h4>
+              <h4 className="text-2xl font-black text-gray-900 tracking-tight">{stats.totalOrders}</h4>
             </div>
           </div>
           
@@ -179,7 +185,7 @@ export const Orders = () => {
             </div>
             <div>
               <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-1">Total Value</p>
-              <h4 className="text-2xl font-black text-gray-900 tracking-tight">Rs. {totalValue.toLocaleString()}</h4>
+              <h4 className="text-2xl font-black text-gray-900 tracking-tight">Rs. {stats.totalValue.toLocaleString()}</h4>
             </div>
           </div>
 
@@ -189,7 +195,7 @@ export const Orders = () => {
             </div>
             <div>
               <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-1">Pending/Processing</p>
-              <h4 className="text-2xl font-black text-gray-900 tracking-tight">{pendingCount}</h4>
+              <h4 className="text-2xl font-black text-gray-900 tracking-tight">{stats.pendingCount}</h4>
             </div>
           </div>
 
@@ -199,7 +205,7 @@ export const Orders = () => {
             </div>
             <div>
               <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-1">Unpaid/Outstanding</p>
-              <h4 className="text-2xl font-black text-gray-900 tracking-tight">Rs. {unpaidValue.toLocaleString()}</h4>
+              <h4 className="text-2xl font-black text-gray-900 tracking-tight">Rs. {stats.unpaidValue.toLocaleString()}</h4>
             </div>
           </div>
         </div>
@@ -219,7 +225,7 @@ export const Orders = () => {
             <Input
               type="select"
               value={typeFilter}
-              onChange={(e) => setTypeFilter(e.target.value)}
+              onChange={(e) => { setTypeFilter(e.target.value); setPage(1); }}
               options={typeOptions}
             />
           </div>
@@ -227,7 +233,7 @@ export const Orders = () => {
              <Input
               type="select"
               value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
+              onChange={(e) => { setStatusFilter(e.target.value); setPage(1); }}
               options={statusOptions}
             />
           </div>
@@ -235,7 +241,7 @@ export const Orders = () => {
              <Input
               type="select"
               value={paymentFilter}
-              onChange={(e) => setPaymentFilter(e.target.value)}
+              onChange={(e) => { setPaymentFilter(e.target.value); setPage(1); }}
               options={paymentOptions}
             />
           </div>
@@ -243,44 +249,54 @@ export const Orders = () => {
              <Input
               type="month"
               value={monthFilter}
-              onChange={(e) => setMonthFilter(e.target.value)}
+              onChange={(e) => { setMonthFilter(e.target.value); setPage(1); }}
             />
           </div>
         </div>
 
         {/* Content */}
-        {filteredOrders.length === 0 ? (
-          <EmptyState
-            search={search || (hasActiveFilters ? "active filters" : "")}
-            entityName="Orders"
-            entityIcon="ListChecks"
-            onClearSearch={() => {
-              setSearch("");
-              setTypeFilter("all");
-              setStatusFilter("all");
-              setPaymentFilter("all");
-              setMonthFilter("");
-            }}
-            addLabel="Create Order"
-          />
-        ) : (
-          <div className="bg-white rounded-sm border border-gray-100 shadow-sm overflow-hidden flex-1 custom-scrollbar min-h-[400px]">
-            <div className="overflow-x-auto">
-              <table className="w-full text-left border-collapse min-w-[900px] whitespace-nowrap">
-                <thead className="bg-primary border-b border-primary/20 text-xs font-semibold text-white">
+        <div className="bg-white rounded-sm border border-gray-100 shadow-sm flex flex-col flex-1 overflow-hidden min-h-[400px]">
+          <div className="flex-1 overflow-auto custom-scrollbar relative">
+            {loading && (
+              <div className="absolute inset-0 top-[40px] z-20 flex items-center justify-center bg-white/60 backdrop-blur-sm">
+                <Loader text="Loading Orders..." />
+              </div>
+            )}
+            <table className="w-full text-left border-collapse min-w-[900px] whitespace-nowrap">
+              <thead className="bg-primary border-b border-primary/20 text-xs font-semibold text-white sticky top-0 z-10">
+                <tr>
+                  <th className="px-4 py-3">Order ID</th>
+                  <th className="px-4 py-3">Customer</th>
+                  <th className="px-4 py-3">Type</th>
+                  <th className="px-4 py-3">Amount & Balance</th>
+                  <th className="px-4 py-3">Status</th>
+                  <th className="px-4 py-3">Payment</th>
+                  <th className="px-4 py-3">Date</th>
+                  <th className="px-4 py-3 text-center rounded-tr-sm">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="text-sm">
+                {!loading && orders.length === 0 ? (
                   <tr>
-                    <th className="px-4 py-3 rounded-tl-sm">Order ID</th>
-                    <th className="px-4 py-3">Customer</th>
-                    <th className="px-4 py-3">Type</th>
-                    <th className="px-4 py-3">Amount & Balance</th>
-                    <th className="px-4 py-3">Status</th>
-                    <th className="px-4 py-3">Payment</th>
-                    <th className="px-4 py-3">Date</th>
-                    <th className="px-4 py-3 text-center rounded-tr-sm">Actions</th>
+                    <td colSpan="8" className="p-0">
+                      <EmptyState
+                        search={search || (hasActiveFilters ? "active filters" : "")}
+                        entityName="Orders"
+                        entityIcon="ListChecks"
+                        onClearSearch={() => {
+                          setSearch("");
+                          setTypeFilter("all");
+                          setStatusFilter("all");
+                          setPaymentFilter("all");
+                          setMonthFilter("");
+                          setPage(1);
+                        }}
+                        addLabel="Create Order"
+                      />
+                    </td>
                   </tr>
-                </thead>
-                <tbody className="text-sm divide-y divide-gray-50">
-                  {filteredOrders.map(order => (
+                ) : (
+                  orders.map(order => (
                     <tr 
                       key={order.id} 
                       onClick={() => handleRowClick(order)}
@@ -319,15 +335,20 @@ export const Orders = () => {
                         </div>
                       </td>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                  ))
+                )}
+              </tbody>
+            </table>
           </div>
-        )}
+          <Pagination 
+            currentPage={page} 
+            totalPages={totalPages} 
+            onPageChange={(newPage) => setPage(newPage)} 
+          />
+        </div>
       </div>
 
-      {editItem && <EditOrder open={!!editItem} onClose={() => { setEditItem(null); fetchOrders(); }} initialData={editItem} />}
+      {editItem && <EditOrder open={!!editItem} onClose={() => { setEditItem(null); fetchOrders(true); }} initialData={editItem} />}
       {deleteItem && (
         <DeleteConfirmModal
           open={!!deleteItem}
@@ -337,9 +358,7 @@ export const Orders = () => {
             try {
               await api.delete(`/orders/${deleteItem.originalId}`);
               toast.success("Order deleted");
-              const updated = orders.filter(o => o.originalId !== deleteItem.originalId);
-              setCachedOrders(updated);
-              setOrders(updated);
+              setOrders(orders.filter(o => o.originalId !== deleteItem.originalId));
             } catch (err) {
               toast.error("Failed to delete order");
             }

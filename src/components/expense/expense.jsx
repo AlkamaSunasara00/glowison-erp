@@ -11,12 +11,10 @@ import AddExpense from "./expenseModal/AddExpense";
 import EditExpense from "./expenseModal/EditExpense";
 import DeleteConfirmModal from "@/common/DeleteConfirmModal";
 import Loader from "@/common/Loader";
-
-let globalExpensesCache = null;
-let globalExpenseStatsCache = null;
+import Pagination from "@/common/Pagination";
 
 const categoryOptions = [
-  { value: "", label: "All Categories" },
+  { value: "all", label: "All Categories" },
   { value: "OFFICE_SUPPLIES", label: "Office Supplies" },
   { value: "TRAVEL", label: "Travel" },
   { value: "UTILITIES", label: "Utilities" },
@@ -27,7 +25,7 @@ const categoryOptions = [
 ];
 
 const statusOptions = [
-  { value: "", label: "All Statuses" },
+  { value: "all", label: "All Statuses" },
   { value: "PAID", label: "Paid" },
   { value: "PENDING", label: "Pending" },
   { value: "PARTIALLY_PAID", label: "Partially Paid" }
@@ -36,39 +34,69 @@ const statusOptions = [
 export const Expense = () => {
   const router = useRouter();
   const [search, setSearch] = useState("");
-  const [categoryFilter, setCategoryFilter] = useState("");
-  const [statusFilter, setStatusFilter] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState("all");
+  const [statusFilter, setStatusFilter] = useState("all");
   
-  const [isAddOpen, setIsAddOpen] = useState(false);
-  const [editItem, setEditItem] = useState(null);
-  const [deleteItem, setDeleteItem] = useState(null);
-  
-  const [expenses, setExpenses] = useState(globalExpensesCache || []);
-  const [stats, setStats] = useState(globalExpenseStatsCache || {
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [stats, setStats] = useState({
     totalAmount: 0,
     dueAmount: 0,
     paidAmount: 0,
     categoryBreakdown: {}
   });
-  const [loading, setLoading] = useState(!globalExpensesCache);
+
+  const [isAddOpen, setIsAddOpen] = useState(false);
+  const [editItem, setEditItem] = useState(null);
+  const [deleteItem, setDeleteItem] = useState(null);
+  
+  const [expenses, setExpenses] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [isInitialized, setIsInitialized] = useState(false);
+
+  // Initialize from URL query
+  useEffect(() => {
+    if (router.isReady && !isInitialized) {
+      if (router.query.page) setPage(parseInt(router.query.page) || 1);
+      if (router.query.search) {
+        setSearch(router.query.search);
+        setDebouncedSearch(router.query.search);
+      }
+      if (router.query.category) setCategoryFilter(router.query.category);
+      if (router.query.status) setStatusFilter(router.query.status);
+      setIsInitialized(true);
+    }
+  }, [router.isReady, isInitialized, router.query]);
+
+  // Debounce search
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedSearch(search);
+      if (search !== debouncedSearch) setPage(1);
+    }, 500);
+    return () => clearTimeout(handler);
+  }, [search, debouncedSearch]);
 
   const fetchExpenses = async (silent = false) => {
     try {
-      if (!silent && !globalExpensesCache) setLoading(true);
+      if (!silent) setLoading(true);
       const res = await api.get('/expenses', {
         params: {
-          limit: 200,
-          search: search || undefined,
-          category: categoryFilter || undefined,
-          status: statusFilter || undefined,
+          page,
+          limit: 10,
+          search: debouncedSearch,
+          category: categoryFilter === 'all' ? undefined : categoryFilter,
+          status: statusFilter === 'all' ? undefined : statusFilter,
           includeStats: true
         }
       });
-      globalExpensesCache = res.data.data;
       setExpenses(res.data.data);
       if (res.data.stats) {
-        globalExpenseStatsCache = res.data.stats;
         setStats(res.data.stats);
+      }
+      if (res.data.pagination) {
+        setTotalPages(res.data.pagination.totalPages);
       }
     } catch (error) {
       toast.error('Failed to load expenses');
@@ -78,13 +106,20 @@ export const Expense = () => {
   };
 
   useEffect(() => {
-    const delayDebounceFn = setTimeout(() => {
-      fetchExpenses();
-    }, 300);
-    return () => clearTimeout(delayDebounceFn);
-  }, [search, categoryFilter, statusFilter]);
+    if (!isInitialized) return;
+    
+    fetchExpenses();
 
-  const hasActiveFilters = categoryFilter || statusFilter || search;
+    const query = {};
+    if (page > 1) query.page = page;
+    if (debouncedSearch) query.search = debouncedSearch;
+    if (categoryFilter !== 'all') query.category = categoryFilter;
+    if (statusFilter !== 'all') query.status = statusFilter;
+
+    router.replace({ pathname: router.pathname, query }, undefined, { shallow: true });
+  }, [page, debouncedSearch, categoryFilter, statusFilter, isInitialized]);
+
+  const hasActiveFilters = categoryFilter !== 'all' || statusFilter !== 'all' || debouncedSearch !== '';
   
   const topCategory = Object.entries(stats.categoryBreakdown).sort((a,b) => b[1] - a[1])[0] || ["None", 0];
 
@@ -167,7 +202,7 @@ export const Expense = () => {
              <Input
               type="select"
               value={categoryFilter}
-              onChange={(e) => setCategoryFilter(e.target.value)}
+              onChange={(e) => { setCategoryFilter(e.target.value); setPage(1); }}
               options={categoryOptions}
             />
           </div>
@@ -175,46 +210,52 @@ export const Expense = () => {
              <Input
               type="select"
               value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
+              onChange={(e) => { setStatusFilter(e.target.value); setPage(1); }}
               options={statusOptions}
             />
           </div>
         </div>
 
         {/* Content */}
-        {loading ? (
-           <div className="flex-1 bg-white rounded-sm border border-gray-100 shadow-sm overflow-hidden min-h-[400px] flex items-center justify-center">
-             <Loader text="Loading Expenses..." />
-           </div>
-        ) : expenses.length === 0 ? (
-          <EmptyState
-            search={hasActiveFilters ? "active filters" : ""}
-            entityName="Expenses"
-            entityIcon="Receipt"
-            onClearSearch={() => {
-              setSearch("");
-              setCategoryFilter("");
-              setStatusFilter("");
-            }}
-            addLabel="Log Expense"
-            onAdd={() => setIsAddOpen(true)}
-          />
-        ) : (
-          <div className="bg-white rounded-sm border border-gray-100 shadow-sm overflow-hidden flex-1 custom-scrollbar">
-            <div className="overflow-x-auto">
-              <table className="w-full text-left border-collapse min-w-[900px] whitespace-nowrap">
-                <thead className="bg-primary border-b border-primary/20 text-xs font-semibold text-white">
+        <div className="bg-white rounded-sm border border-gray-100 shadow-sm flex flex-col flex-1 overflow-hidden min-h-[400px]">
+          <div className="flex-1 overflow-auto custom-scrollbar relative">
+            {loading && (
+              <div className="absolute inset-0 top-[40px] z-20 flex items-center justify-center bg-white/60 backdrop-blur-sm">
+                <Loader text="Loading Expenses..." />
+              </div>
+            )}
+            <table className="w-full text-left border-collapse min-w-[900px] whitespace-nowrap">
+              <thead className="bg-primary border-b border-primary/20 text-xs font-semibold text-white sticky top-0 z-10">
+                <tr>
+                  <th className="px-4 py-3">Expense No & Date</th>
+                  <th className="px-4 py-3">Paid To</th>
+                  <th className="px-4 py-3">Category</th>
+                  <th className="px-4 py-3">Amount</th>
+                  <th className="px-4 py-3">Status</th>
+                  <th className="px-4 py-3 text-center rounded-tr-lg">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="text-sm">
+                {!loading && expenses.length === 0 ? (
                   <tr>
-                    <th className="px-4 py-3 rounded-tl-lg">Expense No & Date</th>
-                    <th className="px-4 py-3">Paid To</th>
-                    <th className="px-4 py-3">Category</th>
-                    <th className="px-4 py-3">Amount</th>
-                    <th className="px-4 py-3">Status</th>
-                    <th className="px-4 py-3 text-center rounded-tr-lg">Actions</th>
+                    <td colSpan="6" className="p-0">
+                      <EmptyState
+                        search={hasActiveFilters ? "active filters" : ""}
+                        entityName="Expenses"
+                        entityIcon="Receipt"
+                        onClearSearch={() => {
+                          setSearch("");
+                          setCategoryFilter("all");
+                          setStatusFilter("all");
+                          setPage(1);
+                        }}
+                        addLabel="Log Expense"
+                        onAdd={() => setIsAddOpen(true)}
+                      />
+                    </td>
                   </tr>
-                </thead>
-                <tbody className="text-sm">
-                  {expenses.map(expense => {
+                ) : (
+                  expenses.map(expense => {
                      return (
                       <tr 
                         key={expense.id} 
@@ -258,16 +299,21 @@ export const Expense = () => {
                         </td>
                       </tr>
                      );
-                  })}
-                </tbody>
-              </table>
-            </div>
+                  })
+                )}
+              </tbody>
+            </table>
           </div>
-        )}
+          <Pagination 
+            currentPage={page} 
+            totalPages={totalPages} 
+            onPageChange={(newPage) => setPage(newPage)} 
+          />
+        </div>
       </div>
 
-      {isAddOpen && <AddExpense open={isAddOpen} onClose={() => { setIsAddOpen(false); fetchExpenses(); }} />}
-      {editItem && <EditExpense open={!!editItem} onClose={() => { setEditItem(null); fetchExpenses(); }} initialData={editItem} />}
+      {isAddOpen && <AddExpense open={isAddOpen} onClose={() => { setIsAddOpen(false); fetchExpenses(true); }} />}
+      {editItem && <EditExpense open={!!editItem} onClose={() => { setEditItem(null); fetchExpenses(true); }} initialData={editItem} />}
       {deleteItem && (
         <DeleteConfirmModal
           open={!!deleteItem}
@@ -277,7 +323,7 @@ export const Expense = () => {
             try {
               await api.delete(`/expenses/${deleteItem.id}`);
               toast.success("Expense deleted");
-              fetchExpenses();
+              setExpenses(expenses.filter(e => e.id !== deleteItem.id));
             } catch (err) {
               toast.error("Failed to delete expense");
             }

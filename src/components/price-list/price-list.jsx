@@ -11,10 +11,7 @@ import EditPriceItem from "./priceListModal/EditPriceItem";
 import DeleteConfirmModal from "@/common/DeleteConfirmModal";
 import { useRouter } from "next/router";
 import Loader from "@/common/Loader";
-
-let globalPriceListCache = null;
-
-
+import Pagination from "@/common/Pagination";
 
 const categoryOptions = [
   { value: "all", label: "All Categories" },
@@ -53,6 +50,7 @@ const PriceList = () => {
   
   // State
   const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [viewMode, setViewMode] = useState(() => {
     if (typeof window !== "undefined") {
@@ -61,17 +59,52 @@ const PriceList = () => {
     return "table";
   });
   
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [stats, setStats] = useState({ totalItems: 0, uniqueCategories: 0, avgClientPrice: 0, avgB2BPrice: 0 });
+
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [editItem, setEditItem] = useState(null);
   const [deleteItem, setDeleteItem] = useState(null);
   
-  const [items, setItems] = useState(globalPriceListCache || []);
-  const [loading, setLoading] = useState(!globalPriceListCache);
+  const [items, setItems] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [isInitialized, setIsInitialized] = useState(false);
+
+  // Initialize from URL query
+  useEffect(() => {
+    if (router.isReady && !isInitialized) {
+      if (router.query.page) setPage(parseInt(router.query.page) || 1);
+      if (router.query.search) {
+        setSearch(router.query.search);
+        setDebouncedSearch(router.query.search);
+      }
+      if (router.query.category) setCategoryFilter(router.query.category);
+      setIsInitialized(true);
+    }
+  }, [router.isReady, isInitialized, router.query]);
+
+  // Debounce search
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedSearch(search);
+      if (search !== debouncedSearch) setPage(1);
+    }, 500);
+    return () => clearTimeout(handler);
+  }, [search, debouncedSearch]);
 
   const fetchPriceList = async (silent = false) => {
     try {
-      if (!silent && !globalPriceListCache) setLoading(true);
-      const res = await api.get('/price-list?limit=200');
+      if (!silent) setLoading(true);
+      const res = await api.get('/price-list', {
+        params: {
+          page,
+          limit: viewMode === 'card' ? 20 : 10,
+          search: debouncedSearch,
+          category: categoryFilter === 'all' ? undefined : categoryFilter,
+          includeStats: true
+        }
+      });
       const data = res.data.data.map(i => ({
         id: i.id,
         name: i.name,
@@ -86,8 +119,9 @@ const PriceList = () => {
         note: i.note || '',
         imageUrl: i.imageUrl || ''
       }));
-      globalPriceListCache = data;
       setItems(data);
+      if (res.data.stats) setStats(res.data.stats);
+      if (res.data.pagination) setTotalPages(res.data.pagination.totalPages);
     } catch (error) {
       toast.error('Failed to load price list');
     } finally {
@@ -96,30 +130,27 @@ const PriceList = () => {
   };
 
   useEffect(() => {
-    fetchPriceList(!!globalPriceListCache);
-  }, []);
+    if (!isInitialized) return;
+    
+    fetchPriceList();
+
+    const query = {};
+    if (page > 1) query.page = page;
+    if (debouncedSearch) query.search = debouncedSearch;
+    if (categoryFilter !== 'all') query.category = categoryFilter;
+
+    router.replace({ pathname: router.pathname, query }, undefined, { shallow: true });
+  }, [page, debouncedSearch, categoryFilter, viewMode, isInitialized]);
 
   // Filters
-  const hasActiveFilters = categoryFilter !== "all";
-
-  const filteredItems = items.filter((item) => {
-    const matchesSearch = item.name.toLowerCase().includes(search.toLowerCase()) || 
-                          item.id.toLowerCase().includes(search.toLowerCase());
-    const matchesCategory = categoryFilter === "all" || item.category === categoryFilter;
-    
-    return matchesSearch && matchesCategory;
-  });
+  const hasActiveFilters = categoryFilter !== "all" || debouncedSearch !== "";
 
   const handleRowClick = (item) => {
     router.push(`/price-list/${item.id}`);
   };
-  const totalItems = items.length;
-  const uniqueCategories = new Set(items.map(i => i.category)).size;
-  const avgClientPrice = totalItems > 0 ? items.reduce((acc, curr) => acc + Number(curr.clientPrice || 0), 0) / totalItems : 0;
-  const avgB2BPrice = totalItems > 0 ? items.reduce((acc, curr) => acc + Number(curr.b2bPrice || 0), 0) / totalItems : 0;
 
   return (
-    <div className="flex flex-col min-h-screen w-full relative gap-4">
+    <div className="flex flex-col min-h-screen w-full relative gap-4 pb-10">
       <div className="flex flex-col gap-4 rounded-lg">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div className="space-y-1">
@@ -143,7 +174,7 @@ const PriceList = () => {
             </div>
             <div className="min-w-0">
               <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1 truncate">Total Items</p>
-              <h4 className="text-xl font-black text-gray-900 tracking-tight truncate">{totalItems}</h4>
+              <h4 className="text-xl font-black text-gray-900 tracking-tight truncate">{stats.totalItems}</h4>
             </div>
           </div>
           <div className="bg-white rounded-sm p-5 shadow-sm border border-gray-100 flex items-center gap-4 hover:-translate-y-1 hover:shadow-md transition-all duration-300">
@@ -152,7 +183,7 @@ const PriceList = () => {
             </div>
             <div className="min-w-0">
               <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1 truncate">Categories</p>
-              <h4 className="text-xl font-black text-purple-600 tracking-tight truncate">{uniqueCategories}</h4>
+              <h4 className="text-xl font-black text-purple-600 tracking-tight truncate">{stats.uniqueCategories}</h4>
             </div>
           </div>
           <div className="bg-white rounded-sm p-5 shadow-sm border border-gray-100 flex items-center gap-4 hover:-translate-y-1 hover:shadow-md transition-all duration-300">
@@ -161,7 +192,7 @@ const PriceList = () => {
             </div>
             <div className="min-w-0">
               <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1 truncate">Avg Client Price</p>
-              <h4 className="text-xl font-black text-emerald-600 tracking-tight truncate">₹{avgClientPrice.toFixed(2)}</h4>
+              <h4 className="text-xl font-black text-emerald-600 tracking-tight truncate">₹{Number(stats.avgClientPrice).toFixed(2)}</h4>
             </div>
           </div>
           <div className="bg-white rounded-sm p-5 shadow-sm border border-gray-100 flex items-center gap-4 hover:-translate-y-1 hover:shadow-md transition-all duration-300">
@@ -170,31 +201,28 @@ const PriceList = () => {
             </div>
             <div className="min-w-0">
               <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1 truncate">Avg B2B Price</p>
-              <h4 className="text-xl font-black text-sky-600 tracking-tight truncate">₹{avgB2BPrice.toFixed(2)}</h4>
+              <h4 className="text-xl font-black text-sky-600 tracking-tight truncate">₹{Number(stats.avgB2BPrice).toFixed(2)}</h4>
             </div>
           </div>
         </div>
 
         {/* Toolbar */}
         <div className="bg-white p-3 rounded-sm border border-gray-100 shadow-sm flex flex-col md:flex-row gap-3">
-          <div className="relative w-full md:w-72">
-            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-              <Icons name="Search" size={16} className="text-gray-400" />
-            </div>
-            <input
-              type="text"
-              placeholder="Search items..."
+          <div className="w-full md:w-64">
+            <Input
+              id="search"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="block w-full pl-9 pr-3 py-2 border border-gray-200 rounded-sm text-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-shadow"
+              placeholder="Search items..."
+              startIcon={<Icons name="Search" size={16} className="text-gray-400" />}
             />
           </div>
           
-          <div className="w-full md:w-64">
+          <div className="w-full md:w-48">
             <Input
               type="select"
               value={categoryFilter}
-              onChange={(e) => setCategoryFilter(e.target.value)}
+              onChange={(e) => { setCategoryFilter(e.target.value); setPage(1); }}
               options={categoryOptions}
             />
           </div>
@@ -203,6 +231,7 @@ const PriceList = () => {
             <button
               onClick={() => {
                 setViewMode("table");
+                setPage(1);
                 if (typeof window !== "undefined") localStorage.setItem("priceListViewMode", "table");
               }}
               className={`p-1.5 rounded-sm transition-colors ${viewMode === "table" ? "bg-white text-primary shadow-sm" : "text-gray-500 hover:text-gray-900"}`}
@@ -213,6 +242,7 @@ const PriceList = () => {
             <button
               onClick={() => {
                 setViewMode("card");
+                setPage(1);
                 if (typeof window !== "undefined") localStorage.setItem("priceListViewMode", "card");
               }}
               className={`p-1.5 rounded-sm transition-colors ${viewMode === "card" ? "bg-white text-primary shadow-sm" : "text-gray-500 hover:text-gray-900"}`}
@@ -224,136 +254,181 @@ const PriceList = () => {
         </div>
 
         {/* Content */}
-        {loading ? (
-          <div className="flex-1 bg-white rounded-sm border border-gray-100 shadow-sm overflow-hidden min-h-[400px] flex items-center justify-center">
-            <Loader text="Loading Price List..." />
-          </div>
-        ) : filteredItems.length === 0 ? (
-          <EmptyState
-            icon="List"
-            title="No price items found"
-            description={
-              hasActiveFilters 
-                ? "No items match your current filters. Try adjusting them."
-                : "Get started by adding your first price list item."
-            }
-            action={hasActiveFilters ? "Clear filters" : "Add item"}
-            onAction={() => {
-              setSearch("");
-              setCategoryFilter("all");
-              if (!hasActiveFilters) setIsAddOpen(true);
-            }}
-          />
-        ) : viewMode === "table" ? (
-          <div className="bg-white rounded-sm border border-gray-100 shadow-sm overflow-hidden flex-1 custom-scrollbar">
-            <div className="overflow-x-auto">
+        <div className="bg-white rounded-sm border border-gray-100 shadow-sm flex flex-col flex-1 overflow-hidden min-h-[400px]">
+          <div className={`flex-1 overflow-auto custom-scrollbar relative ${viewMode === 'card' ? 'p-4 bg-gray-50/30' : ''}`}>
+            {loading && (
+              <div className="absolute inset-0 top-[40px] z-20 flex items-center justify-center bg-white/60 backdrop-blur-sm">
+                <Loader text="Loading Price List..." />
+              </div>
+            )}
+            
+            {viewMode === "table" ? (
               <table className="w-full text-left border-collapse min-w-[900px] whitespace-nowrap">
-                <thead className="bg-primary border-b border-primary/20 text-xs font-semibold text-white">
+                <thead className="bg-primary border-b border-primary/20 text-xs font-semibold text-white sticky top-0 z-10">
                   <tr>
-                    <th className="px-4 py-3 rounded-tl-lg">Item Name</th>
+                    <th className="px-4 py-3 rounded-tl-lg">Item</th>
                     <th className="px-4 py-3">Category</th>
                     <th className="px-4 py-3">Size & Unit</th>
-                    <th className="px-4 py-3 text-right">Client Price</th>
-                    <th className="px-4 py-3 text-right">B2B Price</th>
+                    <th className="px-4 py-3">Client Price</th>
+                    <th className="px-4 py-3">B2B Price</th>
                     <th className="px-4 py-3 text-center rounded-tr-lg">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="text-sm">
-                  {filteredItems.map(item => (
-                    <tr 
-                      key={item.id} 
-                      onClick={() => router.push(`/price-list/${item.id}`)}
-                      className="border-b border-gray-50 hover:bg-gray-50/50 transition-colors cursor-pointer"
-                    >
-                      <td className="px-4 py-3">
-                        <div className="flex items-center gap-3">
-                          <div className="w-9 h-9 rounded-sm bg-indigo-50 text-indigo-600 font-bold flex items-center justify-center shrink-0 border border-indigo-100/50 text-xs">
-                            {item.name.substring(0, 2).toUpperCase()}
-                          </div>
-                          <div className="font-semibold text-gray-900">{item.name}</div>
-                        </div>
-                      </td>
-                      <td className="px-4 py-3">
-                        <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium bg-gray-50 border border-gray-100 text-gray-700">
-                          {item.category === 'OTHER' ? item.otherLabel : formatEnum(item.category, categoryOptions)}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 text-gray-600">
-                        <div className="font-medium">{item.size === 'CUSTOM' ? item.sizeOther : formatEnum(item.size, sizeOptions)}</div>
-                        <div className="text-[11px] text-gray-500 mt-0.5">per {item.priceUnit === 'CUSTOM' ? item.unitOther : formatEnum(item.priceUnit, unitOptions)}</div>
-                      </td>
-                      <td className="px-4 py-3 text-right font-bold text-gray-900">
-                        ₹{Number(item.clientPrice).toLocaleString()}
-                      </td>
-                      <td className="px-4 py-3 text-right font-bold text-emerald-600">
-                        ₹{Number(item.b2bPrice).toLocaleString()}
-                      </td>
-                      <td className="px-4 py-3 text-center" onClick={(e) => e.stopPropagation()}>
-                        <div className="flex items-center justify-center gap-2">
-                           <Button variant="ghost" size="sm" onClick={() => setEditItem(item)} className="px-2!">
-                             <Icons name="Pencil" size={16} className="text-gray-500 hover:text-primary" />
-                           </Button>
-                           <Button variant="ghost" size="sm" onClick={() => setDeleteItem(item)} className="px-2!">
-                             <Icons name="Trash2" size={16} className="text-gray-400 hover:text-rose-500 transition-colors" />
-                           </Button>
-                        </div>
+                  {!loading && items.length === 0 ? (
+                    <tr>
+                      <td colSpan="6" className="p-0">
+                        <EmptyState
+                          icon="List"
+                          title="No price items found"
+                          description={
+                            hasActiveFilters 
+                              ? "No items match your current filters. Try adjusting them."
+                              : "Get started by adding your first price list item."
+                          }
+                          action={hasActiveFilters ? "Clear filters" : "Add item"}
+                          onAction={() => {
+                            setSearch("");
+                            setCategoryFilter("all");
+                            setPage(1);
+                            if (!hasActiveFilters) setIsAddOpen(true);
+                          }}
+                        />
                       </td>
                     </tr>
-                  ))}
+                  ) : (
+                    items.map(item => (
+                      <tr 
+                        key={item.id} 
+                        className="border-b border-gray-50 hover:bg-gray-50/50 transition-colors cursor-pointer"
+                        onClick={() => handleRowClick(item)}
+                      >
+                        <td className="px-4 py-3">
+                          <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-sm bg-gray-50 border border-gray-100 flex items-center justify-center overflow-hidden shrink-0">
+                              {item.imageUrl ? (
+                                <img src={item.imageUrl} alt={item.name} className="w-full h-full object-cover" />
+                              ) : (
+                                <Icons name="Image" size={16} className="text-gray-300" />
+                              )}
+                            </div>
+                            <div className="font-semibold text-gray-900">{item.name}</div>
+                          </div>
+                        </td>
+                        <td className="px-4 py-3 text-gray-600">
+                          {item.category === "OTHER" ? item.otherLabel : formatEnum(item.category, categoryOptions)}
+                        </td>
+                        <td className="px-4 py-3">
+                          <div className="text-gray-900">{item.size === "CUSTOM" ? item.sizeOther : formatEnum(item.size, sizeOptions)}</div>
+                          <div className="text-[11px] text-gray-500">{item.priceUnit === "CUSTOM" ? item.unitOther : formatEnum(item.priceUnit, unitOptions)}</div>
+                        </td>
+                        <td className="px-4 py-3 font-semibold text-gray-900">
+                          ₹{Number(item.clientPrice).toLocaleString()}
+                        </td>
+                        <td className="px-4 py-3 font-semibold text-indigo-600">
+                          {item.b2bPrice ? `₹${Number(item.b2bPrice).toLocaleString()}` : '—'}
+                        </td>
+                        <td className="px-4 py-3 text-center" onClick={(e) => e.stopPropagation()}>
+                          <div className="flex items-center justify-center gap-2">
+                            <Button variant="ghost" size="sm" onClick={() => setEditItem(item)} className="px-2!">
+                              <Icons name="Pencil" size={16} className="text-gray-400 hover:text-indigo-600 transition-colors" />
+                            </Button>
+                            <Button variant="ghost" size="sm" onClick={() => setDeleteItem(item)} className="px-2!">
+                              <Icons name="Trash2" size={16} className="text-gray-400 hover:text-rose-500 transition-colors" />
+                            </Button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))
+                  )}
                 </tbody>
               </table>
-            </div>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 flex-1 content-start">
-            {filteredItems.map(item => (
-              <div 
-                key={item.id}
-                onClick={() => router.push(`/price-list/${item.id}`)}
-                className="bg-white rounded-sm border border-gray-100 shadow-sm hover:shadow-md transition-shadow cursor-pointer p-4 flex flex-col gap-3 relative group"
-              >
-                <div className="flex justify-between items-start mb-1">
-                   <div className="w-10 h-10 rounded-sm bg-indigo-50 text-indigo-600 font-bold flex items-center justify-center shrink-0 border border-indigo-100 text-lg">
-                     {item.name.substring(0, 2).toUpperCase()}
-                   </div>
-                </div>
-                
-                <div className="min-w-0 mb-1">
-                   <h3 className="text-base font-bold text-gray-900 truncate" title={item.name}>{item.name}</h3>
-                   <span className="inline-flex items-center mt-1 px-2 py-0.5 rounded text-[10px] font-medium bg-gray-50 border border-gray-100 text-gray-700">
-                     {item.category === 'OTHER' ? item.otherLabel : formatEnum(item.category, categoryOptions)}
-                   </span>
-                </div>
-
-                <div className="grid grid-cols-2 gap-2 mt-1">
-                  <div className="flex flex-col bg-gray-50 p-2 rounded border border-gray-100">
-                    <span className="text-[10px] font-semibold uppercase tracking-wider text-gray-500">Client Price</span>
-                    <span className="text-sm font-bold text-gray-900 mt-0.5 truncate">₹{Number(item.clientPrice).toLocaleString()}</span>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 content-start relative min-h-[300px]">
+                {!loading && items.length === 0 ? (
+                  <div className="col-span-full">
+                    <EmptyState
+                      icon="List"
+                      title="No price items found"
+                      description={
+                        hasActiveFilters 
+                          ? "No items match your current filters. Try adjusting them."
+                          : "Get started by adding your first price list item."
+                      }
+                      action={hasActiveFilters ? "Clear filters" : "Add item"}
+                      onAction={() => {
+                        setSearch("");
+                        setCategoryFilter("all");
+                        setPage(1);
+                        if (!hasActiveFilters) setIsAddOpen(true);
+                      }}
+                    />
                   </div>
-                  <div className="flex flex-col bg-emerald-50 p-2 rounded border border-emerald-100">
-                    <span className="text-[10px] font-semibold uppercase tracking-wider text-emerald-600">B2B Price</span>
-                    <span className="text-sm font-bold text-emerald-700 mt-0.5 truncate">₹{Number(item.b2bPrice).toLocaleString()}</span>
-                  </div>
-                </div>
+                ) : (
+                  items.map(item => (
+                    <div 
+                      key={item.id}
+                      onClick={() => handleRowClick(item)}
+                      className="bg-white rounded-sm border border-gray-100 shadow-sm hover:shadow-md transition-shadow cursor-pointer p-4 flex flex-col gap-3 relative group"
+                    >
+                      <div className="absolute top-2 right-2 z-10 flex gap-1.5 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity" onClick={(e) => e.stopPropagation()}>
+                         <Button variant="outline" size="sm" onClick={() => setEditItem(item)} className="bg-white/90 backdrop-blur-sm px-2! py-1.5! border-gray-200 shadow-sm"><Icons name="Pencil" size={14} className="text-gray-600 hover:text-indigo-600" /></Button>
+                         <Button variant="outline" size="sm" onClick={() => setDeleteItem(item)} className="bg-white/90 backdrop-blur-sm px-2! py-1.5! border-gray-200 shadow-sm"><Icons name="Trash2" size={14} className="text-gray-600 hover:text-rose-500" /></Button>
+                      </div>
 
-                <div className="flex items-center justify-between pt-2 mt-auto text-[11px] font-semibold text-gray-500 uppercase tracking-wider border-t border-gray-50">
-                  <span className="truncate">{item.size === 'CUSTOM' ? item.sizeOther : formatEnum(item.size, sizeOptions)}</span>
-                  <span>/ {item.priceUnit === 'CUSTOM' ? item.unitOther : formatEnum(item.priceUnit, unitOptions)}</span>
-                </div>
+                      <div className="flex gap-4 items-start">
+                        <div className="w-16 h-16 rounded-sm bg-gray-50 border border-gray-100 flex items-center justify-center overflow-hidden shrink-0 shadow-sm">
+                          {item.imageUrl ? (
+                            <img src={item.imageUrl} alt={item.name} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
+                          ) : (
+                            <Icons name="Image" size={20} className="text-gray-300" />
+                          )}
+                        </div>
+                        <div className="flex-1 min-w-0 pr-8">
+                          <h3 className="font-semibold text-gray-900 truncate" title={item.name}>{item.name}</h3>
+                          <p className="text-[11px] text-gray-500 mt-0.5 truncate">
+                            {item.category === "OTHER" ? item.otherLabel : formatEnum(item.category, categoryOptions)}
+                          </p>
+                        </div>
+                      </div>
 
-                {/* Floating Action Buttons */}
-                <div className="absolute top-3 right-3 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity" onClick={(e) => e.stopPropagation()}>
-                   <Button variant="solid" size="sm" onClick={() => setEditItem(item)} className="rounded-full w-8 h-8 p-0 flex items-center justify-center shadow-md"><Icons name="Pencil" size={14} /></Button>
-                   <Button variant="solid" size="sm" onClick={() => setDeleteItem(item)} className="rounded-full w-8 h-8 p-0 flex items-center justify-center shadow-md bg-rose-600 hover:bg-rose-700 border-none"><Icons name="Trash2" size={14} /></Button>
-                </div>
+                      <div className="grid grid-cols-2 gap-2 p-2 bg-gray-50 rounded text-xs mt-2 border border-gray-100">
+                        <div>
+                          <span className="text-gray-500 block mb-0.5">Size</span>
+                          <span className="font-medium text-gray-900 truncate block">{item.size === "CUSTOM" ? item.sizeOther : formatEnum(item.size, sizeOptions)}</span>
+                        </div>
+                        <div>
+                          <span className="text-gray-500 block mb-0.5">Unit</span>
+                          <span className="font-medium text-gray-900 truncate block">{item.priceUnit === "CUSTOM" ? item.unitOther : formatEnum(item.priceUnit, unitOptions)}</span>
+                        </div>
+                      </div>
+
+                      <div className="flex justify-between items-center mt-auto pt-3 border-t border-gray-50">
+                        <div>
+                          <span className="text-[10px] text-gray-500 uppercase tracking-wider block mb-0.5">Client Price</span>
+                          <span className="font-semibold text-gray-900">₹{Number(item.clientPrice).toLocaleString()}</span>
+                        </div>
+                        <div className="text-right">
+                          <span className="text-[10px] text-gray-500 uppercase tracking-wider block mb-0.5">B2B Price</span>
+                          <span className="font-semibold text-indigo-600">{item.b2bPrice ? `₹${Number(item.b2bPrice).toLocaleString()}` : '—'}</span>
+                        </div>
+                      </div>
+                    </div>
+                  ))
+                )}
               </div>
-            ))}
+            )}
           </div>
-        )}
+          <Pagination 
+            currentPage={page} 
+            totalPages={totalPages} 
+            onPageChange={(newPage) => setPage(newPage)} 
+          />
+        </div>
       </div>
 
-      {isAddOpen && <AddPriceItem open={isAddOpen} onClose={() => { setIsAddOpen(false); fetchPriceList(); }} />}
-      {editItem && <EditPriceItem open={!!editItem} onClose={() => { setEditItem(null); fetchPriceList(); }} initialData={editItem} />}
+      {isAddOpen && <AddPriceItem open={isAddOpen} onClose={() => { setIsAddOpen(false); fetchPriceList(true); }} />}
+      {editItem && <EditPriceItem open={!!editItem} onClose={() => { setEditItem(null); fetchPriceList(true); }} initialData={editItem} />}
       {deleteItem && (
         <DeleteConfirmModal
           open={!!deleteItem}
@@ -363,9 +438,7 @@ const PriceList = () => {
             try {
               await api.delete(`/price-list/${deleteItem.id}`);
               toast.success("Item deleted");
-              const updated = items.filter(i => i.id !== deleteItem.id);
-              globalPriceListCache = updated;
-              setItems(updated);
+              setItems(items.filter(i => i.id !== deleteItem.id));
             } catch (err) {
               toast.error("Failed to delete item");
             }

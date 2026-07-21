@@ -18,19 +18,39 @@ const handler = async (req, res) => {
       if (status && status !== 'all') where.status = status;
       if (source && source !== 'all') where.source = source;
 
-      const [total, leads] = await Promise.all([
+      const [total, leads, statsAggr] = await Promise.all([
         prisma.lead.count({ where }),
         prisma.lead.findMany({
           where,
           skip: parseInt(skip),
           take: parseInt(limit),
           orderBy: { createdAt: 'desc' }
+        }),
+        prisma.lead.groupBy({
+          by: ['status'],
+          where,
+          _count: { _all: true }
         })
       ]);
+
+      const newLeads = statsAggr.find(s => s.status === 'NEW')?._count._all || 0;
+      const wonLeads = statsAggr.find(s => s.status === 'CLOSED_WON')?._count._all || 0;
+      const lostLeads = statsAggr.find(s => s.status === 'CLOSED_LOST')?._count._all || 0;
+      
+      const openLeads = statsAggr
+        .filter(s => s.status !== 'CLOSED_WON' && s.status !== 'CLOSED_LOST')
+        .reduce((sum, s) => sum + s._count._all, 0);
 
       return res.status(200).json({
         success: true,
         data: leads,
+        stats: {
+          totalLeads: total,
+          newLeads,
+          wonLeads,
+          lostLeads,
+          openLeads
+        },
         pagination: {
           total,
           page: parseInt(page),

@@ -11,8 +11,7 @@ import AddInvoice from "./invoiceModal/AddInvoice";
 import EditInvoice from "./invoiceModal/EditInvoice";
 import DeleteConfirmModal from "@/common/DeleteConfirmModal";
 import Loader from "@/common/Loader";
-
-let globalInvoiceCache = null;
+import Pagination from "@/common/Pagination";
 
 const statusOptions = [
   { value: "all", label: "All Statuses" },
@@ -25,9 +24,10 @@ const statusOptions = [
 
 export const Invoice = () => {
   const router = useRouter();
+  
   const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
-  const [isAddOpen, setIsAddOpen] = useState(false);
   const [viewMode, setViewMode] = useState(() => {
     if (typeof window !== "undefined") {
       return localStorage.getItem("invoiceViewMode") || "table";
@@ -35,15 +35,57 @@ export const Invoice = () => {
     return "table";
   });
 
-  const [invoices, setInvoices] = useState(globalInvoiceCache || []);
-  const [loading, setLoading] = useState(!globalInvoiceCache);
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [stats, setStats] = useState({ totalInvoiced: 0, collected: 0, overdue: 0, outstanding: 0 });
+
+  const [isAddOpen, setIsAddOpen] = useState(false);
+  const [invoices, setInvoices] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [isInitialized, setIsInitialized] = useState(false);
+  
   const [editItem, setEditItem] = useState(null);
   const [deleteItem, setDeleteItem] = useState(null);
 
+  // Initialize from URL query
+  useEffect(() => {
+    if (router.isReady && !isInitialized) {
+      if (router.query.page) setPage(parseInt(router.query.page) || 1);
+      if (router.query.search) {
+        setSearch(router.query.search);
+        setDebouncedSearch(router.query.search);
+      }
+      if (router.query.status) setStatusFilter(router.query.status);
+      if (router.query.create === 'true') {
+        setIsAddOpen(true);
+        const { create, ...rest } = router.query;
+        router.replace({ pathname: router.pathname, query: rest }, undefined, { shallow: true });
+      }
+      setIsInitialized(true);
+    }
+  }, [router.isReady, isInitialized, router.query]);
+
+  // Debounce search
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedSearch(search);
+      if (search !== debouncedSearch) setPage(1);
+    }, 500);
+    return () => clearTimeout(handler);
+  }, [search, debouncedSearch]);
+
   const fetchInvoices = async (silent = false) => {
     try {
-      if (!silent && !globalInvoiceCache) setLoading(true);
-      const res = await api.get('/invoices?limit=200');
+      if (!silent) setLoading(true);
+      const res = await api.get('/invoices', {
+        params: {
+          page,
+          limit: viewMode === 'card' ? 20 : 10,
+          search: debouncedSearch,
+          status: statusFilter === 'all' ? undefined : statusFilter,
+          includeStats: true
+        }
+      });
       const data = res.data.data.map(i => ({
         id: i.id,
         invoiceNumber: i.invoiceNumber,
@@ -54,8 +96,9 @@ export const Invoice = () => {
         amount: Number(i.grandTotal),
         status: i.status
       }));
-      globalInvoiceCache = data;
       setInvoices(data);
+      if (res.data.stats) setStats(res.data.stats);
+      if (res.data.pagination) setTotalPages(res.data.pagination.totalPages);
     } catch (error) {
       toast.error('Failed to load invoices');
     } finally {
@@ -64,34 +107,20 @@ export const Invoice = () => {
   };
 
   useEffect(() => {
-    fetchInvoices(!!globalInvoiceCache);
-  }, []);
+    if (!isInitialized) return;
+    
+    fetchInvoices();
 
-  useEffect(() => {
-    if (router.isReady && router.query.create === 'true') {
-      setIsAddOpen(true);
-      const { create, ...rest } = router.query;
-      router.replace({ pathname: router.pathname, query: rest }, undefined, { shallow: true });
-    }
-  }, [router.isReady, router.query.create]);
+    const query = {};
+    if (page > 1) query.page = page;
+    if (debouncedSearch) query.search = debouncedSearch;
+    if (statusFilter !== 'all') query.status = statusFilter;
+
+    router.replace({ pathname: router.pathname, query }, undefined, { shallow: true });
+  }, [page, debouncedSearch, statusFilter, viewMode, isInitialized]);
 
   // Filters
-  const hasActiveFilters = statusFilter !== "all";
-  const filteredInvoices = invoices.filter((invoice) => {
-    const query = search.trim().toLowerCase();
-    const matchesSearch = query.length === 0 || 
-      (invoice.invoiceNumber && invoice.invoiceNumber.toLowerCase().includes(query)) || 
-      invoice.customer.toLowerCase().includes(query);
-    const matchesStatus = statusFilter === "all" || invoice.status === statusFilter;
-
-    return matchesSearch && matchesStatus;
-  });
-
-  // KPIs
-  const totalInvoiced = invoices.reduce((sum, i) => sum + i.amount, 0);
-  const collected = invoices.filter(i => i.status === "PAID").reduce((sum, i) => sum + i.amount, 0);
-  const overdue = invoices.filter(i => i.status === "OVERDUE").reduce((sum, i) => sum + i.amount, 0);
-  const outstanding = invoices.filter(i => i.status === "SENT" || i.status === "OVERDUE" || i.status === "DRAFT").reduce((sum, i) => sum + i.amount, 0);
+  const hasActiveFilters = statusFilter !== "all" || debouncedSearch !== "";
 
   const handleRowClick = (invoiceId) => {
     router.push(`/invoice/${invoiceId}`);
@@ -111,7 +140,7 @@ export const Invoice = () => {
   };
 
   return (
-    <div className="flex flex-col min-h-screen w-full relative gap-4">
+    <div className="flex flex-col min-h-screen w-full relative gap-4 pb-10">
       <div className="flex flex-col gap-4 rounded-lg">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div className="space-y-1">
@@ -142,7 +171,7 @@ export const Invoice = () => {
             </div>
             <div className="min-w-0">
               <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1 truncate">Total Invoiced</p>
-              <h4 className="text-xl font-black text-gray-900 tracking-tight truncate">₹{totalInvoiced.toLocaleString()}</h4>
+              <h4 className="text-xl font-black text-gray-900 tracking-tight truncate">₹{Number(stats.totalInvoiced).toLocaleString()}</h4>
             </div>
           </div>
           <div className="bg-white rounded-sm p-5 shadow-sm border border-gray-100 flex items-center gap-4 hover:-translate-y-1 hover:shadow-md transition-all duration-300">
@@ -151,7 +180,7 @@ export const Invoice = () => {
             </div>
             <div className="min-w-0">
               <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1 truncate">Collected</p>
-              <h4 className="text-xl font-black text-emerald-600 tracking-tight truncate">₹{collected.toLocaleString()}</h4>
+              <h4 className="text-xl font-black text-emerald-600 tracking-tight truncate">₹{Number(stats.collected).toLocaleString()}</h4>
             </div>
           </div>
           <div className="bg-white rounded-sm p-5 shadow-sm border border-gray-100 flex items-center gap-4 hover:-translate-y-1 hover:shadow-md transition-all duration-300">
@@ -160,7 +189,7 @@ export const Invoice = () => {
             </div>
             <div className="min-w-0">
               <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1 truncate">Outstanding</p>
-              <h4 className="text-xl font-black text-amber-600 tracking-tight truncate">₹{outstanding.toLocaleString()}</h4>
+              <h4 className="text-xl font-black text-amber-600 tracking-tight truncate">₹{Number(stats.outstanding).toLocaleString()}</h4>
             </div>
           </div>
           <div className="bg-white rounded-sm p-5 shadow-sm border border-gray-100 flex items-center gap-4 hover:-translate-y-1 hover:shadow-md transition-all duration-300">
@@ -169,7 +198,7 @@ export const Invoice = () => {
             </div>
             <div className="min-w-0">
               <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1 truncate">Overdue</p>
-              <h4 className="text-xl font-black text-rose-600 tracking-tight truncate">₹{overdue.toLocaleString()}</h4>
+              <h4 className="text-xl font-black text-rose-600 tracking-tight truncate">₹{Number(stats.overdue).toLocaleString()}</h4>
             </div>
           </div>
         </div>
@@ -189,7 +218,7 @@ export const Invoice = () => {
              <Input
               type="select"
               value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
+              onChange={(e) => { setStatusFilter(e.target.value); setPage(1); }}
               options={statusOptions}
             />
           </div>
@@ -197,6 +226,7 @@ export const Invoice = () => {
             <button
               onClick={() => {
                 setViewMode("table");
+                setPage(1);
                 if (typeof window !== "undefined") localStorage.setItem("invoiceViewMode", "table");
               }}
               className={`p-1.5 rounded-sm transition-colors ${viewMode === "table" ? "bg-white text-primary shadow-sm" : "text-gray-500 hover:text-gray-900"}`}
@@ -207,6 +237,7 @@ export const Invoice = () => {
             <button
               onClick={() => {
                 setViewMode("card");
+                setPage(1);
                 if (typeof window !== "undefined") localStorage.setItem("invoiceViewMode", "card");
               }}
               className={`p-1.5 rounded-sm transition-colors ${viewMode === "card" ? "bg-white text-primary shadow-sm" : "text-gray-500 hover:text-gray-900"}`}
@@ -218,27 +249,17 @@ export const Invoice = () => {
         </div>
 
         {/* Content */}
-        {/* Content */}
-        {loading ? (
-          <div className="flex-1 bg-white rounded-sm border border-gray-100 shadow-sm overflow-hidden min-h-[400px] flex items-center justify-center">
-            <Loader text="Loading Invoices..." />
-          </div>
-        ) : filteredInvoices.length === 0 ? (
-          <EmptyState
-            search={search || (hasActiveFilters ? "active filters" : "")}
-            entityName="Invoices"
-            entityIcon="FileText"
-            onClearSearch={() => {
-              setSearch("");
-              setStatusFilter("all");
-            }}
-            addLabel="Create Invoice"
-          />
-        ) : viewMode === "table" ? (
-          <div className="bg-white rounded-sm border border-gray-100 shadow-sm overflow-hidden flex-1 custom-scrollbar">
-            <div className="overflow-x-auto">
+        <div className="bg-white rounded-sm border border-gray-100 shadow-sm flex flex-col flex-1 overflow-hidden min-h-[400px]">
+          <div className={`flex-1 overflow-auto custom-scrollbar relative ${viewMode === 'card' ? 'p-4 bg-gray-50/30' : ''}`}>
+            {loading && (
+              <div className="absolute inset-0 top-[40px] z-20 flex items-center justify-center bg-white/60 backdrop-blur-sm">
+                <Loader text="Loading Invoices..." />
+              </div>
+            )}
+            
+            {viewMode === "table" ? (
               <table className="w-full text-left border-collapse min-w-[900px] whitespace-nowrap">
-                <thead className="bg-primary border-b border-primary/20 text-xs font-semibold text-white">
+                <thead className="bg-primary border-b border-primary/20 text-xs font-semibold text-white sticky top-0 z-10">
                   <tr>
                     <th className="px-4 py-3 rounded-tl-lg">Invoice Number</th>
                     <th className="px-4 py-3">Customer</th>
@@ -250,125 +271,140 @@ export const Invoice = () => {
                   </tr>
                 </thead>
                 <tbody className="text-sm">
-                  {filteredInvoices.map(invoice => (
-                    <tr 
-                      key={invoice.id} 
-                      onClick={() => handleRowClick(invoice.id)}
-                      className="border-b border-gray-50 hover:bg-gray-50/50 cursor-pointer transition-colors"
-                    >
-                      <td className="px-4 py-3">
-                         <div className="font-semibold text-gray-900">{invoice.invoiceNumber}</div>
-                         {invoice.orderCode && <div className="text-[10px] text-gray-400">Order: {invoice.orderCode}</div>}
-                      </td>
-                      <td className="px-4 py-3">
-                        <div className="flex items-center gap-2">
-                           <div className="w-8 h-8 rounded-full bg-indigo-50 text-indigo-600 font-bold flex items-center justify-center shrink-0 border border-indigo-100/50 text-xs">
-                             {invoice.customer.substring(0, 2).toUpperCase()}
-                           </div>
-                           <span className="font-semibold text-gray-900">{invoice.customer}</span>
-                        </div>
-                      </td>
-                      <td className="px-4 py-3 text-gray-600">{invoice.date}</td>
-                      <td className="px-4 py-3 text-gray-600">{invoice.dueDate}</td>
-                      <td className="px-4 py-3 text-right font-bold text-gray-900">
-                        ₹{invoice.amount.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}
-                      </td>
-                      <td className="px-4 py-3 text-center">
-                         <StatusBadge status={invoice.status} />
-                      </td>
-                      <td className="px-4 py-3 text-right" onClick={(e) => e.stopPropagation()}>
-                        <div className="flex items-center justify-end gap-1">
-                          <Button variant="ghost" size="sm" onClick={() => handleRowClick(invoice.id)} className="px-2!" title="View / Print">
-                            <Icons name="Eye" size={16} className="text-gray-400 hover:text-blue-500 transition-colors" />
-                          </Button>
-                          <Button variant="ghost" size="sm" onClick={async () => {
-                              const res = await api.get(`/invoices/${invoice.id}`);
-                              setEditItem(res.data.data);
-                          }} className="px-2!" title="Edit">
-                            <Icons name="Pencil" size={16} className="text-gray-400 hover:text-primary transition-colors" />
-                          </Button>
-                          <Button variant="ghost" size="sm" onClick={() => handleDuplicate(invoice.id)} className="px-2!" title="Duplicate">
-                            <Icons name="Copy" size={16} className="text-gray-400 hover:text-green-500 transition-colors" />
-                          </Button>
-                          <Button variant="ghost" size="sm" onClick={() => setDeleteItem(invoice)} className="px-2!" title="Delete">
-                            <Icons name="Trash2" size={16} className="text-gray-400 hover:text-rose-500 transition-colors" />
-                          </Button>
-                        </div>
+                  {!loading && invoices.length === 0 ? (
+                    <tr>
+                      <td colSpan="7" className="p-0">
+                        <EmptyState
+                          search={search || (hasActiveFilters ? "active filters" : "")}
+                          entityName="Invoices"
+                          entityIcon="FileText"
+                          onClearSearch={() => {
+                            setSearch("");
+                            setStatusFilter("all");
+                            setPage(1);
+                          }}
+                          addLabel="Create Invoice"
+                        />
                       </td>
                     </tr>
-                  ))}
+                  ) : (
+                    invoices.map(invoice => (
+                      <tr 
+                        key={invoice.id} 
+                        className="border-b border-gray-50 hover:bg-gray-50/50 transition-colors cursor-pointer"
+                        onClick={() => handleRowClick(invoice.id)}
+                      >
+                        <td className="px-4 py-3">
+                          <div className="font-semibold text-indigo-600">{invoice.invoiceNumber}</div>
+                          {invoice.orderCode && <div className="text-[11px] text-gray-500 mt-0.5">Order: {invoice.orderCode}</div>}
+                        </td>
+                        <td className="px-4 py-3">
+                          <div className="font-medium text-gray-900">{invoice.customer}</div>
+                        </td>
+                        <td className="px-4 py-3 text-gray-600">{invoice.date}</td>
+                        <td className="px-4 py-3 text-gray-600">
+                          {invoice.dueDate !== "-" ? (
+                            <span className={invoice.status === 'OVERDUE' ? 'text-rose-600 font-medium' : ''}>{invoice.dueDate}</span>
+                          ) : '-'}
+                        </td>
+                        <td className="px-4 py-3 text-right font-semibold text-gray-900">
+                          ₹{invoice.amount.toLocaleString()}
+                        </td>
+                        <td className="px-4 py-3 text-center">
+                          <StatusBadge status={invoice.status} />
+                        </td>
+                        <td className="px-4 py-3 text-right" onClick={(e) => e.stopPropagation()}>
+                          <div className="flex items-center justify-end gap-2">
+                            <Button variant="ghost" size="sm" onClick={() => handleDuplicate(invoice.id)} className="px-2!" title="Duplicate">
+                              <Icons name="Copy" size={16} className="text-gray-400 hover:text-indigo-600 transition-colors" />
+                            </Button>
+                            <Button variant="ghost" size="sm" onClick={() => setDeleteItem(invoice)} className="px-2!">
+                              <Icons name="Trash2" size={16} className="text-gray-400 hover:text-rose-500 transition-colors" />
+                            </Button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))
+                  )}
                 </tbody>
               </table>
-            </div>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 flex-1 content-start">
-            {filteredInvoices.map(invoice => (
-              <div 
-                key={invoice.id}
-                onClick={() => handleRowClick(invoice.id)}
-                className="bg-white rounded-sm border border-gray-100 shadow-sm hover:shadow-md transition-shadow cursor-pointer p-4 flex flex-col gap-3 relative group"
-              >
-                <div className="flex justify-between items-start mb-1">
-                   <span className="font-bold text-gray-900">{invoice.invoiceNumber}</span>
-                   <StatusBadge status={invoice.status} />
-                </div>
-                
-                <div className="flex items-center gap-3 py-2 border-y border-gray-50">
-                   <div className="w-10 h-10 rounded-full bg-indigo-50 text-indigo-600 font-bold flex items-center justify-center shrink-0 border border-indigo-100 text-sm">
-                     {invoice.customer.substring(0, 2).toUpperCase()}
-                   </div>
-                   <div className="min-w-0">
-                      <p className="text-[10px] font-semibold uppercase tracking-wider text-gray-400">Customer</p>
-                      <p className="text-sm font-bold text-gray-900 truncate">{invoice.customer}</p>
-                   </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-2 mt-1">
-                  <div className="flex flex-col bg-gray-50 p-2 rounded border border-gray-100">
-                    <span className="text-[10px] font-semibold uppercase tracking-wider text-gray-500">Invoice Date</span>
-                    <span className="text-xs font-bold text-gray-900 mt-0.5 truncate flex items-center gap-1"><Icons name="Calendar" size={10}/> {invoice.date}</span>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 content-start relative min-h-[300px]">
+                {!loading && invoices.length === 0 ? (
+                  <div className="col-span-full">
+                    <EmptyState
+                      search={search || (hasActiveFilters ? "active filters" : "")}
+                      entityName="Invoices"
+                      entityIcon="FileText"
+                      onClearSearch={() => {
+                        setSearch("");
+                        setStatusFilter("all");
+                        setPage(1);
+                      }}
+                      addLabel="Create Invoice"
+                    />
                   </div>
-                  <div className="flex flex-col bg-gray-50 p-2 rounded border border-gray-100">
-                    <span className="text-[10px] font-semibold uppercase tracking-wider text-gray-500">Due Date</span>
-                    <span className="text-xs font-bold text-gray-900 mt-0.5 truncate flex items-center gap-1"><Icons name="Clock" size={10}/> {invoice.dueDate}</span>
-                  </div>
-                </div>
+                ) : (
+                  invoices.map(invoice => (
+                    <div 
+                      key={invoice.id}
+                      onClick={() => handleRowClick(invoice.id)}
+                      className="bg-white rounded-sm border border-gray-100 shadow-sm hover:shadow-md transition-shadow cursor-pointer p-4 flex flex-col gap-3 relative group"
+                    >
+                      <div className="flex justify-between items-start gap-2">
+                        <div className="min-w-0">
+                          <h3 className="font-bold text-indigo-600 text-lg truncate">{invoice.invoiceNumber}</h3>
+                          <p className="text-sm font-medium text-gray-900 mt-1 truncate">{invoice.customer}</p>
+                        </div>
+                        <StatusBadge status={invoice.status} />
+                      </div>
+                      
+                      <div className="grid grid-cols-2 gap-2 mt-1">
+                        <div>
+                          <span className="text-[11px] text-gray-400 uppercase tracking-wider block">Date</span>
+                          <span className="text-sm text-gray-700">{invoice.date}</span>
+                        </div>
+                        <div>
+                          <span className="text-[11px] text-gray-400 uppercase tracking-wider block">Due</span>
+                          <span className={`text-sm ${invoice.status === 'OVERDUE' ? 'text-rose-600 font-medium' : 'text-gray-700'}`}>{invoice.dueDate}</span>
+                        </div>
+                      </div>
 
-                <div className="flex items-center justify-between pt-2 mt-auto">
-                  <span className="text-[11px] text-gray-500 font-semibold uppercase tracking-wider">Amount</span>
-                  <span className="text-lg font-black text-gray-900">₹{invoice.amount.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
-                </div>
-
-                {/* Floating Action Buttons */}
-                <div className="absolute -top-3 -right-3 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity" onClick={(e) => e.stopPropagation()}>
-                   <Button variant="solid" size="sm" onClick={() => handleDuplicate(invoice.id)} className="rounded-full w-8 h-8 p-0 flex items-center justify-center shadow-md bg-green-600 hover:bg-green-700 border-none"><Icons name="Copy" size={14} /></Button>
-                   <Button variant="solid" size="sm" onClick={async () => {
-                       const res = await api.get(`/invoices/${invoice.id}`);
-                       setEditItem(res.data.data);
-                   }} className="rounded-full w-8 h-8 p-0 flex items-center justify-center shadow-md"><Icons name="Pencil" size={14} /></Button>
-                   <Button variant="solid" size="sm" onClick={() => setDeleteItem(invoice)} className="rounded-full w-8 h-8 p-0 flex items-center justify-center shadow-md bg-rose-600 hover:bg-rose-700 border-none"><Icons name="Trash2" size={14} /></Button>
-                </div>
+                      <div className="flex items-center justify-between mt-auto pt-3 border-t border-gray-50">
+                        <div>
+                          <span className="text-[11px] text-gray-400 uppercase tracking-wider block">Total</span>
+                          <span className="font-bold text-gray-900">₹{invoice.amount.toLocaleString()}</span>
+                        </div>
+                        <div className="flex gap-1.5 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity" onClick={(e) => e.stopPropagation()}>
+                           <Button variant="outline" size="sm" onClick={() => handleDuplicate(invoice.id)} className="bg-white/90 backdrop-blur-sm px-2! py-1.5! border-gray-200 shadow-sm" title="Duplicate"><Icons name="Copy" size={14} className="text-gray-600 hover:text-indigo-600" /></Button>
+                           <Button variant="outline" size="sm" onClick={() => setDeleteItem(invoice)} className="bg-white/90 backdrop-blur-sm px-2! py-1.5! border-gray-200 shadow-sm"><Icons name="Trash2" size={14} className="text-gray-600 hover:text-rose-500" /></Button>
+                        </div>
+                      </div>
+                    </div>
+                  ))
+                )}
               </div>
-            ))}
+            )}
           </div>
-        )}
+          <Pagination 
+            currentPage={page} 
+            totalPages={totalPages} 
+            onPageChange={(newPage) => setPage(newPage)} 
+          />
+        </div>
       </div>
 
-      {isAddOpen && <AddInvoice open={isAddOpen} onClose={() => setIsAddOpen(false)} onSuccess={fetchInvoices} />}
-      {editItem && <EditInvoice open={!!editItem} initialData={editItem} onClose={() => setEditItem(null)} onSuccess={fetchInvoices} />}
+      {isAddOpen && <AddInvoice open={isAddOpen} onClose={() => { setIsAddOpen(false); fetchInvoices(true); }} />}
       {deleteItem && (
         <DeleteConfirmModal
           open={!!deleteItem}
           onClose={() => setDeleteItem(null)}
-          entityName={deleteItem.invoiceNumber}
+          entityName={`Invoice ${deleteItem.invoiceNumber}`}
           onConfirm={async () => {
             try {
               await api.delete(`/invoices/${deleteItem.id}`);
               toast.success("Invoice deleted");
-              const updated = invoices.filter(i => i.id !== deleteItem.id);
-              globalInvoiceCache = updated;
-              setInvoices(updated);
+              setInvoices(invoices.filter(i => i.id !== deleteItem.id));
             } catch (err) {
               toast.error("Failed to delete invoice");
             }

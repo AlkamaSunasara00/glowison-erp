@@ -11,6 +11,7 @@ import AddPurchase from "./purchaseModal/AddPurchase";
 import EditPurchase from "./purchaseModal/EditPurchase";
 import DeleteConfirmModal from "@/common/DeleteConfirmModal";
 import Loader from "@/common/Loader";
+import Pagination from "@/common/Pagination";
 
 
 
@@ -27,26 +28,68 @@ const statusOptions = [
   { value: "CANCELLED", label: "Cancelled" },
 ];
 
-let globalPurchasesCache = null;
-
 export const Purchase = () => {
   const router = useRouter();
   const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
   const [paymentFilter, setPaymentFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
   const [monthFilter, setMonthFilter] = useState("");
   
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [stats, setStats] = useState({ totalPurchases: 0, totalPaid: 0, totalOutstanding: 0, pendingDeliveries: 0 });
+
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [editItem, setEditItem] = useState(null);
   const [deleteItem, setDeleteItem] = useState(null);
   
-  const [purchases, setPurchases] = useState(globalPurchasesCache || []);
-  const [loading, setLoading] = useState(!globalPurchasesCache);
+  const [purchases, setPurchases] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [isInitialized, setIsInitialized] = useState(false);
+
+  // Initialize from URL query
+  useEffect(() => {
+    if (router.isReady && !isInitialized) {
+      if (router.query.page) setPage(parseInt(router.query.page) || 1);
+      if (router.query.search) {
+        setSearch(router.query.search);
+        setDebouncedSearch(router.query.search);
+      }
+      if (router.query.payment) setPaymentFilter(router.query.payment);
+      if (router.query.status) setStatusFilter(router.query.status);
+      if (router.query.month) setMonthFilter(router.query.month);
+      setIsInitialized(true);
+    }
+  }, [router.isReady, isInitialized, router.query]);
+
+  // Debounce search
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedSearch(search);
+      setPage(1); // Reset page on search change
+    }, 500);
+    return () => clearTimeout(handler);
+  }, [search]);
+
+  // Reset page on filter changes
+  useEffect(() => {
+    setPage(1);
+  }, [paymentFilter, statusFilter, monthFilter]);
 
   const fetchPurchases = async (silent = false) => {
     try {
-      if (!silent && !globalPurchasesCache) setLoading(true);
-      const res = await api.get('/purchases?limit=200');
+      if (!silent) setLoading(true);
+      const res = await api.get('/purchases', {
+        params: {
+          page,
+          limit: 1,
+          search: debouncedSearch,
+          paymentStatus: paymentFilter,
+          status: statusFilter,
+          month: monthFilter
+        }
+      });
       const mapped = res.data.data.map(p => ({
         ...p,
         id: p.purchaseNumber,
@@ -60,8 +103,15 @@ export const Purchase = () => {
         paymentStatus: p.paymentStatus,
         status: p.status
       }));
-      globalPurchasesCache = mapped;
       setPurchases(mapped);
+      
+      if (res.data.pagination) {
+        setTotalPages(res.data.pagination.totalPages);
+      }
+      
+      if (res.data.stats) {
+        setStats(res.data.stats);
+      }
     } catch (error) {
       toast.error('Failed to load purchases');
     } finally {
@@ -70,26 +120,25 @@ export const Purchase = () => {
   };
 
   useEffect(() => {
+    if (!isInitialized) return; // wait for url params to be loaded
+
     fetchPurchases();
-  }, []);
 
-  // Filters
-  const hasActiveFilters = paymentFilter !== "all" || statusFilter !== "all";
-  const filteredPurchases = purchases.filter((purchase) => {
-    const query = search.trim().toLowerCase();
-    const matchesSearch = query.length === 0 || purchase.id.toLowerCase().includes(query) || (purchase.vendor && purchase.vendor.toLowerCase().includes(query));
-    const matchesPayment = paymentFilter === "all" || purchase.paymentStatus === paymentFilter;
-    const matchesStatus = statusFilter === "all" || purchase.status === statusFilter;
-    const matchesMonth = !monthFilter || purchase.date.startsWith(monthFilter);
+    // Sync to URL
+    const query = {};
+    if (page > 1) query.page = page;
+    if (debouncedSearch) query.search = debouncedSearch;
+    if (paymentFilter !== 'all') query.payment = paymentFilter;
+    if (statusFilter !== 'all') query.status = statusFilter;
+    if (monthFilter) query.month = monthFilter;
+    
+    router.replace({ pathname: router.pathname, query }, undefined, { shallow: true });
+  }, [page, debouncedSearch, paymentFilter, statusFilter, monthFilter, isInitialized]);
 
-    return matchesSearch && matchesPayment && matchesStatus && matchesMonth;
-  });
+  const hasActiveFilters = paymentFilter !== "all" || statusFilter !== "all" || debouncedSearch !== "" || monthFilter !== "";
 
   // KPIs
-  const totalPurchases = purchases.length;
-  const totalPaid = purchases.filter(p => p.paymentStatus === "PAID").reduce((sum, p) => sum + parseFloat(p.total), 0);
-  const totalOutstanding = purchases.filter(p => p.paymentStatus === "PENDING").reduce((sum, p) => sum + parseFloat(p.total), 0);
-  const pendingDeliveries = purchases.filter(p => p.status === "PENDING").length;
+  const { totalPurchases, totalPaid, totalOutstanding, pendingDeliveries } = stats;
 
   return (
     <div className="flex flex-col min-h-screen w-full relative gap-4">
@@ -194,42 +243,47 @@ export const Purchase = () => {
         </div>
 
         {/* Content */}
-        {loading ? (
-          <div className="bg-white rounded-sm border border-gray-100 shadow-sm overflow-hidden flex-1 min-h-[400px] flex items-center justify-center">
-            <Loader text="Loading Purchases..." />
-          </div>
-        ) : filteredPurchases.length === 0 ? (
-          <EmptyState
-            search={search || (hasActiveFilters ? "active filters" : "")}
-            entityName="Purchases"
-            entityIcon="ShoppingCart"
-            onClearSearch={() => {
-              setSearch("");
-              setPaymentFilter("all");
-              setStatusFilter("all");
-              setMonthFilter("");
-            }}
-            addLabel="Record Purchase"
-          />
-        ) : (
-          <div className="bg-white rounded-sm border border-gray-100 shadow-sm overflow-hidden flex-1 custom-scrollbar min-h-[400px]">
-            <div className="overflow-x-auto">
-              <table className="w-full text-left border-collapse min-w-[900px] whitespace-nowrap">
-                <thead className="bg-primary border-b border-primary/20 text-xs font-semibold text-white">
+        <div className="bg-white rounded-sm border border-gray-100 shadow-sm flex flex-col flex-1 overflow-hidden min-h-[400px]">
+          <div className="flex-1 overflow-auto custom-scrollbar relative">
+            {loading && (
+              <div className="absolute inset-0 top-[40px] z-20 flex items-center justify-center bg-white/60 backdrop-blur-sm">
+                <Loader text="Loading Purchases..." />
+              </div>
+            )}
+            <table className="w-full text-left border-collapse min-w-[900px] whitespace-nowrap">
+              <thead className="bg-primary border-b border-primary/20 text-xs font-semibold text-white sticky top-0 z-10">
+                <tr>
+                  <th className="px-4 py-3">Purchase Number</th>
+                  <th className="px-4 py-3">Supplier</th>
+                  <th className="px-4 py-3">Type</th>
+                  <th className="px-4 py-3">Items Summary</th>
+                  <th className="px-4 py-3">Date</th>
+                  <th className="px-4 py-3 text-right">Amount</th>
+                  <th className="px-4 py-3">Payment</th>
+                  <th className="px-4 py-3">Status</th>
+                  <th className="px-4 py-3 text-center rounded-tr-sm">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="text-sm">
+                {!loading && purchases.length === 0 ? (
                   <tr>
-                    <th className="px-4 py-3 rounded-tl-sm">Purchase Number</th>
-                    <th className="px-4 py-3">Supplier</th>
-                    <th className="px-4 py-3">Type</th>
-                    <th className="px-4 py-3">Items Summary</th>
-                    <th className="px-4 py-3">Date</th>
-                    <th className="px-4 py-3 text-right">Amount</th>
-                    <th className="px-4 py-3">Payment</th>
-                    <th className="px-4 py-3">Status</th>
-                    <th className="px-4 py-3 text-center rounded-tr-sm">Actions</th>
+                    <td colSpan="9" className="p-0">
+                      <EmptyState
+                        search={search || (hasActiveFilters ? "active filters" : "")}
+                        entityName="Purchases"
+                        entityIcon="ShoppingCart"
+                        onClearSearch={() => {
+                          setSearch("");
+                          setPaymentFilter("all");
+                          setStatusFilter("all");
+                          setMonthFilter("");
+                        }}
+                        addLabel="Record Purchase"
+                      />
+                    </td>
                   </tr>
-                </thead>
-                <tbody className="text-sm">
-                  {filteredPurchases.map(purchase => {
+                ) : (
+                  purchases.map(purchase => {
                      return (
                       <tr 
                         key={purchase.id} 
@@ -262,12 +316,17 @@ export const Purchase = () => {
                         </td>
                       </tr>
                      );
-                  })}
-                </tbody>
-              </table>
-            </div>
+                  })
+                )}
+              </tbody>
+            </table>
           </div>
-        )}
+          <Pagination 
+            currentPage={page} 
+            totalPages={totalPages} 
+            onPageChange={(newPage) => setPage(newPage)} 
+          />
+        </div>
       </div>
 
       {isAddOpen && <AddPurchase open={isAddOpen} onClose={() => { setIsAddOpen(false); fetchPurchases(true); }} />}

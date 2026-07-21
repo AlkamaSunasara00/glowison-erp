@@ -191,7 +191,7 @@ export const Dashboard = () => {
               </h3>
               <input type="month" value={statusMonth} onChange={(e) => setStatusMonth(e.target.value)} className="text-[10px] font-bold text-gray-500 uppercase tracking-wider border border-gray-200 rounded-sm px-2 py-1.5 outline-none focus:ring-1 focus:ring-primary/50" />
             </div>
-            <div className="h-[250px] w-full flex items-center justify-center flex-1">
+            <div className="h-[250px] w-full min-h-[250px]">
                {orderStatusData.length > 0 ? (
                  <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
@@ -215,7 +215,7 @@ export const Dashboard = () => {
                     </PieChart>
                  </ResponsiveContainer>
                ) : (
-                 <div className="text-gray-400 text-xs font-bold uppercase tracking-wider">No order data for this month.</div>
+                 <div className="w-full h-full flex items-center justify-center text-gray-400 text-xs font-bold uppercase tracking-wider">No order data for this month.</div>
                 )}
              </div>
           </div>
@@ -268,7 +268,7 @@ export const Dashboard = () => {
                  <Icons name="CreditCard" size={16} className="text-rose-500" /> Expenses Breakdown
               </h3>
             </div>
-            <div className="h-[250px] w-full flex items-center justify-center flex-1">
+            <div className="h-[250px] w-full min-h-[250px]">
                {expenseData.length > 0 ? (
                  <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
@@ -293,7 +293,7 @@ export const Dashboard = () => {
                     </PieChart>
                  </ResponsiveContainer>
                ) : (
-                 <div className="text-gray-400 text-xs font-bold uppercase tracking-wider">No expense data for this month.</div>
+                 <div className="w-full h-full flex items-center justify-center text-gray-400 text-xs font-bold uppercase tracking-wider">No expense data for this month.</div>
                 )}
              </div>
           </div>
@@ -305,7 +305,7 @@ export const Dashboard = () => {
                  <Icons name="Users" size={16} className="text-indigo-500" /> Leads by Source
               </h3>
             </div>
-            <div className="h-[250px] w-full flex items-center justify-center flex-1">
+            <div className="h-[250px] w-full min-h-[250px]">
                {leadsData.length > 0 ? (
                  <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
@@ -329,7 +329,7 @@ export const Dashboard = () => {
                     </PieChart>
                  </ResponsiveContainer>
                ) : (
-                 <div className="text-gray-400 text-xs font-bold uppercase tracking-wider">No leads data for this month.</div>
+                 <div className="w-full h-full flex items-center justify-center text-gray-400 text-xs font-bold uppercase tracking-wider">No leads data for this month.</div>
                 )}
              </div>
           </div>
@@ -341,7 +341,7 @@ export const Dashboard = () => {
                  <Icons name="Briefcase" size={16} className="text-purple-500" /> Associate Projects
               </h3>
             </div>
-            <div className="h-[250px] w-full flex items-center justify-center flex-1">
+            <div className="h-[250px] w-full min-h-[250px]">
                {associateProjectsData.length > 0 ? (
                  <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
@@ -365,7 +365,7 @@ export const Dashboard = () => {
                     </PieChart>
                  </ResponsiveContainer>
                ) : (
-                 <div className="text-gray-400 text-xs font-bold uppercase tracking-wider">No project data for this month.</div>
+                 <div className="w-full h-full flex items-center justify-center text-gray-400 text-xs font-bold uppercase tracking-wider">No project data for this month.</div>
                 )}
              </div>
           </div>

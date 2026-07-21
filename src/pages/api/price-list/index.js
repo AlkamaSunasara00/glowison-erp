@@ -4,11 +4,18 @@ import { withAuth } from '@/lib/auth';
 const handler = async (req, res) => {
   try {
     if (req.method === 'GET') {
-      const { page = 1, limit = 10, search } = req.query;
+      const { page = 1, limit = 10, search, category, includeStats } = req.query;
       const skip = (page - 1) * limit;
       
       const where = {};
-      // Customize where clause if needed
+      if (search) {
+        where.OR = [
+          { name: { contains: search, mode: 'insensitive' } },
+        ];
+      }
+      if (category) {
+        where.category = category;
+      }
 
       const [total, items] = await Promise.all([
         prisma.priceListItem.count({ where }),
@@ -20,9 +27,24 @@ const handler = async (req, res) => {
         })
       ]);
 
+      let stats = null;
+      if (includeStats === 'true') {
+        const allItems = await prisma.priceListItem.findMany({
+          where,
+          select: { category: true, clientPrice: true, b2bPrice: true, price: true }
+        });
+        const totalItems = allItems.length;
+        const uniqueCategories = new Set(allItems.map(i => i.category)).size;
+        const avgClientPrice = totalItems > 0 ? allItems.reduce((acc, curr) => acc + Number(curr.clientPrice || curr.price || 0), 0) / totalItems : 0;
+        const avgB2BPrice = totalItems > 0 ? allItems.reduce((acc, curr) => acc + Number(curr.b2bPrice || 0), 0) / totalItems : 0;
+        
+        stats = { totalItems, uniqueCategories, avgClientPrice, avgB2BPrice };
+      }
+
       return res.status(200).json({
         success: true,
         data: items,
+        stats,
         pagination: {
           total,
           page: parseInt(page),

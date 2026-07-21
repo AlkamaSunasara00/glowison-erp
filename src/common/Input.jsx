@@ -75,7 +75,9 @@ const Input = ({
             className={`${baseInputClasses} appearance-none cursor-pointer pr-8`}
             {...props}
           >
-            <option value="">{label || "Select"}</option>
+            {!(options.length > 0 && (options[0].value === "" || String(options[0].value).toLowerCase() === "all" || String(options[0].label).toLowerCase().includes("select"))) && (
+              <option value="">{label || "Select"}</option>
+            )}
             {options.map((opt, i) => (
               <option key={i} value={opt.value}>
                 {opt.label}

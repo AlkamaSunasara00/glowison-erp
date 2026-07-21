@@ -4,24 +4,52 @@ import { withAuth } from '@/lib/auth';
 const handler = async (req, res) => {
   try {
     if (req.method === 'GET') {
-      const { search } = req.query;
+      const { page = 1, limit = 10, search, status, includeStats } = req.query;
+      const skip = (page - 1) * limit;
       
-      const where = search ? {
-        OR: [
+      const where = {};
+      if (search) {
+        where.OR = [
           { name: { contains: search, mode: 'insensitive' } },
           { companyName: { contains: search, mode: 'insensitive' } },
           { mobile: { contains: search, mode: 'insensitive' } },
-        ]
-      } : {};
+        ];
+      }
+      if (status) {
+        where.status = status;
+      }
 
-      const items = await prisma.supplier.findMany({
-        where,
-        orderBy: { name: 'asc' }
-      });
+      const [total, items] = await Promise.all([
+        prisma.supplier.count({ where }),
+        prisma.supplier.findMany({
+          where,
+          skip: parseInt(skip),
+          take: parseInt(limit),
+          orderBy: { name: 'asc' }
+        })
+      ]);
+
+      let stats = null;
+      if (includeStats === 'true') {
+        const allItems = await prisma.supplier.findMany({
+          where,
+          select: { status: true }
+        });
+        const activeCount = allItems.filter(s => s.status === 'ACTIVE').length;
+        const inactiveCount = allItems.filter(s => s.status === 'INACTIVE').length;
+        stats = { totalSuppliers: allItems.length, activeCount, inactiveCount };
+      }
 
       return res.status(200).json({
         success: true,
-        data: items
+        data: items,
+        stats,
+        pagination: {
+          total,
+          page: parseInt(page),
+          limit: parseInt(limit),
+          totalPages: Math.ceil(total / limit)
+        }
       });
     }
 

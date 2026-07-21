@@ -20,9 +20,33 @@ const handler = async (req, res) => {
         })
       ]);
 
+      let stats = null;
+      if (req.query.includeStats === 'true') {
+        const allItems = await prisma.inventoryItem.findMany({
+          where,
+          select: {
+            currentPurchaseStock: true,
+            minimumStock: true,
+            lastPurchasePrice: true,
+            averageCost: true
+          }
+        });
+        let lowStockCount = 0;
+        let totalValue = 0;
+        allItems.forEach(i => {
+          const pStock = Number(i.currentPurchaseStock || 0);
+          const minStock = Number(i.minimumStock || 0);
+          if (pStock <= minStock) lowStockCount++;
+          const price = Number(i.lastPurchasePrice || i.averageCost || 0);
+          totalValue += pStock * price;
+        });
+        stats = { totalItems: allItems.length, lowStockCount, totalValue };
+      }
+
       return res.status(200).json({
         success: true,
         data: items,
+        stats,
         pagination: {
           total,
           page: parseInt(page),

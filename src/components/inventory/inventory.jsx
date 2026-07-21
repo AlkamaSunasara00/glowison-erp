@@ -11,6 +11,7 @@ import EditInventory from "./inventoryModal/EditInventory";
 import AdjustStock from "./inventoryModal/AdjustStock";
 import DeleteConfirmModal from "@/common/DeleteConfirmModal";
 import Loader from "@/common/Loader";
+import Pagination from "@/common/Pagination";
 import { useRouter } from "next/router";
 
 const categoryOptions = [
@@ -22,11 +23,10 @@ const categoryOptions = [
   { value: "FINISHED_GOODS", label: "Finished Goods" },
 ];
 
-let globalInventoryCache = null;
-
 export const Inventory = () => {
+  const router = useRouter();
   const [search, setSearch] = useState("");
-  const [typeFilter, setTypeFilter] = useState("all");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [viewMode, setViewMode] = useState(() => {
     if (typeof window !== 'undefined') {
@@ -34,20 +34,54 @@ export const Inventory = () => {
     }
     return 'table';
   });
-  const router = useRouter();
   
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [stats, setStats] = useState({ totalItems: 0, lowStockCount: 0, totalValue: 0 });
+
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [editItem, setEditItem] = useState(null);
   const [adjustItem, setAdjustItem] = useState(null);
   const [deleteItem, setDeleteItem] = useState(null);
   
-  const [items, setItems] = useState(globalInventoryCache || []);
-  const [loading, setLoading] = useState(!globalInventoryCache);
+  const [items, setItems] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [isInitialized, setIsInitialized] = useState(false);
+
+  // Initialize from URL query
+  useEffect(() => {
+    if (router.isReady && !isInitialized) {
+      if (router.query.page) setPage(parseInt(router.query.page) || 1);
+      if (router.query.search) {
+        setSearch(router.query.search);
+        setDebouncedSearch(router.query.search);
+      }
+      if (router.query.category) setCategoryFilter(router.query.category);
+      setIsInitialized(true);
+    }
+  }, [router.isReady, isInitialized, router.query]);
+
+  // Debounce search
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedSearch(search);
+      if (search !== debouncedSearch) setPage(1);
+    }, 500);
+    return () => clearTimeout(handler);
+  }, [search, debouncedSearch]);
 
   const fetchInventory = async (silent = false) => {
     try {
-      if (!silent && !globalInventoryCache) setLoading(true);
-      const res = await api.get('/inventory?limit=200');
+      if (!silent) setLoading(true);
+      const res = await api.get('/inventory', {
+        params: {
+          page,
+          limit: viewMode === 'card' ? 20 : 10,
+          search: debouncedSearch,
+          category: categoryFilter === 'all' ? undefined : categoryFilter,
+          includeStats: true
+        }
+      });
       const mapped = res.data.data.map(i => ({
         ...i,
         id: i.id,
@@ -68,8 +102,9 @@ export const Inventory = () => {
         bin: i.bin || "-",
         images: i.images || [],
       }));
-      globalInventoryCache = mapped;
       setItems(mapped);
+      if (res.data.stats) setStats(res.data.stats);
+      if (res.data.pagination) setTotalPages(res.data.pagination.totalPages);
     } catch (error) {
       toast.error('Failed to load inventory');
     } finally {
@@ -78,23 +113,19 @@ export const Inventory = () => {
   };
 
   useEffect(() => {
-    fetchInventory(!!globalInventoryCache);
-  }, []);
+    if (!isInitialized) return;
+    
+    fetchInventory();
 
-  // Filters
-  const hasActiveFilters = typeFilter !== "all" || categoryFilter !== "all";
-  const filteredItems = items.filter((item) => {
-    const query = search.trim().toLowerCase();
-    const matchesSearch = query.length === 0 || (item.sku && item.sku.toLowerCase().includes(query)) || item.name.toLowerCase().includes(query);
-    const matchesCategory = categoryFilter === "all" || item.category === categoryFilter;
+    const query = {};
+    if (page > 1) query.page = page;
+    if (debouncedSearch) query.search = debouncedSearch;
+    if (categoryFilter !== 'all') query.category = categoryFilter;
 
-    return matchesSearch && matchesCategory;
-  });
+    router.replace({ pathname: router.pathname, query }, undefined, { shallow: true });
+  }, [page, debouncedSearch, categoryFilter, viewMode, isInitialized]);
 
-  // KPIs
-  const totalItems = items.length;
-  const lowStockCount = items.filter(item => Number(item.purchaseStock) <= Number(item.minStock)).length;
-  const totalValue = items.reduce((sum, item) => sum + (Number(item.purchaseStock) * Number(item.price || item.averageCost)), 0);
+  const hasActiveFilters = categoryFilter !== "all" || debouncedSearch !== "";
 
   return (
     <div className="flex flex-col min-h-screen w-full relative gap-4 pb-10">
@@ -129,16 +160,16 @@ export const Inventory = () => {
             </div>
             <div>
               <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-1">Total Items</p>
-              <h4 className="text-2xl font-black text-gray-900 tracking-tight">{totalItems}</h4>
+              <h4 className="text-2xl font-black text-gray-900 tracking-tight">{stats.totalItems}</h4>
             </div>
           </div>
           <div className="bg-white rounded-sm p-5 sm:p-6 shadow-sm border border-gray-100 flex items-center gap-5 hover:-translate-y-1 hover:shadow-md transition-all duration-300">
-            <div className={`w-14 h-14 rounded-sm flex items-center justify-center shrink-0 border ${lowStockCount > 0 ? 'bg-rose-50 text-rose-600 border-rose-100' : 'bg-emerald-50 text-emerald-600 border-emerald-100'}`}>
+            <div className={`w-14 h-14 rounded-sm flex items-center justify-center shrink-0 border ${stats.lowStockCount > 0 ? 'bg-rose-50 text-rose-600 border-rose-100' : 'bg-emerald-50 text-emerald-600 border-emerald-100'}`}>
               <Icons name="AlertTriangle" size={24} />
             </div>
             <div>
               <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-1">Low Stock Alerts</p>
-              <h4 className={`text-2xl font-black tracking-tight ${lowStockCount > 0 ? 'text-rose-600' : 'text-emerald-600'}`}>{lowStockCount}</h4>
+              <h4 className={`text-2xl font-black tracking-tight ${stats.lowStockCount > 0 ? 'text-rose-600' : 'text-emerald-600'}`}>{stats.lowStockCount}</h4>
             </div>
           </div>
           <div className="bg-white rounded-sm p-5 sm:p-6 shadow-sm border border-gray-100 flex items-center gap-5 hover:-translate-y-1 hover:shadow-md transition-all duration-300">
@@ -147,7 +178,7 @@ export const Inventory = () => {
             </div>
             <div>
               <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-1">Total Value</p>
-              <h4 className="text-2xl font-black text-gray-900 tracking-tight">Rs. {totalValue.toLocaleString()}</h4>
+              <h4 className="text-2xl font-black text-gray-900 tracking-tight">Rs. {Number(stats.totalValue).toLocaleString()}</h4>
             </div>
           </div>
         </div>
@@ -167,7 +198,7 @@ export const Inventory = () => {
              <Input
               type="select"
               value={categoryFilter}
-              onChange={(e) => setCategoryFilter(e.target.value)}
+              onChange={(e) => { setCategoryFilter(e.target.value); setPage(1); }}
               options={categoryOptions}
             />
           </div>
@@ -175,6 +206,7 @@ export const Inventory = () => {
             <button
               onClick={() => {
                 setViewMode("table");
+                setPage(1);
                 if (typeof window !== 'undefined') localStorage.setItem('inventoryViewMode', "table");
               }}
               className={`p-1.5 rounded-sm transition-colors ${viewMode === "table" ? "bg-white text-primary shadow-sm" : "text-gray-500 hover:text-gray-900"}`}
@@ -185,6 +217,7 @@ export const Inventory = () => {
             <button
               onClick={() => {
                 setViewMode("card");
+                setPage(1);
                 if (typeof window !== 'undefined') localStorage.setItem('inventoryViewMode', "card");
               }}
               className={`p-1.5 rounded-sm transition-colors ${viewMode === "card" ? "bg-white text-primary shadow-sm" : "text-gray-500 hover:text-gray-900"}`}
@@ -196,26 +229,17 @@ export const Inventory = () => {
         </div>
 
         {/* Content */}
-        {loading ? (
-          <div className="flex-1 bg-white rounded-sm border border-gray-100 shadow-sm overflow-hidden min-h-[400px] flex items-center justify-center">
-            <Loader text="Loading Inventory..." />
-          </div>
-        ) : filteredItems.length === 0 ? (
-          <EmptyState
-            search={search || (hasActiveFilters ? "active filters" : "")}
-            entityName="Items"
-            entityIcon="Package"
-            onClearSearch={() => {
-              setSearch("");
-              setCategoryFilter("all");
-            }}
-            addLabel="Add Item"
-          />
-        ) : viewMode === "table" ? (
-          <div className="bg-white rounded-sm border border-gray-100 shadow-sm overflow-hidden flex-1 custom-scrollbar">
-            <div className="overflow-x-auto">
+        <div className="bg-white rounded-sm border border-gray-100 shadow-sm flex flex-col flex-1 overflow-hidden min-h-[400px]">
+          <div className={`flex-1 overflow-auto custom-scrollbar relative ${viewMode === 'card' ? 'p-4 bg-gray-50/30' : ''}`}>
+            {loading && (
+              <div className="absolute inset-0 top-[40px] z-20 flex items-center justify-center bg-white/60 backdrop-blur-sm">
+                <Loader text="Loading Inventory..." />
+              </div>
+            )}
+            
+            {viewMode === "table" ? (
               <table className="w-full text-left border-collapse min-w-[900px] whitespace-nowrap">
-                <thead className="bg-primary border-b border-primary/20 text-xs font-semibold text-white">
+                <thead className="bg-primary border-b border-primary/20 text-xs font-semibold text-white sticky top-0 z-10">
                   <tr>
                     <th className="px-4 py-3 rounded-tl-lg">SKU & Name</th>
                     <th className="px-4 py-3">Category</th>
@@ -225,128 +249,159 @@ export const Inventory = () => {
                   </tr>
                 </thead>
                 <tbody className="text-sm">
-                  {filteredItems.map(item => {
-                    const isLowStock = Number(item.purchaseStock) <= Number(item.minStock);
-                     return (
-                      <tr 
-                        key={item.id} 
-                        className="border-b border-gray-50 hover:bg-gray-50/50 transition-colors cursor-pointer"
-                        onClick={() => router.push(`/inventory/${item.id}`)}
-                      >
-                        <td className="px-4 py-3">
-                          <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-sm bg-gray-50 border border-gray-100 flex items-center justify-center overflow-hidden shrink-0 shadow-sm">
-                              {item.images && item.images.length > 0 ? (
-                                <img src={item.images[0]} alt={item.name} className="w-full h-full object-cover" />
-                              ) : (
-                                <div className="font-bold text-gray-400 text-[10px] uppercase tracking-wider">{item.name.substring(0,2)}</div>
-                              )}
+                  {!loading && items.length === 0 ? (
+                    <tr>
+                      <td colSpan="5" className="p-0">
+                        <EmptyState
+                          search={search || (hasActiveFilters ? "active filters" : "")}
+                          entityName="Items"
+                          entityIcon="Package"
+                          onClearSearch={() => {
+                            setSearch("");
+                            setCategoryFilter("all");
+                            setPage(1);
+                          }}
+                          addLabel="Add Item"
+                        />
+                      </td>
+                    </tr>
+                  ) : (
+                    items.map(item => {
+                      const isLowStock = Number(item.purchaseStock) <= Number(item.minStock);
+                       return (
+                        <tr 
+                          key={item.id} 
+                          className="border-b border-gray-50 hover:bg-gray-50/50 transition-colors cursor-pointer"
+                          onClick={() => router.push(`/inventory/${item.id}`)}
+                        >
+                          <td className="px-4 py-3">
+                            <div className="flex items-center gap-3">
+                              <div className="w-10 h-10 rounded-sm bg-gray-50 border border-gray-100 flex items-center justify-center overflow-hidden shrink-0 shadow-sm">
+                                {item.images && item.images.length > 0 ? (
+                                  <img src={item.images[0]} alt={item.name} className="w-full h-full object-cover" />
+                                ) : (
+                                  <div className="font-bold text-gray-400 text-[10px] uppercase tracking-wider">{item.name.substring(0,2)}</div>
+                                )}
+                              </div>
+                              <div>
+                                <div className="font-semibold text-gray-900">{item.name}</div>
+                                <div className="text-xs text-gray-500">{item.sku || 'No SKU'}</div>
+                              </div>
                             </div>
-                            <div>
-                              <div className="font-semibold text-gray-900">{item.name}</div>
-                              <div className="text-xs text-gray-500">{item.sku || 'No SKU'}</div>
+                          </td>
+                          <td className="px-4 py-3">
+                            <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium bg-gray-50 border border-gray-100 text-gray-700">
+                              {item.displayCategory}
+                            </span>
+                            {item.subCategory !== '-' && <div className="text-xs text-gray-500 mt-0.5">{item.subCategory}</div>}
+                          </td>
+                          <td className="px-4 py-3">
+                            <div className="flex flex-col gap-1">
+                              <div className="flex items-center gap-2">
+                                <span className={`font-semibold ${isLowStock ? 'text-rose-600' : 'text-gray-900'}`}>{item.purchaseStock} {item.purchaseUnit}</span>
+                                {isLowStock && <span className="w-2 h-2 rounded-full bg-rose-500 animate-pulse"></span>}
+                              </div>
                             </div>
-                          </div>
-                        </td>
-                        <td className="px-4 py-3">
-                          <StatusBadge status={item.category} label={item.displayCategory} />
-                          {item.subCategory !== '-' && <div className="text-[11px] text-gray-500 mt-1">{item.subCategory}</div>}
-                        </td>
-                        <td className="px-4 py-3">
-                          <div className={`font-medium ${isLowStock ? 'text-rose-600' : 'text-gray-900'}`}>
-                            {item.purchaseStock} <span className="text-[10px] uppercase tracking-wider text-gray-500 font-semibold">{item.purchaseUnit}</span>
-                          </div>
-                          {isLowStock && <div className="text-[10px] text-rose-500 font-semibold mt-0.5">Low Stock (Min {item.minStock})</div>}
-                        </td>
-                        <td className="px-4 py-3 font-semibold text-gray-700">
-                          Rs. {Number(item.price).toLocaleString()}
-                        </td>
-                        <td className="px-4 py-3 text-center" onClick={(e) => e.stopPropagation()}>
-                          <div className="flex items-center justify-center gap-1.5">
-                             <Button variant="outline" size="sm" onClick={() => setAdjustItem(item)} className="px-2! py-1! text-xs font-semibold">Adjust</Button>
-                             <Button variant="ghost" size="sm" onClick={() => setEditItem(item)} className="px-2!">
-                               <Icons name="Pencil" size={16} className="text-gray-400 hover:text-indigo-600 transition-colors" />
-                             </Button>
-                             <Button variant="ghost" size="sm" onClick={() => setDeleteItem(item)} className="px-2!">
-                               <Icons name="Trash2" size={16} className="text-gray-400 hover:text-rose-500 transition-colors" />
-                             </Button>
-                          </div>
-                        </td>
-                      </tr>
-                     );
-                  })}
+                          </td>
+                          <td className="px-4 py-3">
+                            <div className="font-medium text-gray-900">₹{Number(item.price || 0).toFixed(2)}</div>
+                          </td>
+                          <td className="px-4 py-3 text-center" onClick={(e) => e.stopPropagation()}>
+                            <div className="flex items-center justify-center gap-2">
+                              <Button variant="ghost" size="sm" onClick={() => setAdjustItem(item)} className="px-2! text-emerald-600 hover:text-emerald-700 bg-emerald-50 hover:bg-emerald-100" title="Adjust Stock">
+                                <Icons name="TrendingUp" size={16} />
+                              </Button>
+                              <Button variant="ghost" size="sm" onClick={() => setEditItem(item)} className="px-2!">
+                                <Icons name="Pencil" size={16} className="text-gray-400 hover:text-indigo-600 transition-colors" />
+                              </Button>
+                              <Button variant="ghost" size="sm" onClick={() => setDeleteItem(item)} className="px-2!">
+                                <Icons name="Trash2" size={16} className="text-gray-400 hover:text-rose-500 transition-colors" />
+                              </Button>
+                            </div>
+                          </td>
+                        </tr>
+                       );
+                    })
+                  )}
                 </tbody>
               </table>
-            </div>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 flex-1 content-start">
-            {filteredItems.map(item => {
-              const isLowStock = Number(item.purchaseStock) <= Number(item.minStock);
-              return (
-                <div 
-                  key={item.id}
-                  onClick={() => router.push(`/inventory/${item.id}`)}
-                  className="bg-white rounded-sm border border-gray-100 shadow-sm hover:shadow-md transition-shadow cursor-pointer p-4 flex flex-col gap-3 relative group"
-                >
-                  {/* Header Area */}
-                  <div className={`h-36 w-full rounded-sm border border-gray-200 overflow-hidden flex flex-col items-center justify-center relative mb-2 bg-gradient-to-br from-gray-50 to-white`}>
-                    
-                    {item.images && item.images.length > 0 ? (
-                      <img src={item.images[0]} alt={item.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
-                    ) : (
-                      <div className="w-16 h-16 rounded-full flex items-center justify-center font-bold text-2xl mb-2 shadow-sm bg-gray-100 text-gray-500 border border-gray-200">
-                        {item.name.substring(0, 2).toUpperCase()}
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 content-start relative min-h-[300px]">
+                {!loading && items.length === 0 ? (
+                  <div className="col-span-full">
+                    <EmptyState
+                      search={search || (hasActiveFilters ? "active filters" : "")}
+                      entityName="Items"
+                      entityIcon="Package"
+                      onClearSearch={() => {
+                        setSearch("");
+                        setCategoryFilter("all");
+                        setPage(1);
+                      }}
+                      addLabel="Add Item"
+                    />
+                  </div>
+                ) : (
+                  items.map(item => {
+                    const isLowStock = Number(item.purchaseStock) <= Number(item.minStock);
+                    return (
+                      <div 
+                        key={item.id}
+                        onClick={() => router.push(`/inventory/${item.id}`)}
+                        className={`bg-white rounded-sm border ${isLowStock ? 'border-rose-200 shadow-rose-100' : 'border-gray-100'} shadow-sm hover:shadow-md transition-shadow cursor-pointer p-4 flex flex-col gap-3 relative group`}
+                      >
+                        <div className={`h-36 w-full rounded-sm border ${isLowStock ? 'border-rose-100' : 'border-gray-200'} overflow-hidden flex flex-col items-center justify-center relative mb-2 bg-gradient-to-br ${isLowStock ? 'from-rose-50' : 'from-gray-50'} to-white`}>
+                          {item.images && item.images.length > 0 ? (
+                             <img src={item.images[0]} alt={item.name} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
+                          ) : (
+                             <div className={`w-16 h-16 rounded-full flex items-center justify-center font-bold text-2xl mb-2 shadow-sm ${isLowStock ? 'bg-rose-100 text-rose-500 border border-rose-200' : 'bg-gray-100 text-gray-500 border border-gray-200'}`}>
+                                {item.name.substring(0, 2).toUpperCase()}
+                             </div>
+                          )}
+                          
+                          {isLowStock && <div className="absolute top-2 left-2 bg-rose-500 text-white text-[10px] font-bold px-2 py-0.5 rounded shadow-sm">LOW STOCK</div>}
+                          
+                          {/* Floating Action Buttons */}
+                          <div className="absolute top-2 right-2 flex gap-1.5 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity" onClick={(e) => e.stopPropagation()}>
+                             <Button variant="outline" size="sm" onClick={() => setAdjustItem(item)} className="bg-white/90 backdrop-blur-sm px-2! py-1.5! border-gray-200 shadow-sm"><Icons name="TrendingUp" size={14} className="text-emerald-600 hover:text-emerald-700" /></Button>
+                             <Button variant="outline" size="sm" onClick={() => setEditItem(item)} className="bg-white/90 backdrop-blur-sm px-2! py-1.5! border-gray-200 shadow-sm"><Icons name="Pencil" size={14} className="text-gray-600 hover:text-indigo-600" /></Button>
+                             <Button variant="outline" size="sm" onClick={() => setDeleteItem(item)} className="bg-white/90 backdrop-blur-sm px-2! py-1.5! border-gray-200 shadow-sm"><Icons name="Trash2" size={14} className="text-gray-600 hover:text-rose-500" /></Button>
+                          </div>
+                        </div>
+
+                        <div>
+                          <h3 className="font-semibold text-gray-900 truncate" title={item.name}>{item.name}</h3>
+                          <p className="text-[11px] text-gray-500 mt-0.5">SKU: {item.sku || 'N/A'}</p>
+                        </div>
+
+                        <div className="flex flex-col gap-1.5 mt-auto pt-3 border-t border-gray-50">
+                          <div className="flex justify-between items-center text-sm">
+                            <span className="text-gray-500">Stock</span>
+                            <span className={`font-bold ${isLowStock ? 'text-rose-600' : 'text-gray-900'}`}>{item.purchaseStock} {item.purchaseUnit}</span>
+                          </div>
+                          <div className="flex justify-between items-center text-sm">
+                            <span className="text-gray-500">Avg Cost</span>
+                            <span className="font-semibold text-indigo-600">₹{Number(item.price || 0).toFixed(2)}</span>
+                          </div>
+                        </div>
                       </div>
-                    )}
-                    
-                    <div className="absolute top-2 left-2 flex gap-1.5">
-                      <StatusBadge status={item.category} label={item.displayCategory} />
-                    </div>
-
-                    {isLowStock && (
-                       <div className="absolute bottom-2 left-2 bg-rose-100/90 backdrop-blur-sm text-rose-700 text-[10px] font-bold px-2 py-0.5 rounded shadow-sm border border-rose-200 flex items-center gap-1">
-                          <Icons name="AlertTriangle" size={10} /> Low Stock
-                       </div>
-                    )}
-                    
-                    {/* Floating Action Buttons inside header */}
-                    <div className="absolute top-2 right-2 flex gap-1.5 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity" onClick={(e) => e.stopPropagation()}>
-                       <Button variant="outline" size="sm" onClick={() => setAdjustItem(item)} className="bg-white/90 backdrop-blur-sm px-2! py-1.5! border-gray-200 shadow-sm font-semibold text-xs text-gray-700 hover:text-primary"><Icons name="PlusMinus" size={14} className="mr-1" /> Adjust</Button>
-                       <Button variant="outline" size="sm" onClick={() => setEditItem(item)} className="bg-white/90 backdrop-blur-sm px-2! py-1.5! border-gray-200 shadow-sm"><Icons name="Pencil" size={14} className="text-gray-600 hover:text-indigo-600" /></Button>
-                       <Button variant="outline" size="sm" onClick={() => setDeleteItem(item)} className="bg-white/90 backdrop-blur-sm px-2! py-1.5! border-gray-200 shadow-sm"><Icons name="Trash2" size={14} className="text-gray-600 hover:text-rose-500" /></Button>
-                    </div>
-                  </div>
-
-                  {/* Details */}
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="min-w-0">
-                      <h3 className="font-semibold text-gray-900 truncate" title={item.name}>{item.name}</h3>
-                      <p className="text-[11px] text-gray-500 mt-0.5 truncate">SKU: {item.sku || 'No SKU'}</p>
-                    </div>
-                  </div>
-
-                  {/* Stock Details */}
-                  <div className="grid grid-cols-2 gap-2 mt-1">
-                    <div className="flex flex-col bg-gray-50 p-2 rounded border border-gray-100">
-                      <span className="text-[10px] font-semibold uppercase tracking-wider text-gray-500">Current Stock</span>
-                      <span className={`text-sm font-bold mt-0.5 ${isLowStock ? 'text-rose-600' : 'text-gray-900'}`}>{item.purchaseStock} <span className="text-[10px] font-medium opacity-70">{item.purchaseUnit}</span></span>
-                    </div>
-                    <div className="flex flex-col bg-gray-50 p-2 rounded border border-gray-100">
-                      <span className="text-[10px] font-semibold uppercase tracking-wider text-gray-500">Cost</span>
-                      <span className="text-sm font-bold text-gray-900 mt-0.5"><span className="text-[10px] font-medium text-gray-500">Rs. </span>{Number(item.price).toLocaleString()}</span>
-                    </div>
-                  </div>
-                </div>
-              )
-            })}
+                    );
+                  })
+                )}
+              </div>
+            )}
           </div>
-        )}
+          <Pagination 
+            currentPage={page} 
+            totalPages={totalPages} 
+            onPageChange={(newPage) => setPage(newPage)} 
+          />
+        </div>
       </div>
 
-      {isAddOpen && <AddInventory open={isAddOpen} onClose={() => { setIsAddOpen(false); fetchInventory(); }} />}
-      {editItem && <EditInventory open={!!editItem} onClose={() => { setEditItem(null); fetchInventory(); }} initialData={editItem} />}
-      {adjustItem && <AdjustStock open={!!adjustItem} onClose={() => { setAdjustItem(null); fetchInventory(); }} item={adjustItem} />}
+      {isAddOpen && <AddInventory open={isAddOpen} onClose={() => { setIsAddOpen(false); fetchInventory(true); }} />}
+      {editItem && <EditInventory open={!!editItem} onClose={() => { setEditItem(null); fetchInventory(true); }} initialData={editItem} />}
+      {adjustItem && <AdjustStock open={!!adjustItem} onClose={() => { setAdjustItem(null); fetchInventory(true); }} item={adjustItem} />}
       {deleteItem && (
         <DeleteConfirmModal
           open={!!deleteItem}
@@ -356,9 +411,7 @@ export const Inventory = () => {
             try {
               await api.delete(`/inventory/${deleteItem.id}`);
               toast.success("Item deleted");
-              const updated = items.filter(i => i.id !== deleteItem.id);
-              globalInventoryCache = updated;
-              setItems(updated);
+              setItems(items.filter(i => i.id !== deleteItem.id));
             } catch (err) {
               toast.error("Failed to delete item");
             }
@@ -371,4 +424,3 @@ export const Inventory = () => {
 };
 
 export default Inventory;
-

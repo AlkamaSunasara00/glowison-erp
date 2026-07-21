@@ -5,12 +5,18 @@ import { generateDocumentNumber } from '@/lib/generateNumber';
 const handler = async (req, res) => {
   try {
     if (req.method === 'GET') {
-      const { page = 1, limit = 10, search } = req.query;
+      const { page = 1, limit = 10, search, status, includeStats } = req.query;
       const skip = (page - 1) * limit;
       
       const where = {};
       if (search) {
-        where.invoiceNumber = { contains: search, mode: 'insensitive' };
+        where.OR = [
+          { invoiceNumber: { contains: search, mode: 'insensitive' } },
+          { customer: { name: { contains: search, mode: 'insensitive' } } }
+        ];
+      }
+      if (status) {
+        where.status = status;
       }
 
       const [total, items] = await Promise.all([
@@ -24,9 +30,23 @@ const handler = async (req, res) => {
         })
       ]);
 
+      let stats = null;
+      if (includeStats === 'true') {
+        const allItems = await prisma.invoice.findMany({
+          where,
+          select: { status: true, grandTotal: true }
+        });
+        const totalInvoiced = allItems.reduce((sum, i) => sum + Number(i.grandTotal || 0), 0);
+        const collected = allItems.filter(i => i.status === "PAID").reduce((sum, i) => sum + Number(i.grandTotal || 0), 0);
+        const overdue = allItems.filter(i => i.status === "OVERDUE").reduce((sum, i) => sum + Number(i.grandTotal || 0), 0);
+        const outstanding = allItems.filter(i => i.status === "SENT" || i.status === "OVERDUE" || i.status === "DRAFT").reduce((sum, i) => sum + Number(i.grandTotal || 0), 0);
+        stats = { totalInvoiced, collected, overdue, outstanding };
+      }
+
       return res.status(200).json({
         success: true,
         data: items,
+        stats,
         pagination: {
           total,
           page: parseInt(page),

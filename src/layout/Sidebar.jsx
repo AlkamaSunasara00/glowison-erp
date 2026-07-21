@@ -50,6 +50,20 @@ const Sidebar = ({ setMobileOpen, isMobileOpen, isDesktopCollapsed, setDesktopCo
     const { user, logout } = useAuth();
     const [openMenus, setOpenMenus] = useState([]);
     const [showLogoutModal, setShowLogoutModal] = useState(false);
+    const [hoveredItem, setHoveredItem] = useState(null);
+    const [hoverStyle, setHoverStyle] = useState({});
+
+    const handleMouseEnter = (e, item) => {
+        if (!isDesktopCollapsed) return;
+        const rect = e.currentTarget.getBoundingClientRect();
+        setHoverStyle({ top: rect.top + rect.height / 2, left: rect.right + 10 });
+        setHoveredItem(item.name);
+    };
+
+    const handleMouseLeave = () => {
+        if (!isDesktopCollapsed) return;
+        setHoveredItem(null);
+    };
 
     const collapsed = !isMobile && isDesktopCollapsed;
 
@@ -101,7 +115,7 @@ const Sidebar = ({ setMobileOpen, isMobileOpen, isDesktopCollapsed, setDesktopCo
                 </div>
 
                 {/* Menu */}
-                <div className="flex-1 overflow-y-auto custom-scrollbar pr-2 flex flex-col gap-1">
+                <div className="flex-1 overflow-y-auto sidebar-scrollbar pr-2 flex flex-col gap-1">
                     {menuItems.map((item, index) => {
                         const Icon = item.icon;
                         const isActive = isItemActive(item);
@@ -223,7 +237,7 @@ const Sidebar = ({ setMobileOpen, isMobileOpen, isDesktopCollapsed, setDesktopCo
             </div>
 
             {/* ── MENU ──────────────────────────────────── */}
-            <div className="flex-1 overflow-y-auto custom-scrollbar py-3 flex flex-col gap-0.5 px-2">
+            <div className="flex-1 overflow-y-auto sidebar-scrollbar py-3 flex flex-col gap-0.5 px-2">
                 {menuItems.map((item, index) => {
                     const Icon = item.icon;
                     const isActive = isItemActive(item);
@@ -235,17 +249,16 @@ const Sidebar = ({ setMobileOpen, isMobileOpen, isDesktopCollapsed, setDesktopCo
                             <div key={index} className="flex flex-col">
                                 <button
                                     onClick={() => toggleMenu(item.name)}
+                                    onMouseEnter={(e) => handleMouseEnter(e, item)}
+                                    onMouseLeave={handleMouseLeave}
                                     className={`group flex items-center w-full transition-all duration-200 rounded-xl relative
                                         ${collapsed ? "justify-center px-0 py-3" : "justify-between px-3 py-3"}
-                                        ${isActive ? "bg-white/20 text-white shadow-sm" : isOpen ? "bg-white/10 text-white" : "text-white/70 hover:text-white hover:bg-white/10"}`}
+                                        ${collapsed 
+                                            ? (isActive || isOpen ? "text-white" : "text-white/70 hover:text-white") 
+                                            : (isActive ? "bg-white/20 text-white shadow-sm" : isOpen ? "bg-white/10 text-white" : "text-white/70 hover:text-white hover:bg-white/10")}`}
                                 >
-                                    {collapsed && (
-                                        <div className="absolute left-14 px-2.5 py-1.5 bg-gray-900 text-white text-xs font-medium rounded-md shadow-xl opacity-0 group-hover:opacity-100 pointer-events-none whitespace-nowrap z-[100] transition-opacity duration-200 border border-gray-700">
-                                            {item.name}
-                                        </div>
-                                    )}
                                     <div className={`flex items-center ${collapsed ? "" : "gap-3"}`}>
-                                        <div className={`flex-shrink-0 flex items-center justify-center w-9 h-9 rounded-lg transition-all duration-200 ${isActive ? "bg-white/25 shadow-inner" : "group-hover:bg-white/10"}`}>
+                                        <div className={`flex-shrink-0 flex items-center justify-center w-9 h-9 rounded-lg transition-all duration-200 ${isActive ? "bg-white/25 shadow-inner" : (collapsed ? "group-hover:bg-white/20" : "group-hover:bg-white/10")}`}>
                                             <Icon size={19} />
                                         </div>
                                         {!collapsed && <span className={`text-sm tracking-wide whitespace-nowrap ${isActive ? "font-bold" : "font-semibold"}`}>{item.name}</span>}
@@ -275,24 +288,23 @@ const Sidebar = ({ setMobileOpen, isMobileOpen, isDesktopCollapsed, setDesktopCo
                         <Link
                             key={index}
                             href={item.path}
-                            onClick={() => setOpenMenus([])}
+                            onClick={() => { setOpenMenus([]); setHoveredItem(null); }}
+                            onMouseEnter={(e) => handleMouseEnter(e, item)}
+                            onMouseLeave={handleMouseLeave}
                             className={`group flex items-center transition-all duration-200 rounded-xl relative
                                 ${collapsed ? "justify-center px-0 py-2" : "gap-3 px-3 py-2"}
-                                ${isActive
-                                    ? "bg-white/20 text-white font-bold shadow-sm"
-                                    : "text-white/70 hover:text-white hover:bg-white/10 font-semibold"
-                                }`}
+                                ${collapsed
+                                    ? (isActive ? "text-white font-bold" : "text-white/70 hover:text-white font-semibold")
+                                    : (isActive
+                                        ? "bg-white/20 text-white font-bold shadow-sm"
+                                        : "text-white/70 hover:text-white hover:bg-white/10 font-medium"
+                                    )}`}
                         >
-                            {collapsed && (
-                                <div className="absolute left-14 px-2.5 py-1.5 bg-gray-900 text-white text-xs font-medium rounded-md shadow-xl opacity-0 group-hover:opacity-100 pointer-events-none whitespace-nowrap z-[100] transition-opacity duration-200 border border-gray-700">
-                                    {item.name}
-                                </div>
-                            )}
                             {/* Active indicator bar */}
                             {isActive && !collapsed && (
                                 <div className="absolute left-2 w-0.5 h-6 rounded-full bg-white opacity-80" />
                             )}
-                            <div className={`flex-shrink-0 flex items-center justify-center w-9 h-9 rounded-lg transition-all duration-200 ${isActive ? "bg-white/25 shadow-inner" : "group-hover:bg-white/10"}`}>
+                            <div className={`flex-shrink-0 flex items-center justify-center w-9 h-9 rounded-lg transition-all duration-200 ${isActive ? "bg-white/25 shadow-inner" : (collapsed ? "group-hover:bg-white/20" : "group-hover:bg-white/10")}`}>
                                 <Icon size={19} />
                             </div>
                             {!collapsed && <span className="text-sm tracking-wide whitespace-nowrap">{item.name}</span>}
@@ -345,6 +357,17 @@ const Sidebar = ({ setMobileOpen, isMobileOpen, isDesktopCollapsed, setDesktopCo
                             </div>
                         </div>
                     </div>
+                </div>,
+                document.body
+            )}
+
+            {/* ── TOOLTIP PORTAL ───────────────────────────── */}
+            {hoveredItem && typeof window !== "undefined" && createPortal(
+                <div 
+                    className="fixed z-[9999] px-2.5 py-1.5 bg-gray-900 text-white text-xs font-medium rounded-md shadow-xl whitespace-nowrap border border-gray-700 pointer-events-none transform -translate-y-1/2 transition-opacity duration-200"
+                    style={{ top: hoverStyle.top, left: hoverStyle.left }}
+                >
+                    {hoveredItem}
                 </div>,
                 document.body
             )}

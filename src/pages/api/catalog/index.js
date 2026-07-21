@@ -15,19 +15,31 @@ const handler = async (req, res) => {
         ];
       }
 
-      const [total, items] = await Promise.all([
+      const [total, items, avgAggr] = await Promise.all([
         prisma.catalogItem.count({ where }),
         prisma.catalogItem.findMany({
           where,
           skip: parseInt(skip),
           take: parseInt(limit),
           orderBy: { createdAt: 'desc' }
+        }),
+        prisma.catalogItem.aggregate({
+          where,
+          _avg: { retailPrice: true }
         })
       ]);
+
+      const categoriesCount = 0;
+      const avgRetail = avgAggr._avg.retailPrice || 0;
 
       return res.status(200).json({
         success: true,
         data: items,
+        stats: {
+          totalItems: total,
+          categoriesCount,
+          avgRetail
+        },
         pagination: {
           total,
           page: parseInt(page),

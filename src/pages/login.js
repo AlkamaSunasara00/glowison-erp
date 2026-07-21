@@ -5,10 +5,13 @@ import { useRouter } from 'next/router';
 import { useAuth } from '@/context/AuthContext';
 import Input from '@/common/Input';
 import Button from '@/common/Button';
+import { Eye, EyeOff } from 'lucide-react';
+
 
 export default function Login() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { login, user } = useAuth();
   const router = useRouter();
@@ -33,38 +36,35 @@ export default function Login() {
       <Head>
         <title>Login | Glowison ERP</title>
       </Head>
-      <div className="min-h-screen flex w-full bg-gray-50">
+      <div 
+        className="min-h-screen flex w-full bg-cover bg-center bg-no-repeat relative"
+        style={{ backgroundImage: "url('/colorful_flowers_dark_background.jpg')" }}
+      >
+        <div className="absolute inset-0 bg-black/40 z-0"></div>
         
-        {/* Left Side: Graphic */}
-        <div className="hidden lg:flex w-1/2 relative bg-primary-900 items-center justify-center overflow-hidden">
-          <div className="absolute inset-0 z-0">
-            <img 
-              src="/login-bg.jpg" 
-              alt="Glowison ERP"
-              className="opacity-90 w-full h-full object-cover object-center"
-            />
-          </div>
-          <div className="relative z-10 p-12 text-white text-center">
-            <h1 className="text-5xl font-serif font-bold mb-4 tracking-tight">Welcome to Glowison ERP</h1>
-            <p className="text-lg font-serif font-light text-white/80 max-w-md mx-auto">
-              Streamline your business operations.
+        {/* Left Side: Text */}
+        <div className="hidden lg:flex w-1/2 relative z-10 items-center justify-center p-12">
+          <div className="text-white text-center drop-shadow-2xl">
+            <h1 className="text-6xl font-black mb-6 tracking-tighter" style={{ fontFamily: "'Playfair Display', serif" }}>
+              Welcome to Glowison
+            </h1>
+            <p className="text-xl font-light text-white/90 max-w-md mx-auto" style={{ fontFamily: "'Montserrat', sans-serif" }}>
+              Streamline your business operations in full bloom.
             </p>
           </div>
-          {/* Glassmorphism overlay gradient */}
-          <div className="absolute inset-0 bg-gradient-to-t from-primary-900/60 to-transparent mix-blend-multiply z-0"></div>
         </div>
 
         {/* Right Side: Login Form */}
-        <div className="w-full lg:w-1/2 flex items-center justify-center p-8 sm:p-12">
-          <div className="w-full max-w-md bg-white p-8 rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-gray-100">
+        <div className="w-full lg:w-1/2 relative z-10 flex items-center justify-center p-6 sm:p-12">
+          <div className="w-full max-w-md backdrop-blur-sm bg-white/10 p-8 rounded-3xl shadow-2xl border border-white/20">
             <div className="mb-10 text-center">
-              <h2 className="text-3xl font-bold text-gray-900">Welcome back</h2>
-              <p className="text-gray-500 mt-2">Please enter your details to sign in.</p>
+              <h2 className="text-3xl font-bold text-white drop-shadow-lg">Welcome back</h2>
+              <p className="text-white/80 mt-2 font-medium">Please enter your details to sign in.</p>
             </div>
             
             <form onSubmit={handleSubmit} className="space-y-6">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                <label className="block text-sm font-medium text-white/90 mb-1">Email</label>
                 <Input
                   type="email"
                   id="email"
@@ -76,15 +76,28 @@ export default function Login() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Password</label>
-                <Input
-                  type="password"
-                  id="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="••••••••"
-                  required
-                />
+                <label className="block text-sm font-medium text-white/90 mb-1">Password</label>
+                <div className="relative">
+                  <Input
+                    type={showPassword ? "text" : "password"}
+                    id="password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="••••••••"
+                    required
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-200 focus:outline-none transition-colors"
+                  >
+                    {showPassword ? (
+                      <EyeOff className="h-5 w-5" aria-hidden="true" />
+                    ) : (
+                      <Eye className="h-5 w-5" aria-hidden="true" />
+                    )}
+                  </button>
+                </div>
               </div>
 
               <div className="flex items-center justify-between">
@@ -93,9 +106,9 @@ export default function Login() {
                     id="remember-me"
                     name="remember-me"
                     type="checkbox"
-                    className="h-4 w-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+                    className="h-4 w-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500 bg-white/20"
                   />
-                  <label htmlFor="remember-me" className="ml-2 block text-sm text-gray-900">
+                  <label htmlFor="remember-me" className="ml-2 block text-sm text-white/90">
                     Remember me
                   </label>
                 </div>
@@ -104,7 +117,7 @@ export default function Login() {
               <Button
                 type="submit"
                 variant="solid"
-                className="w-full justify-center py-2.5 text-base shadow-lg shadow-primary-600/20"
+                className="w-full justify-center py-3 text-base font-bold shadow-xl hover:shadow-2xl transition-all"
                 disabled={isSubmitting}
                 isLoading={isSubmitting}
               >

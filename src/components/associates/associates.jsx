@@ -11,12 +11,10 @@ import AddAssociate from "./associateModal/AddAssociate";
 import EditAssociate from "./associateModal/EditAssociate";
 import DeleteConfirmModal from "@/common/DeleteConfirmModal";
 import Loader from "@/common/Loader";
-
-let globalAssociatesCache = null;
-let globalAssociateStatsCache = null;
+import Pagination from "@/common/Pagination";
 
 const categoryOptions = [
-  { value: "", label: "All Categories" },
+  { value: "all", label: "All Categories" },
   { value: "INSTALLER", label: "Installer" },
   { value: "FABRICATOR", label: "Fabricator" },
   { value: "ELECTRICIAN", label: "Electrician" },
@@ -26,7 +24,7 @@ const categoryOptions = [
 ];
 
 const statusOptions = [
-  { value: "", label: "All Statuses" },
+  { value: "all", label: "All Statuses" },
   { value: "ACTIVE", label: "Active" },
   { value: "INACTIVE", label: "Inactive" },
 ];
@@ -34,40 +32,69 @@ const statusOptions = [
 export const Associates = () => {
   const router = useRouter();
   const [search, setSearch] = useState("");
-  const [categoryFilter, setCategoryFilter] = useState("");
-  const [statusFilter, setStatusFilter] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState("all");
+  const [statusFilter, setStatusFilter] = useState("all");
 
-  const [isAddOpen, setIsAddOpen] = useState(false);
-  const [editItem, setEditItem] = useState(null);
-  const [deleteItem, setDeleteItem] = useState(null);
-
-  const [associates, setAssociates] = useState(globalAssociatesCache || []);
-  const [stats, setStats] = useState(globalAssociateStatsCache || {
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [stats, setStats] = useState({
     totalAssociates: 0,
     activeAssociates: 0,
     totalPendingAmount: 0,
     totalWorkValue: 0
   });
-  const [loading, setLoading] = useState(!globalAssociatesCache);
+
+  const [isAddOpen, setIsAddOpen] = useState(false);
+  const [editItem, setEditItem] = useState(null);
+  const [deleteItem, setDeleteItem] = useState(null);
+
+  const [associates, setAssociates] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [isInitialized, setIsInitialized] = useState(false);
+
+  // Initialize from URL query
+  useEffect(() => {
+    if (router.isReady && !isInitialized) {
+      if (router.query.page) setPage(parseInt(router.query.page) || 1);
+      if (router.query.search) {
+        setSearch(router.query.search);
+        setDebouncedSearch(router.query.search);
+      }
+      if (router.query.category) setCategoryFilter(router.query.category);
+      if (router.query.status) setStatusFilter(router.query.status);
+      setIsInitialized(true);
+    }
+  }, [router.isReady, isInitialized, router.query]);
+
+  // Debounce search
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedSearch(search);
+      if (search !== debouncedSearch) setPage(1);
+    }, 500);
+    return () => clearTimeout(handler);
+  }, [search, debouncedSearch]);
 
   const fetchAssociates = async (silent = false) => {
     try {
-      // Only show spinner on the very first load (no cache at all)
-      if (!silent && !globalAssociatesCache) setLoading(true);
+      if (!silent) setLoading(true);
       const res = await api.get('/associates', {
         params: {
-          limit: 200,
-          search: search || undefined,
-          category: categoryFilter || undefined,
-          status: statusFilter || undefined,
+          page,
+          limit: 10,
+          search: debouncedSearch,
+          category: categoryFilter === 'all' ? undefined : categoryFilter,
+          status: statusFilter === 'all' ? undefined : statusFilter,
           includeStats: true
         }
       });
-      globalAssociatesCache = res.data.data;
       setAssociates(res.data.data);
       if (res.data.stats) {
-        globalAssociateStatsCache = res.data.stats;
         setStats(res.data.stats);
+      }
+      if (res.data.pagination) {
+        setTotalPages(res.data.pagination.totalPages);
       }
     } catch (error) {
       toast.error('Failed to load associates');
@@ -76,25 +103,21 @@ export const Associates = () => {
     }
   };
 
-  // On initial mount, use cache immediately — only fetch if filters change or cache is empty
   useEffect(() => {
-    // If there's cached data and no filters active, use cache and silently refresh in background
-    if (globalAssociatesCache && !search && !categoryFilter && !statusFilter) {
-      setAssociates(globalAssociatesCache);
-      if (globalAssociateStatsCache) setStats(globalAssociateStatsCache);
-      setLoading(false);
-      // Silently refresh in background without spinner
-      fetchAssociates(true);
-      return;
-    }
-    // No cache, or filters active — debounced fetch
-    const delayDebounceFn = setTimeout(() => {
-      fetchAssociates();
-    }, search ? 300 : 0);
-    return () => clearTimeout(delayDebounceFn);
-  }, [search, categoryFilter, statusFilter]);
+    if (!isInitialized) return;
+    
+    fetchAssociates();
 
-  const hasActiveFilters = categoryFilter || statusFilter || search;
+    const query = {};
+    if (page > 1) query.page = page;
+    if (debouncedSearch) query.search = debouncedSearch;
+    if (categoryFilter !== 'all') query.category = categoryFilter;
+    if (statusFilter !== 'all') query.status = statusFilter;
+
+    router.replace({ pathname: router.pathname, query }, undefined, { shallow: true });
+  }, [page, debouncedSearch, categoryFilter, statusFilter, isInitialized]);
+
+  const hasActiveFilters = categoryFilter !== 'all' || statusFilter !== 'all' || debouncedSearch !== '';
 
   return (
     <div className="flex flex-col min-h-screen w-full relative gap-4">
@@ -175,7 +198,7 @@ export const Associates = () => {
              <Input
               type="select"
               value={categoryFilter}
-              onChange={(e) => setCategoryFilter(e.target.value)}
+              onChange={(e) => { setCategoryFilter(e.target.value); setPage(1); }}
               options={categoryOptions}
             />
           </div>
@@ -183,49 +206,55 @@ export const Associates = () => {
              <Input
               type="select"
               value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
+              onChange={(e) => { setStatusFilter(e.target.value); setPage(1); }}
               options={statusOptions}
             />
           </div>
         </div>
 
         {/* Content */}
-        {loading ? (
-           <div className="flex-1 bg-white rounded-sm border border-gray-100 shadow-sm overflow-hidden min-h-[400px] flex items-center justify-center">
-             <Loader text="Loading Associates..." />
-           </div>
-        ) : associates.length === 0 ? (
-          <EmptyState
-            search={hasActiveFilters ? "active filters" : ""}
-            entityName="Associates"
-            entityIcon="Users"
-            onClearSearch={() => {
-              setSearch("");
-              setCategoryFilter("");
-              setStatusFilter("");
-            }}
-            addLabel="Add Associate"
-            onAdd={() => setIsAddOpen(true)}
-          />
-        ) : (
-          <div className="bg-white rounded-sm border border-gray-100 shadow-sm overflow-hidden flex-1 custom-scrollbar">
-            <div className="overflow-x-auto">
-              <table className="w-full text-left border-collapse min-w-[1000px] whitespace-nowrap">
-                <thead className="bg-primary border-b border-primary/20 text-xs font-semibold text-white">
+        <div className="bg-white rounded-sm border border-gray-100 shadow-sm flex flex-col flex-1 overflow-hidden min-h-[400px]">
+          <div className="flex-1 overflow-auto custom-scrollbar relative">
+            {loading && (
+              <div className="absolute inset-0 top-[40px] z-20 flex items-center justify-center bg-white/60 backdrop-blur-sm">
+                <Loader text="Loading Associates..." />
+              </div>
+            )}
+            <table className="w-full text-left border-collapse min-w-[1000px] whitespace-nowrap">
+              <thead className="bg-primary border-b border-primary/20 text-xs font-semibold text-white sticky top-0 z-10">
+                <tr>
+                  <th className="px-4 py-3">Associate</th>
+                  <th className="px-4 py-3">Category</th>
+                  <th className="px-4 py-3">Mobile</th>
+                  <th className="px-4 py-3 text-center">Projects</th>
+                  <th className="px-4 py-3 text-right">Work Amount</th>
+                  <th className="px-4 py-3 text-right">Paid</th>
+                  <th className="px-4 py-3 text-right">Due</th>
+                  <th className="px-4 py-3">Status</th>
+                  <th className="px-4 py-3 text-center rounded-tr-lg">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="text-sm">
+                {!loading && associates.length === 0 ? (
                   <tr>
-                    <th className="px-4 py-3 rounded-tl-lg">Associate</th>
-                    <th className="px-4 py-3">Category</th>
-                    <th className="px-4 py-3">Mobile</th>
-                    <th className="px-4 py-3 text-center">Projects</th>
-                    <th className="px-4 py-3 text-right">Work Amount</th>
-                    <th className="px-4 py-3 text-right">Paid</th>
-                    <th className="px-4 py-3 text-right">Due</th>
-                    <th className="px-4 py-3">Status</th>
-                    <th className="px-4 py-3 text-center rounded-tr-lg">Actions</th>
+                    <td colSpan="9" className="p-0">
+                      <EmptyState
+                        search={hasActiveFilters ? "active filters" : ""}
+                        entityName="Associates"
+                        entityIcon="Users"
+                        onClearSearch={() => {
+                          setSearch("");
+                          setCategoryFilter("all");
+                          setStatusFilter("all");
+                          setPage(1);
+                        }}
+                        addLabel="Add Associate"
+                        onAdd={() => setIsAddOpen(true)}
+                      />
+                    </td>
                   </tr>
-                </thead>
-                <tbody className="text-sm">
-                  {associates.map(associate => {
+                ) : (
+                  associates.map(associate => {
                      return (
                       <tr 
                         key={associate.id} 
@@ -248,39 +277,32 @@ export const Associates = () => {
                         <td className="px-4 py-3 text-gray-600">{associate.phone || '—'}</td>
                         <td className="px-4 py-3 text-center font-semibold text-gray-900">{associate.totalProjects}</td>
                         <td className="px-4 py-3 text-right font-semibold text-gray-900">₹{associate.totalWorkAmount.toLocaleString()}</td>
-                        <td className="px-4 py-3 text-right text-emerald-600 font-semibold">₹{associate.totalPaid.toLocaleString()}</td>
-                        <td className="px-4 py-3 text-right text-rose-600 font-semibold">₹{associate.totalDue.toLocaleString()}</td>
+                        <td className="px-4 py-3 text-right font-medium text-emerald-600">₹{associate.totalPaid.toLocaleString()}</td>
+                        <td className="px-4 py-3 text-right font-medium text-rose-600">₹{associate.totalDue.toLocaleString()}</td>
                         <td className="px-4 py-3">
                            <StatusBadge status={associate.status} />
                         </td>
-                        <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
-                          <div className="flex items-center justify-center gap-1.5">
-                            {associate.phone && (
-                               <>
-                                 <a href={`tel:${associate.phone}`} className="w-7 h-7 rounded-md bg-blue-50 text-blue-600 flex items-center justify-center hover:bg-blue-100 transition-colors" title="Call">
-                                   <Icons name="Phone" size={12} />
-                                 </a>
-                                 <a href={`https://wa.me/${associate.phone.replace(/\\D/g,'')}`} target="_blank" rel="noreferrer" className="w-7 h-7 rounded-md bg-emerald-50 text-emerald-600 flex items-center justify-center hover:bg-emerald-100 transition-colors" title="WhatsApp">
-                                   <Icons name="MessageCircle" size={12} />
-                                 </a>
-                               </>
-                            )}
-                            <Button variant="ghost" size="sm" onClick={() => setEditItem(associate)} className="px-1.5! py-1.5! h-7! w-7!">
-                              <Icons name="Pencil" size={14} className="text-gray-500 hover:text-primary" />
-                            </Button>
-                            <Button variant="ghost" size="sm" onClick={() => setDeleteItem(associate)} className="px-1.5! py-1.5! h-7! w-7!">
-                              <Icons name="Trash2" size={14} className="text-gray-400 hover:text-rose-500 transition-colors" />
-                            </Button>
-                          </div>
+                        <td className="px-4 py-3 text-center" onClick={(e) => e.stopPropagation()}>
+                          <Button variant="ghost" size="sm" onClick={() => setEditItem(associate)} className="px-2!">
+                            <Icons name="Pencil" size={16} className="text-gray-500 hover:text-primary" />
+                          </Button>
+                          <Button variant="ghost" size="sm" onClick={() => setDeleteItem(associate)} className="px-2!">
+                            <Icons name="Trash2" size={16} className="text-gray-400 hover:text-rose-500 transition-colors" />
+                          </Button>
                         </td>
                       </tr>
                      );
-                  })}
-                </tbody>
-              </table>
-            </div>
+                  })
+                )}
+              </tbody>
+            </table>
           </div>
-        )}
+          <Pagination 
+            currentPage={page} 
+            totalPages={totalPages} 
+            onPageChange={(newPage) => setPage(newPage)} 
+          />
+        </div>
       </div>
 
       {isAddOpen && <AddAssociate open={isAddOpen} onClose={() => { setIsAddOpen(false); fetchAssociates(true); }} />}
@@ -294,9 +316,9 @@ export const Associates = () => {
             try {
               await api.delete(`/associates/${deleteItem.id}`);
               toast.success("Associate deleted");
-              fetchAssociates();
+              setAssociates(associates.filter(a => a.id !== deleteItem.id));
             } catch (err) {
-              toast.error(err.response?.data?.message || "Failed to delete associate");
+              toast.error("Failed to delete associate");
             }
             setDeleteItem(null);
           }}

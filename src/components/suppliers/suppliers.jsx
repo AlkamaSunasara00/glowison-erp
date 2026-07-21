@@ -11,8 +11,7 @@ import EditSupplier from "./supplierModal/EditSupplier";
 import DeleteConfirmModal from "@/common/DeleteConfirmModal";
 import toast from "react-hot-toast";
 import Loader from "@/common/Loader";
-
-let globalSuppliersCache = null;
+import Pagination from "@/common/Pagination";
 
 const statusOptions = [
   { value: "all", label: "All Status" },
@@ -23,6 +22,7 @@ const statusOptions = [
 export const Suppliers = () => {
   const router = useRouter();
   const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [viewMode, setViewMode] = useState(() => {
     if (typeof window !== "undefined") {
@@ -30,18 +30,55 @@ export const Suppliers = () => {
     }
     return "table";
   });
+  
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [stats, setStats] = useState({ totalSuppliers: 0, activeCount: 0, inactiveCount: 0 });
+
   const [isAddSupplierOpen, setIsAddSupplierOpen] = useState(false);
-  const [suppliers, setSuppliers] = useState(globalSuppliersCache || []);
+  const [suppliers, setSuppliers] = useState([]);
   const [editItem, setEditItem] = useState(null);
   const [deleteItem, setDeleteItem] = useState(null);
-  const [loading, setLoading] = useState(!globalSuppliersCache);
+  const [loading, setLoading] = useState(true);
+  const [isInitialized, setIsInitialized] = useState(false);
+
+  // Initialize from URL query
+  useEffect(() => {
+    if (router.isReady && !isInitialized) {
+      if (router.query.page) setPage(parseInt(router.query.page) || 1);
+      if (router.query.search) {
+        setSearch(router.query.search);
+        setDebouncedSearch(router.query.search);
+      }
+      if (router.query.status) setStatusFilter(router.query.status);
+      setIsInitialized(true);
+    }
+  }, [router.isReady, isInitialized, router.query]);
+
+  // Debounce search
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedSearch(search);
+      if (search !== debouncedSearch) setPage(1);
+    }, 500);
+    return () => clearTimeout(handler);
+  }, [search, debouncedSearch]);
 
   const fetchSuppliers = async (silent = false) => {
     try {
-      if (!silent && !globalSuppliersCache) setLoading(true);
-      const res = await api.get('/suppliers');
-      globalSuppliersCache = res.data.data;
+      if (!silent) setLoading(true);
+      const res = await api.get('/suppliers', {
+        params: {
+          page,
+          limit: viewMode === 'card' ? 20 : 10,
+          search: debouncedSearch,
+          status: statusFilter === 'all' ? undefined : statusFilter,
+          includeStats: true
+        }
+      });
       setSuppliers(res.data.data);
+      if (res.data.stats) setStats(res.data.stats);
+      if (res.data.pagination) setTotalPages(res.data.pagination.totalPages);
     } catch (error) {
       toast.error('Failed to load suppliers');
     } finally {
@@ -50,33 +87,26 @@ export const Suppliers = () => {
   };
 
   useEffect(() => {
-    fetchSuppliers(!!globalSuppliersCache);
-  }, []);
+    if (!isInitialized) return;
+    
+    fetchSuppliers();
 
-  // Filters
-  const hasActiveFilters = statusFilter !== "all";
-  const filteredSuppliers = suppliers.filter((supplier) => {
-    const query = search.trim().toLowerCase();
-    const matchesSearch = query.length === 0 || 
-      supplier.name.toLowerCase().includes(query) || 
-      (supplier.companyName && supplier.companyName.toLowerCase().includes(query)) ||
-      supplier.mobile.includes(query);
-    const matchesStatus = statusFilter === "all" || supplier.status === statusFilter;
+    const query = {};
+    if (page > 1) query.page = page;
+    if (debouncedSearch) query.search = debouncedSearch;
+    if (statusFilter !== 'all') query.status = statusFilter;
 
-    return matchesSearch && matchesStatus;
-  });
+    router.replace({ pathname: router.pathname, query }, undefined, { shallow: true });
+  }, [page, debouncedSearch, statusFilter, viewMode, isInitialized]);
 
-  // KPIs
-  const totalSuppliers = suppliers.length;
-  const activeCount = suppliers.filter(s => s.status === "ACTIVE").length;
-  const inactiveCount = suppliers.filter(s => s.status === "INACTIVE").length;
+  const hasActiveFilters = statusFilter !== "all" || debouncedSearch !== "";
 
   const handleRowClick = (supplier) => {
     router.push(`/suppliers/${supplier.id}`);
   };
 
   return (
-    <div className="flex flex-col min-h-screen w-full relative gap-4">
+    <div className="flex flex-col min-h-screen w-full relative gap-4 pb-10">
       <div className="flex flex-col gap-4 rounded-lg">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div className="space-y-1">
@@ -107,7 +137,7 @@ export const Suppliers = () => {
             </div>
             <div>
               <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-1">Total Suppliers</p>
-              <h4 className="text-2xl font-black text-gray-900 tracking-tight">{totalSuppliers}</h4>
+              <h4 className="text-2xl font-black text-gray-900 tracking-tight">{stats.totalSuppliers}</h4>
             </div>
           </div>
           <div className="bg-white rounded-sm p-5 sm:p-6 shadow-sm border border-gray-100 flex items-center gap-5 hover:-translate-y-1 hover:shadow-md transition-all duration-300">
@@ -116,7 +146,7 @@ export const Suppliers = () => {
             </div>
             <div>
               <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-1">Active Suppliers</p>
-              <h4 className="text-2xl font-black text-emerald-600 tracking-tight">{activeCount}</h4>
+              <h4 className="text-2xl font-black text-emerald-600 tracking-tight">{stats.activeCount}</h4>
             </div>
           </div>
           <div className="bg-white rounded-sm p-5 sm:p-6 shadow-sm border border-gray-100 flex items-center gap-5 hover:-translate-y-1 hover:shadow-md transition-all duration-300">
@@ -125,7 +155,7 @@ export const Suppliers = () => {
             </div>
             <div>
               <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-1">Inactive Suppliers</p>
-              <h4 className="text-2xl font-black text-rose-600 tracking-tight">{inactiveCount}</h4>
+              <h4 className="text-2xl font-black text-rose-600 tracking-tight">{stats.inactiveCount}</h4>
             </div>
           </div>
         </div>
@@ -145,7 +175,7 @@ export const Suppliers = () => {
             <Input
               type="select"
               value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
+              onChange={(e) => { setStatusFilter(e.target.value); setPage(1); }}
               options={statusOptions}
             />
           </div>
@@ -153,6 +183,7 @@ export const Suppliers = () => {
             <button
               onClick={() => {
                 setViewMode("table");
+                setPage(1);
                 if (typeof window !== "undefined") localStorage.setItem("supplierViewMode", "table");
               }}
               className={`p-1.5 rounded-sm transition-colors ${viewMode === "table" ? "bg-white text-primary shadow-sm" : "text-gray-500 hover:text-gray-900"}`}
@@ -163,6 +194,7 @@ export const Suppliers = () => {
             <button
               onClick={() => {
                 setViewMode("card");
+                setPage(1);
                 if (typeof window !== "undefined") localStorage.setItem("supplierViewMode", "card");
               }}
               className={`p-1.5 rounded-sm transition-colors ${viewMode === "card" ? "bg-white text-primary shadow-sm" : "text-gray-500 hover:text-gray-900"}`}
@@ -174,26 +206,17 @@ export const Suppliers = () => {
         </div>
 
         {/* Content */}
-        {loading ? (
-          <div className="flex-1 bg-white rounded-sm border border-gray-100 shadow-sm overflow-hidden min-h-[400px] flex items-center justify-center">
-            <Loader text="Loading Suppliers..." />
-          </div>
-        ) : filteredSuppliers.length === 0 ? (
-          <EmptyState
-            search={search || (hasActiveFilters ? "active filters" : "")}
-            entityName="Suppliers"
-            entityIcon="Truck"
-            onClearSearch={() => {
-              setSearch("");
-              setStatusFilter("all");
-            }}
-            addLabel="Add Supplier"
-          />
-        ) : viewMode === "table" ? (
-          <div className="bg-white rounded-sm border border-gray-100 shadow-sm overflow-hidden flex-1 custom-scrollbar">
-            <div className="overflow-x-auto">
+        <div className="bg-white rounded-sm border border-gray-100 shadow-sm flex flex-col flex-1 overflow-hidden min-h-[400px]">
+          <div className={`flex-1 overflow-auto custom-scrollbar relative ${viewMode === 'card' ? 'p-4 bg-gray-50/30' : ''}`}>
+            {loading && (
+              <div className="absolute inset-0 top-[40px] z-20 flex items-center justify-center bg-white/60 backdrop-blur-sm">
+                <Loader text="Loading Suppliers..." />
+              </div>
+            )}
+            
+            {viewMode === "table" ? (
               <table className="w-full text-left border-collapse min-w-[900px] whitespace-nowrap">
-                <thead className="bg-primary border-b border-primary/20 text-xs font-semibold text-white">
+                <thead className="bg-primary border-b border-primary/20 text-xs font-semibold text-white sticky top-0 z-10">
                   <tr>
                     <th className="px-4 py-3 rounded-tl-lg">Supplier Details</th>
                     <th className="px-4 py-3">Contact Person</th>
@@ -203,104 +226,146 @@ export const Suppliers = () => {
                   </tr>
                 </thead>
                 <tbody className="text-sm">
-                  {filteredSuppliers.map(supplier => (
-                    <tr 
-                      key={supplier.id} 
-                      onClick={() => handleRowClick(supplier)}
-                      className="border-b border-gray-50 hover:bg-gray-50/50 cursor-pointer transition-colors"
-                    >
-                      <td className="px-4 py-3">
-                        <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-sm bg-indigo-50 text-indigo-600 font-bold flex items-center justify-center shrink-0 border border-indigo-100/50">
-                            {supplier.name.substring(0, 2).toUpperCase()}
-                          </div>
-                          <div>
-                            <div className="font-semibold text-gray-900">{supplier.name}</div>
-                            {supplier.companyName && <div className="text-xs text-gray-500 mt-0.5">{supplier.companyName}</div>}
-                          </div>
-                        </div>
-                      </td>
-                      <td className="px-4 py-3">
-                        <div className="font-medium text-gray-900">{supplier.contactPerson}</div>
-                        <div className="text-[11px] text-gray-500 mt-0.5">{supplier.mobile}</div>
-                      </td>
-                      <td className="px-4 py-3 text-gray-700">
-                        <div className="font-medium">{supplier.city}</div>
-                        <div className="text-[11px] text-gray-500 mt-0.5">{supplier.state}</div>
-                      </td>
-                      <td className="px-4 py-3">
-                        <StatusBadge 
-                          status={supplier.status} 
+                  {!loading && suppliers.length === 0 ? (
+                    <tr>
+                      <td colSpan="5" className="p-0">
+                        <EmptyState
+                          search={search || (hasActiveFilters ? "active filters" : "")}
+                          entityName="Suppliers"
+                          entityIcon="Truck"
+                          onClearSearch={() => {
+                            setSearch("");
+                            setStatusFilter("all");
+                            setPage(1);
+                          }}
+                          addLabel="Add Supplier"
                         />
                       </td>
-                      <td className="px-4 py-3 text-center" onClick={(e) => e.stopPropagation()}>
-                        <div className="flex items-center justify-center gap-2">
-                          <Button variant="ghost" size="sm" onClick={() => setEditItem(supplier)} className="px-2!">
-                            <Icons name="Pencil" size={16} className="text-gray-400 hover:text-indigo-600 transition-colors" />
-                          </Button>
-                          <Button variant="ghost" size="sm" onClick={() => setDeleteItem(supplier)} className="px-2!">
-                            <Icons name="Trash2" size={16} className="text-gray-400 hover:text-rose-500 transition-colors" />
-                          </Button>
-                        </div>
-                      </td>
                     </tr>
-                  ))}
+                  ) : (
+                    suppliers.map(supplier => (
+                      <tr 
+                        key={supplier.id} 
+                        onClick={() => handleRowClick(supplier)}
+                        className="border-b border-gray-50 hover:bg-gray-50/50 cursor-pointer transition-colors"
+                      >
+                        <td className="px-4 py-3">
+                          <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-sm bg-indigo-50 text-indigo-600 font-bold flex items-center justify-center shrink-0 border border-indigo-100/50">
+                              {supplier.name.substring(0, 2).toUpperCase()}
+                            </div>
+                            <div>
+                              <div className="font-semibold text-gray-900">{supplier.name}</div>
+                              {supplier.companyName && <div className="text-xs text-gray-500 mt-0.5">{supplier.companyName}</div>}
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-4 py-3">
+                          <div className="font-medium text-gray-900">{supplier.contactPerson}</div>
+                          <div className="text-[11px] text-gray-500 mt-0.5">{supplier.mobile}</div>
+                        </td>
+                        <td className="px-4 py-3 text-gray-700">
+                          <div className="font-medium">{supplier.city}</div>
+                          <div className="text-[11px] text-gray-500 mt-0.5">{supplier.state}</div>
+                        </td>
+                        <td className="px-4 py-3">
+                          <StatusBadge 
+                            status={supplier.status} 
+                          />
+                        </td>
+                        <td className="px-4 py-3 text-center" onClick={(e) => e.stopPropagation()}>
+                          <div className="flex items-center justify-center gap-2">
+                            <Button variant="ghost" size="sm" onClick={() => setEditItem(supplier)} className="px-2!">
+                              <Icons name="Pencil" size={16} className="text-gray-400 hover:text-indigo-600 transition-colors" />
+                            </Button>
+                            <Button variant="ghost" size="sm" onClick={() => setDeleteItem(supplier)} className="px-2!">
+                              <Icons name="Trash2" size={16} className="text-gray-400 hover:text-rose-500 transition-colors" />
+                            </Button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))
+                  )}
                 </tbody>
               </table>
-            </div>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 flex-1 content-start">
-            {filteredSuppliers.map(supplier => (
-              <div 
-                key={supplier.id}
-                onClick={() => handleRowClick(supplier)}
-                className="bg-white rounded-sm border border-gray-100 shadow-sm hover:shadow-md transition-shadow cursor-pointer p-4 flex flex-col gap-3 relative group"
-              >
-                <div className={`h-24 w-full rounded-sm border border-gray-200 overflow-hidden flex items-center justify-center relative mb-2 bg-gradient-to-br from-gray-50 to-white`}>
-                  <div className="w-14 h-14 rounded-full flex items-center justify-center font-bold text-2xl shadow-sm bg-indigo-50 text-indigo-600 border border-indigo-100/50">
-                    {supplier.name.substring(0, 2).toUpperCase()}
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 content-start relative min-h-[300px]">
+                {!loading && suppliers.length === 0 ? (
+                  <div className="col-span-full">
+                    <EmptyState
+                      search={search || (hasActiveFilters ? "active filters" : "")}
+                      entityName="Suppliers"
+                      entityIcon="Truck"
+                      onClearSearch={() => {
+                        setSearch("");
+                        setStatusFilter("all");
+                        setPage(1);
+                      }}
+                      addLabel="Add Supplier"
+                    />
                   </div>
-                  
-                  <div className="absolute top-2 left-2 flex gap-1.5">
-                    <StatusBadge status={supplier.status} />
-                  </div>
-                  
-                  {/* Floating Action Buttons inside header */}
-                  <div className="absolute top-2 right-2 flex gap-1.5 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity" onClick={(e) => e.stopPropagation()}>
-                     <Button variant="outline" size="sm" onClick={() => setEditItem(supplier)} className="bg-white/90 backdrop-blur-sm px-2! py-1.5! border-gray-200 shadow-sm"><Icons name="Pencil" size={14} className="text-gray-600 hover:text-indigo-600" /></Button>
-                     <Button variant="outline" size="sm" onClick={() => setDeleteItem(supplier)} className="bg-white/90 backdrop-blur-sm px-2! py-1.5! border-gray-200 shadow-sm"><Icons name="Trash2" size={14} className="text-gray-600 hover:text-rose-500" /></Button>
-                  </div>
-                </div>
+                ) : (
+                  suppliers.map(supplier => (
+                    <div 
+                      key={supplier.id}
+                      onClick={() => handleRowClick(supplier)}
+                      className="bg-white rounded-sm border border-gray-100 shadow-sm hover:shadow-md transition-shadow cursor-pointer p-4 flex flex-col gap-3 relative group"
+                    >
+                      <div className="flex items-start justify-between gap-3 relative">
+                        <div className="w-12 h-12 rounded-sm bg-indigo-50 text-indigo-600 font-bold text-xl flex items-center justify-center shrink-0 border border-indigo-100/50">
+                          {supplier.name.substring(0, 2).toUpperCase()}
+                        </div>
+                        <div className="absolute top-0 right-0 flex gap-1.5 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity" onClick={(e) => e.stopPropagation()}>
+                           <Button variant="outline" size="sm" onClick={() => setEditItem(supplier)} className="bg-white/90 backdrop-blur-sm px-2! py-1.5! border-gray-200 shadow-sm"><Icons name="Pencil" size={14} className="text-gray-600 hover:text-indigo-600" /></Button>
+                           <Button variant="outline" size="sm" onClick={() => setDeleteItem(supplier)} className="bg-white/90 backdrop-blur-sm px-2! py-1.5! border-gray-200 shadow-sm"><Icons name="Trash2" size={14} className="text-gray-600 hover:text-rose-500" /></Button>
+                        </div>
+                      </div>
 
-                <div className="min-w-0">
-                  <h3 className="font-semibold text-gray-900 truncate" title={supplier.name}>{supplier.name}</h3>
-                  <p className="text-[11px] text-gray-500 mt-0.5 truncate">{supplier.companyName || 'No Company Name'}</p>
-                </div>
+                      <div>
+                        <h3 className="font-semibold text-gray-900 truncate" title={supplier.name}>{supplier.name}</h3>
+                        {supplier.companyName && <p className="text-[11px] text-gray-500 mt-0.5 truncate">{supplier.companyName}</p>}
+                      </div>
 
-                <div className="grid grid-cols-2 gap-2 mt-1">
-                  <div className="flex flex-col bg-gray-50 p-2 rounded border border-gray-100">
-                    <span className="text-[10px] font-semibold uppercase tracking-wider text-gray-500">Contact</span>
-                    <span className="text-xs font-bold text-gray-900 mt-0.5 truncate">{supplier.contactPerson}</span>
-                  </div>
-                  <div className="flex flex-col bg-gray-50 p-2 rounded border border-gray-100">
-                    <span className="text-[10px] font-semibold uppercase tracking-wider text-gray-500">Mobile</span>
-                    <span className="text-xs font-bold text-gray-900 mt-0.5 truncate">{supplier.mobile}</span>
-                  </div>
-                </div>
+                      <div className="flex flex-col gap-1.5 mt-1">
+                        <div className="flex items-center gap-2 text-xs text-gray-600">
+                          <Icons name="User" size={12} className="text-gray-400 shrink-0" />
+                          <span className="truncate">{supplier.contactPerson || '-'}</span>
+                        </div>
+                        <div className="flex items-center gap-2 text-xs text-gray-600">
+                          <Icons name="Phone" size={12} className="text-gray-400 shrink-0" />
+                          <span className="truncate">{supplier.mobile}</span>
+                        </div>
+                        <div className="flex items-center gap-2 text-xs text-gray-600">
+                          <Icons name="MapPin" size={12} className="text-gray-400 shrink-0" />
+                          <span className="truncate">{supplier.city}{supplier.state ? `, ${supplier.state}` : ''}</span>
+                        </div>
+                      </div>
 
-                <div className="flex items-center gap-1.5 mt-auto pt-3 border-t border-gray-50 text-[11px] text-gray-500 font-medium">
-                  <Icons name="MapPin" size={12} className="text-gray-400 shrink-0"/>
-                  <span className="truncate">{supplier.city}, {supplier.state}</span>
-                </div>
+                      <div className="flex items-center justify-between pt-3 border-t border-gray-50 mt-auto">
+                        <StatusBadge status={supplier.status} />
+                        
+                        <div className="flex gap-1.5" onClick={(e) => e.stopPropagation()}>
+                          <a href={`tel:${supplier.mobile}`} className="w-7 h-7 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center hover:bg-blue-100 transition-colors" title="Call">
+                            <Icons name="Phone" size={12} />
+                          </a>
+                        </div>
+                      </div>
+                    </div>
+                  ))
+                )}
               </div>
-            ))}
+            )}
           </div>
-        )}
+          <Pagination 
+            currentPage={page} 
+            totalPages={totalPages} 
+            onPageChange={(newPage) => setPage(newPage)} 
+          />
+        </div>
       </div>
 
-      {isAddSupplierOpen && <AddSupplier open={isAddSupplierOpen} onClose={() => { setIsAddSupplierOpen(false); fetchSuppliers(); }} />}
-      {editItem && <EditSupplier open={!!editItem} onClose={() => { setEditItem(null); fetchSuppliers(); }} initialData={editItem} />}
+      {isAddSupplierOpen && <AddSupplier open={isAddSupplierOpen} onClose={() => { setIsAddSupplierOpen(false); fetchSuppliers(true); }} />}
+      {editItem && <EditSupplier open={!!editItem} onClose={() => { setEditItem(null); fetchSuppliers(true); }} initialData={editItem} />}
       {deleteItem && (
         <DeleteConfirmModal
           open={!!deleteItem}
@@ -310,9 +375,7 @@ export const Suppliers = () => {
             try {
               await api.delete(`/suppliers/${deleteItem.id}`);
               toast.success("Supplier deleted");
-              const updated = suppliers.filter(s => s.id !== deleteItem.id);
-              globalSuppliersCache = updated;
-              setSuppliers(updated);
+              setSuppliers(suppliers.filter(s => s.id !== deleteItem.id));
             } catch (err) {
               toast.error("Failed to delete supplier");
             }

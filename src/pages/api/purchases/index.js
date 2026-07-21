@@ -5,17 +5,33 @@ import { generateDocumentNumber } from '@/lib/generateNumber';
 const handler = async (req, res) => {
   try {
     if (req.method === 'GET') {
-      const { page = 1, limit = 50, search } = req.query;
+      const { page = 1, limit = 10, search, paymentStatus, status, month } = req.query;
       const skip = (page - 1) * limit;
       
-      const where = search ? {
-        OR: [
+      const where = {};
+      if (search) {
+        where.OR = [
           { purchaseNumber: { contains: search, mode: 'insensitive' } },
           { supplier: { name: { contains: search, mode: 'insensitive' } } },
-        ]
-      } : {};
+        ];
+      }
+      if (paymentStatus && paymentStatus !== 'all') {
+        where.paymentStatus = paymentStatus;
+      }
+      if (status && status !== 'all') {
+        where.status = status;
+      }
+      if (month) {
+        const startDate = new Date(`${month}-01T00:00:00.000Z`);
+        const endDate = new Date(startDate);
+        endDate.setMonth(endDate.getMonth() + 1);
+        where.purchaseDate = {
+          gte: startDate,
+          lt: endDate,
+        };
+      }
 
-      const [total, items] = await Promise.all([
+      const [total, items, pendingPaid, paid, pendingDeliveryCount] = await Promise.all([
         prisma.purchase.count({ where }),
         prisma.purchase.findMany({
           where,
@@ -30,6 +46,17 @@ const handler = async (req, res) => {
               }
             }
           }
+        }),
+        prisma.purchase.aggregate({
+          where: { ...where, paymentStatus: 'PENDING' },
+          _sum: { grandTotal: true }
+        }),
+        prisma.purchase.aggregate({
+          where: { ...where, paymentStatus: 'PAID' },
+          _sum: { grandTotal: true }
+        }),
+        prisma.purchase.count({
+          where: { ...where, status: 'PENDING' }
         })
       ]);
 
@@ -41,6 +68,12 @@ const handler = async (req, res) => {
           page: parseInt(page),
           limit: parseInt(limit),
           totalPages: Math.ceil(total / limit)
+        },
+        stats: {
+          totalPurchases: total,
+          totalPaid: Number(paid._sum.grandTotal || 0),
+          totalOutstanding: Number(pendingPaid._sum.grandTotal || 0),
+          pendingDeliveries: pendingDeliveryCount
         }
       });
     }
