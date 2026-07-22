@@ -6,14 +6,30 @@ const handler = async (req, res) => {
 
   try {
     if (req.method === 'GET') {
-      const projects = await prisma.associateProject.findMany({
+      const projectAssociates = await prisma.projectAssociate.findMany({
         where: { associateId: id },
-        orderBy: { date: 'desc' },
+        orderBy: { createdAt: 'desc' },
         include: {
-          order: { select: { id: true, orderNumber: true } },
-          _count: { select: { costItems: true, payments: true } }
+          project: {
+            include: {
+              order: { select: { id: true, orderNumber: true } }
+            }
+          }
         }
       });
+      
+      const projects = projectAssociates.map(pa => ({
+        ...pa,
+        projectName: pa.project.name,
+        customerName: pa.project.customerName,
+        location: pa.project.location,
+        description: pa.project.description,
+        date: pa.project.date,
+        status: pa.project.status,
+        orderId: pa.project.orderId,
+        order: pa.project.order
+      }));
+
       return res.status(200).json({ success: true, data: projects });
     }
 
@@ -24,21 +40,26 @@ const handler = async (req, res) => {
         return res.status(400).json({ success: false, message: 'Project name is required' });
       }
 
-      const project = await prisma.associateProject.create({
+      const project = await prisma.project.create({
         data: {
-          associateId: id,
-          projectName: projectName.trim(),
+          name: projectName.trim(),
           orderId: orderId || null,
           customerName: customerName || null,
           location: location || null,
           description: description || null,
           date: date ? new Date(date) : new Date(),
           status: status || 'PENDING',
-          totalAmount: 0,
-          paidAmount: 0,
-          dueAmount: 0,
-          paymentStatus: 'UNPAID'
-        }
+          associates: {
+            create: {
+              associateId: id,
+              totalAmount: 0,
+              paidAmount: 0,
+              dueAmount: 0,
+              paymentStatus: 'UNPAID'
+            }
+          }
+        },
+        include: { associates: true }
       });
 
       return res.status(201).json({ success: true, message: 'Project created successfully', data: project });

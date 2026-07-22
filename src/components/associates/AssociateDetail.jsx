@@ -202,33 +202,33 @@ const AssociateDetail = ({ open, itemId, onClose, onUpdated, isPage = false }) =
                         </tr>
                       </thead>
                       <tbody className="text-sm">
-                        {associate.projects.map(project => (
+                        {associate.projects.map(pa => (
                           <tr 
-                            key={project.id} 
+                            key={pa.id} 
                             className="border-b border-gray-50 hover:bg-gray-50/50 transition-colors cursor-pointer"
-                            onClick={() => router.push(`/associates/project/${project.id}`)}
+                            onClick={() => router.push(`/associates/project/${pa.id}`)}
                           >
                             <td className="px-4 py-3 text-gray-500">
-                              <div className="flex items-center gap-1 text-xs"><Icons name="Calendar" size={10} /> {new Date(project.date).toLocaleDateString('en-CA')}</div>
+                              <div className="flex items-center gap-1 text-xs"><Icons name="Calendar" size={10} /> {new Date(pa.project.date).toLocaleDateString('en-CA')}</div>
                             </td>
-                            <td className="px-4 py-3 font-semibold text-gray-900">{project.projectName}</td>
+                            <td className="px-4 py-3 font-semibold text-gray-900">{pa.project.name}</td>
                             <td className="px-4 py-3 text-gray-600">
-                              {project.order ? (
+                              {pa.project.order ? (
                                 <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium bg-blue-50 border border-blue-100 text-blue-700">
-                                  {String(project.order.orderNumber).startsWith('ORD-') ? project.order.orderNumber : `ORD-${String(project.order.orderNumber).padStart(6, '0')}`}
+                                  {String(pa.project.order.orderNumber).startsWith('ORD-') ? pa.project.order.orderNumber : `ORD-${String(pa.project.order.orderNumber).padStart(6, '0')}`}
                                 </span>
                               ) : '—'}
                             </td>
-                            <td className="px-4 py-3 text-right font-semibold text-gray-900">₹{parseFloat(project.totalAmount).toLocaleString()}</td>
-                            <td className="px-4 py-3 text-right text-emerald-600 font-semibold">₹{parseFloat(project.paidAmount).toLocaleString()}</td>
-                            <td className="px-4 py-3 text-right text-rose-600 font-semibold">₹{parseFloat(project.dueAmount).toLocaleString()}</td>
-                            <td className="px-4 py-3"><StatusBadge status={project.status} /></td>
+                            <td className="px-4 py-3 text-right font-semibold text-gray-900">₹{parseFloat(pa.totalAmount).toLocaleString()}</td>
+                            <td className="px-4 py-3 text-right text-emerald-600 font-semibold">₹{parseFloat(pa.paidAmount).toLocaleString()}</td>
+                            <td className="px-4 py-3 text-right text-rose-600 font-semibold">₹{parseFloat(pa.dueAmount).toLocaleString()}</td>
+                            <td className="px-4 py-3"><StatusBadge status={pa.project.status} /></td>
                             <td className="px-4 py-3 text-center" onClick={(e) => e.stopPropagation()}>
                               <div className="flex items-center justify-center gap-1">
-                                <Button variant="ghost" size="sm" onClick={() => setEditProject(project)} className="px-2!">
+                                <Button variant="ghost" size="sm" onClick={() => setEditProject(pa)} className="px-2!">
                                   <Icons name="Pencil" size={16} className="text-gray-400 hover:text-primary transition-colors" />
                                 </Button>
-                                <Button variant="ghost" size="sm" onClick={() => setDeleteProject(project)} className="px-2!">
+                                <Button variant="ghost" size="sm" onClick={() => setDeleteProject(pa)} className="px-2!">
                                   <Icons name="Trash2" size={16} className="text-gray-400 hover:text-rose-500 transition-colors" />
                                 </Button>
                               </div>

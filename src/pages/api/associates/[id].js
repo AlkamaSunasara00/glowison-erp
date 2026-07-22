@@ -10,13 +10,17 @@ const handler = async (req, res) => {
         where: { id },
         include: {
           projects: {
-            orderBy: { date: 'desc' },
             include: {
-              order: { select: { id: true, orderNumber: true } },
-              costItems: true,
-              payments: { orderBy: { date: 'desc' } }
-            }
-          }
+              project: {
+                include: {
+                  order: { select: { id: true, orderNumber: true } }
+                }
+              }
+            },
+            orderBy: { createdAt: 'desc' }
+          },
+          costItems: true,
+          payments: { orderBy: { date: 'desc' } }
         }
       });
       if (!item) return res.status(404).json({ success: false, message: 'Associate not found' });
@@ -56,7 +60,7 @@ const handler = async (req, res) => {
 
     if (req.method === 'DELETE') {
       // Check for linked projects
-      const projectCount = await prisma.associateProject.count({ where: { associateId: id } });
+      const projectCount = await prisma.projectAssociate.count({ where: { associateId: id } });
       if (projectCount > 0) {
         return res.status(400).json({
           success: false,

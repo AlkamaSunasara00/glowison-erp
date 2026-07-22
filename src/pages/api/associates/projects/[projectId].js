@@ -1,58 +1,91 @@
 import prisma from '@/lib/prisma';
-import { withAuth } from '@/lib/auth';
+import { assertServerEnv } from '@/lib/server-env';
 
-const handler = async (req, res) => {
-  const { projectId } = req.query;
+export default async function handler(req, res) {
+  assertServerEnv();
+
+  // Here, projectId from the URL actually refers to the ProjectAssociate ID
+  const { projectId: projectAssociateId } = req.query;
 
   try {
     if (req.method === 'GET') {
-      const project = await prisma.associateProject.findUnique({
-        where: { id: projectId },
+      const pa = await prisma.projectAssociate.findUnique({
+        where: { id: projectAssociateId },
         include: {
-          associate: { select: { id: true, name: true, phone: true, category: true } },
-          order: { select: { id: true, orderNumber: true } },
-          costItems: { orderBy: { type: 'asc' } },
-          payments: { orderBy: { date: 'desc' } }
+          associate: true,
+          project: {
+            include: {
+              order: { select: { id: true, orderNumber: true } }
+            }
+          }
         }
       });
-      if (!project) return res.status(404).json({ success: false, message: 'Project not found' });
-      return res.status(200).json({ success: true, data: project });
+      if (!pa) return res.status(404).json({ success: false, message: 'Assignment not found' });
+
+      // Fetch cost items and payments for THIS associate on THIS project
+      const costItems = await prisma.projectCostItem.findMany({
+        where: { projectId: pa.projectId, associateId: pa.associateId }
+      });
+      
+      const payments = await prisma.projectPayment.findMany({
+        where: { projectId: pa.projectId, associateId: pa.associateId },
+        orderBy: { date: 'desc' }
+      });
+      
+      const projectData = {
+        ...pa,
+        projectName: pa.project.name,
+        customerName: pa.project.customerName,
+        location: pa.project.location,
+        description: pa.project.description,
+        date: pa.project.date,
+        status: pa.project.status,
+        orderId: pa.project.orderId,
+        order: pa.project.order,
+        costItems,
+        payments
+      };
+      
+      return res.status(200).json({ success: true, data: projectData });
     }
 
     if (req.method === 'PUT') {
-      const { projectName, orderId, customerName, location, description, date, status, totalAmount } = req.body;
+      const { status, totalAmount } = req.body;
 
-      const currentProject = await prisma.associateProject.findUnique({ where: { id: projectId } });
-      const newTotal = totalAmount !== undefined ? parseFloat(totalAmount) : parseFloat(currentProject.totalAmount);
-      const totalPaid = parseFloat(currentProject.paidAmount);
+      // When saving edit from assignment detail
+      const currentPa = await prisma.projectAssociate.findUnique({ where: { id: projectAssociateId } });
+      if (!currentPa) return res.status(404).json({ success: false, message: 'Not found' });
+
+      const newTotal = totalAmount !== undefined ? parseFloat(totalAmount) : parseFloat(currentPa.totalAmount);
+      const totalPaid = parseFloat(currentPa.paidAmount);
       const dueAmount = Math.max(0, newTotal - totalPaid);
       let paymentStatus = 'UNPAID';
       if (totalPaid >= newTotal && newTotal > 0) paymentStatus = 'PAID';
       else if (totalPaid > 0) paymentStatus = 'PARTIAL';
 
-      const project = await prisma.associateProject.update({
-        where: { id: projectId },
+      const updatedPa = await prisma.projectAssociate.update({
+        where: { id: projectAssociateId },
         data: {
-          projectName: projectName || undefined,
-          orderId: orderId !== undefined ? (orderId || null) : undefined,
-          customerName: customerName !== undefined ? (customerName || null) : undefined,
-          location: location !== undefined ? (location || null) : undefined,
-          description: description !== undefined ? (description || null) : undefined,
-          date: date ? new Date(date) : undefined,
-          status: status || undefined,
           totalAmount: newTotal,
           dueAmount: dueAmount,
           paymentStatus: paymentStatus
         }
       });
+      
+      // Optionally update project status if passed
+      if (status) {
+        await prisma.project.update({
+          where: { id: currentPa.projectId },
+          data: { status }
+        });
+      }
 
-      return res.status(200).json({ success: true, message: 'Project updated', data: project });
+      return res.status(200).json({ success: true, message: 'Assignment updated', data: updatedPa });
     }
 
     if (req.method === 'DELETE') {
-      // Cascade deletes cost items and payments due to onDelete: Cascade
-      await prisma.associateProject.delete({ where: { id: projectId } });
-      return res.status(200).json({ success: true, message: 'Project deleted successfully' });
+      await prisma.projectAssociate.delete({ where: { id: projectAssociateId } });
+      return res.status(200).json({ success: true, message: 'Assignment deleted successfully' });
     }
 
     res.setHeader('Allow', ['GET', 'PUT', 'DELETE']);
@@ -61,6 +94,4 @@ const handler = async (req, res) => {
     console.error(error);
     return res.status(500).json({ success: false, message: 'Internal Server Error' });
   }
-};
-
-export default withAuth(handler);
+}

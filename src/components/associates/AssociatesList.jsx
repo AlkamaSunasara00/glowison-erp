@@ -78,7 +78,7 @@ export const Associates = () => {
 
   const fetchAssociates = async (silent = false) => {
     try {
-      if (!silent) setLoading(true);
+      if (!silent && associates.length === 0) setLoading(true);
       const res = await api.get('/associates', {
         params: {
           page,
@@ -97,7 +97,7 @@ export const Associates = () => {
         setTotalPages(res.data.pagination.totalPages);
       }
     } catch (error) {
-      toast.error('Failed to load associates');
+      toast.error('Failed to fetch associates');
     } finally {
       setLoading(false);
     }
@@ -118,6 +118,18 @@ export const Associates = () => {
   }, [page, debouncedSearch, categoryFilter, statusFilter, isInitialized]);
 
   const hasActiveFilters = categoryFilter !== 'all' || statusFilter !== 'all' || debouncedSearch !== '';
+
+  const handleDelete = async () => {
+    if (!deleteItem) return;
+    try {
+      await api.delete(`/associates/${deleteItem.id}`);
+      toast.success('Associate deleted successfully');
+      setDeleteItem(null);
+      fetchAssociates(true);
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Failed to delete associate');
+    }
+  };
 
   return (
     <div className="flex flex-col min-h-screen w-full relative gap-4">
@@ -305,23 +317,27 @@ export const Associates = () => {
         </div>
       </div>
 
-      {isAddOpen && <AddAssociate open={isAddOpen} onClose={() => { setIsAddOpen(false); fetchAssociates(true); }} />}
-      {editItem && <EditAssociate open={!!editItem} onClose={() => { setEditItem(null); fetchAssociates(true); }} initialData={editItem} />}
+      {isAddOpen && (
+        <AddAssociate 
+          open={isAddOpen} 
+          onClose={() => setIsAddOpen(false)} 
+          onSuccess={() => fetchAssociates(true)} 
+        />
+      )}
+      {editItem && (
+        <EditAssociate 
+          open={!!editItem} 
+          onClose={() => setEditItem(null)} 
+          associate={editItem} 
+          onSuccess={() => fetchAssociates(true)} 
+        />
+      )}
       {deleteItem && (
         <DeleteConfirmModal
           open={!!deleteItem}
           onClose={() => setDeleteItem(null)}
           entityName={deleteItem.name}
-          onConfirm={async () => {
-            try {
-              await api.delete(`/associates/${deleteItem.id}`);
-              toast.success("Associate deleted");
-              setAssociates(associates.filter(a => a.id !== deleteItem.id));
-            } catch (err) {
-              toast.error("Failed to delete associate");
-            }
-            setDeleteItem(null);
-          }}
+          onConfirm={handleDelete}
         />
       )}
     </div>

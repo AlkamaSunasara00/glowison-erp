@@ -102,7 +102,13 @@ const AddPurchase = ({ open, onClose }) => {
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
+    setFormData(prev => {
+      const newData = { ...prev, [name]: value };
+      if (name === 'supplierId' && value) {
+        newData.purchaseType = 'SUPPLIER';
+      }
+      return newData;
+    });
   };
 
   const handleItemChange = (index, field, value) => {
@@ -296,10 +302,6 @@ const AddPurchase = ({ open, onClose }) => {
                 <div className="space-y-1.5">
                   <label className="label">Purchase Date <span className="required">*</span></label>
                   <Input type="date" name="purchaseDate" value={formData.purchaseDate} onChange={handleChange} required />
-                </div>
-                <div className="space-y-1.5 md:col-span-2">
-                  <label className="label">Purchase Order # (Auto if empty)</label>
-                  <Input name="purchaseNumber" value={formData.purchaseNumber} onChange={handleChange} placeholder="e.g. PO-1001" />
                 </div>
               </div>
 

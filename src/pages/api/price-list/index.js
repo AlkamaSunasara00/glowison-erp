@@ -31,11 +31,11 @@ const handler = async (req, res) => {
       if (includeStats === 'true') {
         const allItems = await prisma.priceListItem.findMany({
           where,
-          select: { category: true, clientPrice: true, b2bPrice: true, price: true }
+          select: { category: true, clientPrice: true, b2bPrice: true }
         });
         const totalItems = allItems.length;
         const uniqueCategories = new Set(allItems.map(i => i.category)).size;
-        const avgClientPrice = totalItems > 0 ? allItems.reduce((acc, curr) => acc + Number(curr.clientPrice || curr.price || 0), 0) / totalItems : 0;
+        const avgClientPrice = totalItems > 0 ? allItems.reduce((acc, curr) => acc + Number(curr.clientPrice || 0), 0) / totalItems : 0;
         const avgB2BPrice = totalItems > 0 ? allItems.reduce((acc, curr) => acc + Number(curr.b2bPrice || 0), 0) / totalItems : 0;
         
         stats = { totalItems, uniqueCategories, avgClientPrice, avgB2BPrice };

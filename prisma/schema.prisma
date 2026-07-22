@@ -308,7 +308,7 @@ model Order {
   paymentStatus     PaymentStatus @default(UNPAID)
   note              String?
   invoices          Invoice[]
-  associateProjects AssociateProject[]
+  projects          Project[]
   createdAt         DateTime      @default(now())
   updatedAt         DateTime      @updatedAt
 
@@ -630,7 +630,9 @@ model Associate {
   category  AssociateCategory @default(INSTALLER)
   status    AssociateStatus   @default(ACTIVE)
   notes     String?
-  projects  AssociateProject[]
+  projects  ProjectAssociate[]
+  costItems ProjectCostItem[]
+  payments  ProjectPayment[]
   createdAt DateTime          @default(now())
   updatedAt DateTime          @updatedAt
 
@@ -638,50 +640,83 @@ model Associate {
   @@index([category])
 }
 
-model AssociateProject {
-  id            String        @id @default(uuid())
-  associate     Associate     @relation(fields: [associateId], references: [id])
-  associateId   String
-  projectName   String
-  order         Order?        @relation(fields: [orderId], references: [id])
+model Project {
+  id            String             @id @default(uuid())
+  name          String
+  order         Order?             @relation(fields: [orderId], references: [id])
   orderId       String?
   customerName  String?
   location      String?
   description   String?
-  date          DateTime      @default(now())
-  status        ProjectStatus @default(PENDING)
-  totalAmount   Decimal       @default(0) @db.Decimal(10, 2)
-  paidAmount    Decimal       @default(0) @db.Decimal(10, 2)
-  dueAmount     Decimal       @default(0) @db.Decimal(10, 2)
-  paymentStatus PaymentStatus @default(UNPAID)
+  date          DateTime           @default(now())
+  status        ProjectStatus      @default(PENDING)
+  totalAmount   Decimal            @default(0) @db.Decimal(10, 2)
+  paidAmount    Decimal            @default(0) @db.Decimal(10, 2)
+  dueAmount     Decimal            @default(0) @db.Decimal(10, 2)
+  paymentStatus PaymentStatus      @default(UNPAID)
+  
+  associates    ProjectAssociate[]
   costItems     ProjectCostItem[]
   payments      ProjectPayment[]
-  createdAt     DateTime      @default(now())
-  updatedAt     DateTime      @updatedAt
+  
+  createdAt     DateTime           @default(now())
+  updatedAt     DateTime           @updatedAt
 
-  @@index([associateId])
   @@index([orderId])
   @@index([status])
 }
 
+model ProjectAssociate {
+  id            String        @id @default(uuid())
+  project       Project       @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  projectId     String
+  associate     Associate     @relation(fields: [associateId], references: [id], onDelete: Cascade)
+  associateId   String
+  
+  role          String?
+  
+  // Associate's specific financials for this project
+  totalAmount   Decimal       @default(0) @db.Decimal(10, 2)
+  paidAmount    Decimal       @default(0) @db.Decimal(10, 2)
+  dueAmount     Decimal       @default(0) @db.Decimal(10, 2)
+  paymentStatus PaymentStatus @default(UNPAID)
+
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  @@unique([projectId, associateId])
+  @@index([projectId])
+  @@index([associateId])
+}
+
 model ProjectCostItem {
   id          String           @id @default(uuid())
-  project     AssociateProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  project     Project          @relation(fields: [projectId], references: [id], onDelete: Cascade)
   projectId   String
+  associate   Associate?       @relation(fields: [associateId], references: [id], onDelete: SetNull)
+  associateId String?
   type        CostType         @default(LABOUR)
   description String?
   quantity    Decimal          @default(1) @db.Decimal(10, 2)
   rate        Decimal          @default(0) @db.Decimal(10, 2)
   amount      Decimal          @default(0) @db.Decimal(10, 2)
+  
+  @@index([projectId])
+  @@index([associateId])
 }
 
 model ProjectPayment {
   id            String           @id @default(uuid())
-  project       AssociateProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  project       Project          @relation(fields: [projectId], references: [id], onDelete: Cascade)
   projectId     String
+  associate     Associate?       @relation(fields: [associateId], references: [id], onDelete: SetNull)
+  associateId   String?
   amount        Decimal          @db.Decimal(10, 2)
   paymentMethod PaymentMethod    @default(CASH)
   date          DateTime         @default(now())
   notes         String?
   createdAt     DateTime         @default(now())
+  
+  @@index([projectId])
+  @@index([associateId])
 }

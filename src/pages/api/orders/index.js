@@ -5,7 +5,7 @@ import { generateDocumentNumber } from '@/lib/generateNumber';
 const handler = async (req, res) => {
   try {
     if (req.method === 'GET') {
-      const { page = 1, limit = 10, search, type, status, date } = req.query;
+      const { page = 1, limit = 10, search, type, status, date, customerId } = req.query;
       const skip = (page - 1) * limit;
 
       const where = {};
@@ -19,6 +19,7 @@ const handler = async (req, res) => {
       
       if (type && type !== 'all') where.type = type;
       if (status && status !== 'all') where.status = status;
+      if (customerId) where.customerId = customerId;
       
       if (date) {
         const d = new Date(date);

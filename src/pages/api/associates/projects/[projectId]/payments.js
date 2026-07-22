@@ -1,102 +1,105 @@
 import prisma from '@/lib/prisma';
-import { withAuth } from '@/lib/auth';
+import { assertServerEnv } from '@/lib/server-env';
 
-const handler = async (req, res) => {
-  const { projectId } = req.query;
+export default async function handler(req, res) {
+  assertServerEnv();
+  const { projectId: projectAssociateId } = req.query;
 
   try {
-    if (req.method === 'GET') {
-      const payments = await prisma.projectPayment.findMany({
-        where: { projectId },
-        orderBy: { date: 'desc' }
-      });
-      return res.status(200).json({ success: true, data: payments });
-    }
+    const pa = await prisma.projectAssociate.findUnique({
+      where: { id: projectAssociateId }
+    });
+    if (!pa) return res.status(404).json({ success: false, message: 'Assignment not found' });
 
     if (req.method === 'POST') {
       const { amount, paymentMethod, date, notes } = req.body;
+      const parsedAmount = parseFloat(amount);
 
-      if (!amount || parseFloat(amount) <= 0) {
-        return res.status(400).json({ success: false, message: 'Payment amount must be greater than 0' });
+      if (isNaN(parsedAmount) || parsedAmount <= 0) {
+        return res.status(400).json({ success: false, message: 'Valid amount is required' });
       }
 
-      // Create payment record
-      const payment = await prisma.projectPayment.create({
-        data: {
-          projectId,
-          amount: parseFloat(amount),
-          paymentMethod: paymentMethod || 'CASH',
-          date: date ? new Date(date) : new Date(),
-          notes: notes || null
+      await prisma.$transaction(async (tx) => {
+        // Create payment
+        await tx.projectPayment.create({
+          data: {
+            projectId: pa.projectId,
+            associateId: pa.associateId,
+            amount: parsedAmount,
+            paymentMethod: paymentMethod || 'CASH',
+            date: date ? new Date(date) : undefined,
+            notes
+          }
+        });
+
+        // Update PA balances
+        const currentPa = await tx.projectAssociate.findUnique({ where: { id: projectAssociateId } });
+        const newPaid = parseFloat(currentPa.paidAmount) + parsedAmount;
+        const total = parseFloat(currentPa.totalAmount);
+        const newDue = Math.max(0, total - newPaid);
+
+        let paymentStatus = 'UNPAID';
+        if (newPaid >= total && total > 0) paymentStatus = 'PAID';
+        else if (newPaid > 0) paymentStatus = 'PARTIAL';
+
+        await tx.projectAssociate.update({
+          where: { id: projectAssociateId },
+          data: { paidAmount: newPaid, dueAmount: newDue, paymentStatus }
+        });
+
+        // Also update master project balances
+        const project = await tx.project.findUnique({ where: { id: pa.projectId } });
+        if (project) {
+          const projectPaid = parseFloat(project.paidAmount) + parsedAmount;
+          const projectTotal = parseFloat(project.totalAmount);
+          const projectDue = Math.max(0, projectTotal - projectPaid);
+          let pStatus = 'UNPAID';
+          if (projectPaid >= projectTotal && projectTotal > 0) pStatus = 'PAID';
+          else if (projectPaid > 0) pStatus = 'PARTIAL';
+          await tx.project.update({
+            where: { id: pa.projectId },
+            data: { paidAmount: projectPaid, dueAmount: projectDue, paymentStatus: pStatus }
+          });
         }
       });
 
-      // Recalculate project payment totals
-      const allPayments = await prisma.projectPayment.findMany({
-        where: { projectId },
-        select: { amount: true }
-      });
-
-      const totalPaid = allPayments.reduce((sum, p) => sum + parseFloat(p.amount), 0);
-
-      const project = await prisma.associateProject.findUnique({
-        where: { id: projectId },
-        select: { totalAmount: true }
-      });
-
-      const totalAmount = parseFloat(project?.totalAmount || 0);
-      const dueAmount = Math.max(0, totalAmount - totalPaid);
-      let paymentStatus = 'UNPAID';
-      if (totalPaid >= totalAmount && totalAmount > 0) paymentStatus = 'PAID';
-      else if (totalPaid > 0) paymentStatus = 'PARTIAL';
-
-      await prisma.associateProject.update({
-        where: { id: projectId },
-        data: { paidAmount: totalPaid, dueAmount, paymentStatus }
-      });
-
-      return res.status(201).json({
-        success: true,
-        message: 'Payment recorded successfully',
-        data: { payment, paidAmount: totalPaid, dueAmount, paymentStatus }
-      });
+      return res.status(200).json({ success: true, message: 'Payment recorded' });
     }
 
     if (req.method === 'DELETE') {
       const { paymentId } = req.query;
-      if (!paymentId) return res.status(400).json({ success: false, message: 'paymentId is required' });
 
-      await prisma.projectPayment.delete({ where: { id: paymentId } });
+      if (!paymentId) return res.status(400).json({ success: false, message: 'paymentId required' });
 
-      // Recalculate project payment totals
-      const allPayments = await prisma.projectPayment.findMany({
-        where: { projectId },
-        select: { amount: true }
-      });
-      const totalPaid = allPayments.reduce((sum, p) => sum + parseFloat(p.amount), 0);
-      const project = await prisma.associateProject.findUnique({
-        where: { id: projectId },
-        select: { totalAmount: true }
-      });
-      const totalAmount = parseFloat(project?.totalAmount || 0);
-      const dueAmount = Math.max(0, totalAmount - totalPaid);
-      let paymentStatus = 'UNPAID';
-      if (totalPaid >= totalAmount && totalAmount > 0) paymentStatus = 'PAID';
-      else if (totalPaid > 0) paymentStatus = 'PARTIAL';
-      await prisma.associateProject.update({
-        where: { id: projectId },
-        data: { paidAmount: totalPaid, dueAmount, paymentStatus }
+      const payment = await prisma.projectPayment.findUnique({ where: { id: paymentId } });
+      if (!payment) return res.status(404).json({ success: false, message: 'Payment not found' });
+
+      await prisma.$transaction(async (tx) => {
+        await tx.projectPayment.delete({ where: { id: paymentId } });
+
+        // Update PA balances
+        const currentPa = await tx.projectAssociate.findUnique({ where: { id: projectAssociateId } });
+        const newPaid = Math.max(0, parseFloat(currentPa.paidAmount) - parseFloat(payment.amount));
+        const total = parseFloat(currentPa.totalAmount);
+        const newDue = Math.max(0, total - newPaid);
+
+        let paymentStatus = 'UNPAID';
+        if (newPaid >= total && total > 0) paymentStatus = 'PAID';
+        else if (newPaid > 0) paymentStatus = 'PARTIAL';
+
+        await tx.projectAssociate.update({
+          where: { id: projectAssociateId },
+          data: { paidAmount: newPaid, dueAmount: newDue, paymentStatus }
+        });
       });
 
       return res.status(200).json({ success: true, message: 'Payment deleted' });
     }
 
-    res.setHeader('Allow', ['GET', 'POST', 'DELETE']);
+    res.setHeader('Allow', ['POST', 'DELETE']);
     return res.status(405).end(`Method ${req.method} Not Allowed`);
   } catch (error) {
     console.error(error);
     return res.status(500).json({ success: false, message: 'Internal Server Error' });
   }
-};
-
-export default withAuth(handler);
+}

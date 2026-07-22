@@ -122,10 +122,19 @@ const ProjectDetail = ({ projectId }) => {
   // ── Payment Handlers ──
   const handlePaymentSubmit = async (e) => {
     e.preventDefault();
-    if (!paymentForm.amount || parseFloat(paymentForm.amount) <= 0) {
+    const amount = parseFloat(paymentForm.amount);
+    
+    if (!amount || amount <= 0) {
       toast.error('Enter a valid amount');
       return;
     }
+    
+    const dueAmount = parseFloat(project.dueAmount || 0);
+    if (amount > dueAmount) {
+      toast.error(`Cannot pay more than the due amount (₹${dueAmount.toLocaleString()}). Add cost items first to increase the due amount.`);
+      return;
+    }
+
     try {
       setSavingPayment(true);
       await api.post(`/associates/projects/${projectId}/payments`, paymentForm);
@@ -194,12 +203,11 @@ const ProjectDetail = ({ projectId }) => {
       <div className="shrink-0 bg-white border-b border-gray-200">
         <div className="flex items-center justify-between px-4 sm:px-6 py-4">
           <button
-            onClick={() => router.push(`/associates/${project.associateId}`)}
+            onClick={() => router.back()}
             className="flex items-center gap-2 text-sm font-medium text-gray-500 transition-colors hover:text-gray-900"
           >
             <Icons name="ArrowLeft" size={18} />
-            <span className="hidden sm:inline">Back to {project.associate?.name || 'Associate'}</span>
-            <span className="sm:hidden">Back</span>
+            <span>Back</span>
           </button>
         </div>
 
