@@ -58,6 +58,26 @@ export default function ProjectsList() {
         </div>
       </div>
 
+      {/* KPI Cards */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="bg-white rounded-sm p-4 shadow-sm border border-gray-100 flex flex-col justify-center">
+          <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Total Projects</p>
+          <h4 className="text-2xl font-black text-gray-900 tracking-tight">{projects.length}</h4>
+        </div>
+        <div className="bg-white rounded-sm p-4 shadow-sm border border-gray-100 flex flex-col justify-center">
+          <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Total Cost</p>
+          <h4 className="text-2xl font-black text-gray-900 tracking-tight">₹{projects.reduce((sum, p) => sum + Number(p.totalAmount || 0), 0).toLocaleString()}</h4>
+        </div>
+        <div className="bg-white rounded-sm p-4 shadow-sm border border-gray-100 flex flex-col justify-center">
+          <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Total Paid</p>
+          <h4 className="text-2xl font-black text-emerald-600 tracking-tight">₹{projects.reduce((sum, p) => sum + Number(p.paidAmount || 0), 0).toLocaleString()}</h4>
+        </div>
+        <div className="bg-white rounded-sm p-4 shadow-sm border border-gray-100 flex flex-col justify-center">
+          <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Total Due</p>
+          <h4 className="text-2xl font-black text-rose-600 tracking-tight">₹{projects.reduce((sum, p) => sum + Number(p.dueAmount || 0), 0).toLocaleString()}</h4>
+        </div>
+      </div>
+
       <div className="bg-white p-3 rounded-sm border border-gray-100 shadow-sm flex flex-col md:flex-row gap-3">
         <div className="w-full md:w-64">
           <Input
@@ -93,7 +113,7 @@ export default function ProjectsList() {
                   <th className="px-4 py-3">Customer</th>
                   <th className="px-4 py-3">Date</th>
                   <th className="px-4 py-3 text-center">Associates</th>
-                  <th className="px-4 py-3 text-right">Total Budget</th>
+                  <th className="px-4 py-3 text-right">Total Cost</th>
                   <th className="px-4 py-3 text-right">Paid</th>
                   <th className="px-4 py-3 text-right">Due</th>
                   <th className="px-4 py-3">Status</th>

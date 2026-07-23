@@ -1,13 +1,227 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { useRouter } from "next/router";
 import api from "@/lib/api";
 import Button from "@/common/Button";
 import Icons from "@/common/Icons";
-import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts';
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend, Brush, BarChart, Bar, ComposedChart, Line } from 'recharts';
 
+// ── Full Page Chart Modal ────────────────────────────
+const ChartModal = ({ open, onClose, salesData, month, onMonthChange }) => {
+  const [activeLines, setActiveLines] = useState({ revenue: true, expense: true, profit: true });
+  const [chartType, setChartType] = useState('area'); // 'area' | 'bar' | 'composed'
+
+  const toggleLine = (key) => {
+    setActiveLines(prev => ({ ...prev, [key]: !prev[key] }));
+  };
+
+  const presets = [
+    { label: 'All', keys: { revenue: true, expense: true, profit: true } },
+    { label: 'Revenue vs Profit', keys: { revenue: true, expense: false, profit: true } },
+    { label: 'Revenue vs Expense', keys: { revenue: true, expense: true, profit: false } },
+    { label: 'Profit vs Expense', keys: { revenue: false, expense: true, profit: true } },
+  ];
+
+  const lineConfig = [
+    { key: 'revenue', label: 'Revenue', color: '#3b82f6', gradientId: 'modalColorRevenue' },
+    { key: 'expense', label: 'Expenses', color: '#ef4444', gradientId: 'modalColorExpense' },
+    { key: 'profit', label: 'Profit', color: '#10b981', gradientId: 'modalColorProfit' },
+  ];
+
+  // Calculate totals for the summary bar
+  const totals = useMemo(() => {
+    if (!salesData || salesData.length === 0) return { revenue: 0, expense: 0, profit: 0 };
+    return salesData.reduce((acc, d) => ({
+      revenue: acc.revenue + (d.revenue || 0),
+      expense: acc.expense + (d.expense || 0),
+      profit: acc.profit + (d.profit || 0),
+    }), { revenue: 0, expense: 0, profit: 0 });
+  }, [salesData]);
+
+  if (!open) return null;
+
+  return (
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center">
+      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm animate-overlay-in" onClick={onClose} />
+      <div className="relative w-[96vw] h-[92vh] bg-white rounded-sm shadow-2xl flex flex-col overflow-hidden animate-fade-in-up z-10">
+        
+        {/* Modal Header */}
+        <div className="shrink-0 border-b border-gray-200 bg-white px-6 py-4 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-sm bg-gradient-to-br from-blue-500 to-emerald-500 flex items-center justify-center">
+              <Icons name="TrendingUp" size={18} color="white" />
+            </div>
+            <div>
+              <h2 className="text-sm font-black text-gray-900 uppercase tracking-wider">Financial Analytics</h2>
+              <p className="text-[10px] text-gray-400 font-semibold uppercase tracking-wider mt-0.5">Revenue, Expenses & Profit Breakdown</p>
+            </div>
+          </div>
+          <button onClick={onClose} className="w-8 h-8 rounded-sm bg-gray-100 hover:bg-gray-200 flex items-center justify-center transition-colors">
+            <Icons name="X" size={16} className="text-gray-500" />
+          </button>
+        </div>
+
+        {/* Controls Bar */}
+        <div className="shrink-0 border-b border-gray-100 bg-gray-50/50 px-6 py-3 flex flex-wrap items-center gap-3 justify-between">
+          <div className="flex items-center gap-2 flex-wrap">
+            {/* Presets */}
+            {presets.map((preset, i) => {
+              const isActive = JSON.stringify(activeLines) === JSON.stringify(preset.keys);
+              return (
+                <button
+                  key={i}
+                  onClick={() => setActiveLines(preset.keys)}
+                  className={`px-3 py-1.5 rounded-sm text-[10px] font-bold uppercase tracking-wider transition-all ${
+                    isActive
+                      ? 'bg-primary text-white shadow-sm'
+                      : 'bg-white border border-gray-200 text-gray-500 hover:bg-gray-50 hover:text-gray-700'
+                  }`}
+                >
+                  {preset.label}
+                </button>
+              );
+            })}
+
+            <div className="w-px h-5 bg-gray-200 mx-1" />
+
+            {/* Individual toggles */}
+            {lineConfig.map(line => (
+              <button
+                key={line.key}
+                onClick={() => toggleLine(line.key)}
+                className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-sm text-[10px] font-bold uppercase tracking-wider transition-all border ${
+                  activeLines[line.key]
+                    ? 'border-transparent text-white shadow-sm'
+                    : 'bg-white border-gray-200 text-gray-400'
+                }`}
+                style={activeLines[line.key] ? { backgroundColor: line.color } : {}}
+              >
+                <div className="w-2.5 h-2.5 rounded-full border-2 border-white/50" style={{ backgroundColor: activeLines[line.key] ? 'white' : line.color }} />
+                {line.label}
+              </button>
+            ))}
+          </div>
+
+          <div className="flex items-center gap-2">
+            {/* Chart type */}
+            {['area', 'bar', 'composed'].map(type => (
+              <button
+                key={type}
+                onClick={() => setChartType(type)}
+                className={`px-2.5 py-1.5 rounded-sm text-[10px] font-bold uppercase tracking-wider transition-all ${
+                  chartType === type
+                    ? 'bg-gray-900 text-white'
+                    : 'bg-white border border-gray-200 text-gray-500 hover:bg-gray-50'
+                }`}
+              >
+                {type === 'area' ? 'Area' : type === 'bar' ? 'Bar' : 'Mixed'}
+              </button>
+            ))}
+
+            <div className="w-px h-5 bg-gray-200 mx-1" />
+            <input
+              type="month"
+              value={month}
+              onChange={(e) => onMonthChange(e.target.value)}
+              className="text-[10px] font-bold text-gray-500 uppercase tracking-wider border border-gray-200 rounded-sm px-2.5 py-1.5 outline-none focus:ring-1 focus:ring-primary/50 bg-white"
+            />
+          </div>
+        </div>
+
+        {/* Summary Strip */}
+        <div className="shrink-0 px-6 py-3 bg-white border-b border-gray-100 grid grid-cols-3 gap-4">
+          {lineConfig.map(line => (
+            <div key={line.key} className={`flex items-center gap-3 px-4 py-2.5 rounded-sm border transition-all ${activeLines[line.key] ? 'border-gray-200 bg-white shadow-sm' : 'border-gray-100 bg-gray-50 opacity-50'}`}>
+              <div className="w-3 h-8 rounded-sm" style={{ backgroundColor: line.color }} />
+              <div>
+                <p className="text-[9px] font-bold text-gray-400 uppercase tracking-wider">{line.label}</p>
+                <p className="text-lg font-black text-gray-900">₹{totals[line.key]?.toLocaleString()}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Chart Area */}
+        <div className="flex-1 p-6 min-h-0">
+          <ResponsiveContainer width="100%" height="100%">
+            {chartType === 'bar' ? (
+              <BarChart data={salesData} margin={{ top: 10, right: 20, left: 0, bottom: 40 }}>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f3f4f6" />
+                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#9ca3af', fontWeight: 'bold' }} dy={10} />
+                <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#9ca3af', fontWeight: 'bold' }} tickFormatter={(val) => `₹${val / 1000}k`} />
+                <RechartsTooltip
+                  contentStyle={{ borderRadius: '4px', border: '1px solid #e5e7eb', boxShadow: '0 4px 12px rgba(0,0,0,0.08)', fontSize: '12px', fontWeight: 'bold' }}
+                  formatter={(value, name) => [`₹${value.toLocaleString()}`, name]}
+                />
+                <Legend verticalAlign="top" height={36} wrapperStyle={{ fontSize: '10px', fontWeight: 'bold', textTransform: 'uppercase', color: '#9ca3af' }} />
+                {activeLines.revenue && <Bar dataKey="revenue" name="Revenue" fill="#3b82f6" radius={[3, 3, 0, 0]} />}
+                {activeLines.expense && <Bar dataKey="expense" name="Expenses" fill="#ef4444" radius={[3, 3, 0, 0]} />}
+                {activeLines.profit && <Bar dataKey="profit" name="Profit" fill="#10b981" radius={[3, 3, 0, 0]} />}
+                <Brush dataKey="name" height={28} stroke="#d1d5db" fill="#f9fafb" travellerWidth={8} startIndex={0} endIndex={Math.min(salesData.length - 1, salesData.length - 1)} />
+              </BarChart>
+            ) : chartType === 'composed' ? (
+              <ComposedChart data={salesData} margin={{ top: 10, right: 20, left: 0, bottom: 40 }}>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f3f4f6" />
+                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#9ca3af', fontWeight: 'bold' }} dy={10} />
+                <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#9ca3af', fontWeight: 'bold' }} tickFormatter={(val) => `₹${val / 1000}k`} />
+                <RechartsTooltip
+                  contentStyle={{ borderRadius: '4px', border: '1px solid #e5e7eb', boxShadow: '0 4px 12px rgba(0,0,0,0.08)', fontSize: '12px', fontWeight: 'bold' }}
+                  formatter={(value, name) => [`₹${value.toLocaleString()}`, name]}
+                />
+                <Legend verticalAlign="top" height={36} wrapperStyle={{ fontSize: '10px', fontWeight: 'bold', textTransform: 'uppercase', color: '#9ca3af' }} />
+                {activeLines.revenue && <Bar dataKey="revenue" name="Revenue" fill="#3b82f6" radius={[3, 3, 0, 0]} opacity={0.8} />}
+                {activeLines.expense && <Line type="monotone" dataKey="expense" name="Expenses" stroke="#ef4444" strokeWidth={3} dot={{ r: 3 }} />}
+                {activeLines.profit && <Line type="monotone" dataKey="profit" name="Profit" stroke="#10b981" strokeWidth={3} dot={{ r: 3 }} />}
+                <Brush dataKey="name" height={28} stroke="#d1d5db" fill="#f9fafb" travellerWidth={8} />
+              </ComposedChart>
+            ) : (
+              <AreaChart data={salesData} margin={{ top: 10, right: 20, left: 0, bottom: 40 }}>
+                <defs>
+                  <linearGradient id="modalColorRevenue" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.25} />
+                    <stop offset="95%" stopColor="#3b82f6" stopOpacity={0} />
+                  </linearGradient>
+                  <linearGradient id="modalColorExpense" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#ef4444" stopOpacity={0.2} />
+                    <stop offset="95%" stopColor="#ef4444" stopOpacity={0} />
+                  </linearGradient>
+                  <linearGradient id="modalColorProfit" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#10b981" stopOpacity={0.2} />
+                    <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f3f4f6" />
+                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#9ca3af', fontWeight: 'bold' }} dy={10} />
+                <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#9ca3af', fontWeight: 'bold' }} tickFormatter={(val) => `₹${val / 1000}k`} />
+                <RechartsTooltip
+                  contentStyle={{ borderRadius: '4px', border: '1px solid #e5e7eb', boxShadow: '0 4px 12px rgba(0,0,0,0.08)', fontSize: '12px', fontWeight: 'bold' }}
+                  formatter={(value, name) => [`₹${value.toLocaleString()}`, name]}
+                />
+                <Legend verticalAlign="top" height={36} wrapperStyle={{ fontSize: '10px', fontWeight: 'bold', textTransform: 'uppercase', color: '#9ca3af' }} />
+                {activeLines.revenue && <Area type="monotone" dataKey="revenue" name="Revenue" stroke="#3b82f6" strokeWidth={3} fillOpacity={1} fill="url(#modalColorRevenue)" />}
+                {activeLines.expense && <Area type="monotone" dataKey="expense" name="Expenses" stroke="#ef4444" strokeWidth={3} fillOpacity={1} fill="url(#modalColorExpense)" />}
+                {activeLines.profit && <Area type="monotone" dataKey="profit" name="Profit" stroke="#10b981" strokeWidth={3} fillOpacity={1} fill="url(#modalColorProfit)" />}
+                <Brush dataKey="name" height={28} stroke="#d1d5db" fill="#f9fafb" travellerWidth={8} />
+              </AreaChart>
+            )}
+          </ResponsiveContainer>
+        </div>
+
+        {/* Footer hint */}
+        <div className="shrink-0 border-t border-gray-100 bg-gray-50/50 px-6 py-2 flex items-center justify-center">
+          <p className="text-[10px] text-gray-400 font-semibold uppercase tracking-wider flex items-center gap-1.5">
+            <Icons name="MousePointer" size={10} /> Drag the slider below the chart to zoom into a date range
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+
+// ── Main Dashboard ────────────────────────────────────
 export const Dashboard = () => {
   const router = useRouter();
-  const [metrics, setMetrics] = useState({ totalRevenue: 0, activeOrders: 0, pendingInvoices: 0, newLeads: 0, activeAssociates: 0, lowStockCount: 0, lowStockItems: [] });
+  const [metrics, setMetrics] = useState({ totalRevenue: 0, totalProfit: 0, totalExpense: 0, activeOrders: 0, pendingInvoices: 0, newLeads: 0, activeAssociates: 0, lowStockCount: 0, lowStockItems: [] });
   const [loading, setLoading] = useState(true);
 
   // Chart states
@@ -20,6 +234,9 @@ export const Dashboard = () => {
   const [expenseData, setExpenseData] = useState([]);
   const [leadsData, setLeadsData] = useState([]);
   const [associateProjectsData, setAssociateProjectsData] = useState([]);
+
+  // Modal state
+  const [chartModalOpen, setChartModalOpen] = useState(false);
 
   // Fetch top-level metrics once
   useEffect(() => {
@@ -41,10 +258,15 @@ export const Dashboard = () => {
     const fetchRevenueData = async () => {
       try {
         const res = await api.get(`/dashboard/revenue-chart?month=${revenueMonth}`);
-        setSalesData(res.data.data.chartData || []);
-        setExpenseData(res.data.data.expenseData || []);
-        setLeadsData(res.data.data.leadsData || []);
-        setAssociateProjectsData(res.data.data.associateProjectsData || []);
+        if (res.data?.data) {
+          setSalesData(res.data.data.chartData || []);
+          setExpenseData(res.data.data.expenseData || []);
+          setLeadsData(res.data.data.leadsData || []);
+          setAssociateProjectsData(res.data.data.associateProjectsData || []);
+          if (revenueMonth === statusMonth) {
+            setOrderStatusData(res.data.data.orderStatusData || []);
+          }
+        }
       } catch (error) {
         console.error("Failed to load revenue data", error);
       }
@@ -52,8 +274,9 @@ export const Dashboard = () => {
     fetchRevenueData();
   }, [revenueMonth]);
 
-  // Fetch Order Status chart data when its month changes
+  // Fetch Order Status chart data only if statusMonth differs from revenueMonth
   useEffect(() => {
+    if (statusMonth === revenueMonth) return;
     const fetchStatusData = async () => {
       try {
         const res = await api.get(`/dashboard/revenue-chart?month=${statusMonth}`);
@@ -63,7 +286,7 @@ export const Dashboard = () => {
       }
     };
     fetchStatusData();
-  }, [statusMonth]);
+  }, [statusMonth, revenueMonth]);
 
   const quickActions = [
     { label: "New Order", icon: "ShoppingCart", path: "/orders", color: "bg-blue-50 text-blue-600 border-blue-100" },
@@ -99,8 +322,8 @@ export const Dashboard = () => {
         </div>
       </div>
 
-      {/* Top KPIs - 4 Columns Per Line */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+      {/* Top KPIs */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         
         <div className="bg-white rounded-sm p-5 shadow-sm border border-gray-100 flex items-center gap-4 hover:-translate-y-1 hover:shadow-md transition-all duration-300 cursor-pointer" onClick={() => router.push("/reports")}>
           <div className="w-12 h-12 rounded-sm bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0 border border-emerald-100">
@@ -108,7 +331,29 @@ export const Dashboard = () => {
           </div>
           <div className="min-w-0">
             <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1 truncate">Total Revenue</p>
-            <h4 className="text-xl font-black text-gray-900 tracking-tight truncate">₹{metrics.totalRevenue.toLocaleString()}</h4>
+            <h4 className="text-xl font-black text-gray-900 tracking-tight truncate">₹{metrics.totalRevenue?.toLocaleString() || 0}</h4>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-sm p-5 shadow-sm border border-gray-100 flex items-center gap-4 hover:-translate-y-1 hover:shadow-md transition-all duration-300 cursor-pointer" onClick={() => router.push("/reports")}>
+          <div className="w-12 h-12 rounded-sm bg-blue-50 text-blue-600 flex items-center justify-center shrink-0 border border-blue-100">
+            <Icons name="TrendingUp" size={24} />
+          </div>
+          <div className="min-w-0">
+            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1 truncate">Net Profit</p>
+            <h4 className={`text-xl font-black tracking-tight truncate ${metrics.totalProfit >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
+              ₹{metrics.totalProfit?.toLocaleString() || 0}
+            </h4>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-sm p-5 shadow-sm border border-gray-100 flex items-center gap-4 hover:-translate-y-1 hover:shadow-md transition-all duration-300 cursor-pointer" onClick={() => router.push("/expense")}>
+          <div className="w-12 h-12 rounded-sm bg-rose-50 text-rose-600 flex items-center justify-center shrink-0 border border-rose-100">
+            <Icons name="TrendingDown" size={24} />
+          </div>
+          <div className="min-w-0">
+            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1 truncate">Total Expense</p>
+            <h4 className="text-xl font-black text-rose-600 tracking-tight truncate">₹{metrics.totalExpense?.toLocaleString() || 0}</h4>
           </div>
         </div>
 
@@ -228,7 +473,15 @@ export const Dashboard = () => {
              <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider flex items-center gap-2">
                 <Icons name="TrendingUp" size={16} className="text-emerald-500" /> Revenue & Profit Overview
              </h3>
-             <input type="month" value={revenueMonth} onChange={(e) => setRevenueMonth(e.target.value)} className="text-[10px] font-bold text-gray-500 uppercase tracking-wider border border-gray-200 rounded-sm px-2 py-1.5 outline-none focus:ring-1 focus:ring-primary/50" />
+             <div className="flex items-center gap-2">
+               <button
+                 onClick={() => setChartModalOpen(true)}
+                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-sm text-[10px] font-bold uppercase tracking-wider bg-gray-900 text-white hover:bg-gray-800 transition-colors shadow-sm"
+               >
+                 <Icons name="Maximize2" size={12} /> Full Screen
+               </button>
+               <input type="month" value={revenueMonth} onChange={(e) => setRevenueMonth(e.target.value)} className="text-[10px] font-bold text-gray-500 uppercase tracking-wider border border-gray-200 rounded-sm px-2 py-1.5 outline-none focus:ring-1 focus:ring-primary/50" />
+             </div>
            </div>
            <div className="h-[320px] w-full">
               <ResponsiveContainer width="100%" height="100%">
@@ -237,6 +490,10 @@ export const Dashboard = () => {
                      <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
                        <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3}/>
                        <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
+                     </linearGradient>
+                     <linearGradient id="colorExpense" x1="0" y1="0" x2="0" y2="1">
+                       <stop offset="5%" stopColor="#ef4444" stopOpacity={0.2}/>
+                       <stop offset="95%" stopColor="#ef4444" stopOpacity={0}/>
                      </linearGradient>
                      <linearGradient id="colorProfit" x1="0" y1="0" x2="0" y2="1">
                        <stop offset="5%" stopColor="#10b981" stopOpacity={0.2}/>
@@ -252,6 +509,7 @@ export const Dashboard = () => {
                    />
                    <Legend verticalAlign="top" height={36} wrapperStyle={{ fontSize: '11px', fontWeight: 'bold', textTransform: 'uppercase', color: '#9ca3af' }} />
                    <Area type="monotone" dataKey="revenue" name="Revenue" stroke="#3b82f6" strokeWidth={3} fillOpacity={1} fill="url(#colorRevenue)" />
+                   <Area type="monotone" dataKey="expense" name="Expenses" stroke="#ef4444" strokeWidth={3} fillOpacity={1} fill="url(#colorExpense)" />
                    <Area type="monotone" dataKey="profit" name="Profit" stroke="#10b981" strokeWidth={3} fillOpacity={1} fill="url(#colorProfit)" />
                  </AreaChart>
               </ResponsiveContainer>
@@ -426,6 +684,15 @@ export const Dashboard = () => {
             )}
          </div>
       </div>
+
+      {/* Full Page Chart Modal */}
+      <ChartModal
+        open={chartModalOpen}
+        onClose={() => setChartModalOpen(false)}
+        salesData={salesData}
+        month={revenueMonth}
+        onMonthChange={setRevenueMonth}
+      />
     </div>
   );
 };

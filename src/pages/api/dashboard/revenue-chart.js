@@ -23,51 +23,64 @@ const handler = async (req, res) => {
     const endDate = new Date(targetYear, targetMonth + 1, 0, 23, 59, 59, 999);
     const daysInMonth = endDate.getDate();
 
-    // Fetch Orders (Revenue)
-    const orders = await prisma.order.findMany({
-      where: {
-        createdAt: { gte: startDate, lte: endDate },
-        status: 'COMPLETED'
-      },
-      select: { total: true, createdAt: true }
-    });
-
-    // Fetch Expenses
-    const expenses = await prisma.expense.findMany({
-      where: {
-        spentOn: { gte: startDate, lte: endDate }
-      },
-      select: { amount: true, spentOn: true, category: true }
-    });
-    
-    // Fetch Leads
-    const leads = await prisma.lead.findMany({
-      where: {
-        createdAt: { gte: startDate, lte: endDate }
-      },
-      select: { source: true }
-    });
-
-    // Fetch Associate Projects
-    const associateProjects = await prisma.associateProject.findMany({
-      where: {
-        createdAt: { gte: startDate, lte: endDate }
-      },
-      select: { status: true }
-    });
-    
-    // Fetch Order Status for the dynamic pie chart
-    const allOrdersInMonth = await prisma.order.findMany({
-      where: {
-        createdAt: { gte: startDate, lte: endDate }
-      },
-      select: { status: true }
-    });
+    const [
+      orders,
+      expenses,
+      leads,
+      purchases,
+      associatePayments,
+      projects,
+      allOrdersInMonth
+    ] = await Promise.all([
+      prisma.order.findMany({
+        where: {
+          createdAt: { gte: startDate, lte: endDate },
+          status: 'COMPLETED'
+        },
+        select: { total: true, createdAt: true }
+      }),
+      prisma.expense.findMany({
+        where: {
+          spentOn: { gte: startDate, lte: endDate }
+        },
+        select: { amount: true, spentOn: true, category: true }
+      }),
+      prisma.lead.findMany({
+        where: {
+          createdAt: { gte: startDate, lte: endDate }
+        },
+        select: { source: true }
+      }),
+      prisma.purchase.findMany({
+        where: {
+          purchaseDate: { gte: startDate, lte: endDate }
+        },
+        select: { grandTotal: true, purchaseDate: true }
+      }),
+      prisma.projectPayment.findMany({
+        where: {
+          date: { gte: startDate, lte: endDate }
+        },
+        select: { amount: true, date: true }
+      }),
+      prisma.project.findMany({
+        where: {
+          date: { gte: startDate, lte: endDate }
+        },
+        select: { status: true }
+      }),
+      prisma.order.findMany({
+        where: {
+          createdAt: { gte: startDate, lte: endDate }
+        },
+        select: { status: true }
+      })
+    ]);
 
     // Aggregate daily data
     const dailyData = {};
     for (let i = 1; i <= daysInMonth; i++) {
-      dailyData[i] = { revenue: 0, expense: 0, profit: 0 };
+      dailyData[i] = { revenue: 0, expense: 0, purchase: 0, associatePaid: 0 };
     }
 
     orders.forEach(order => {
@@ -80,15 +93,28 @@ const handler = async (req, res) => {
       dailyData[day].expense += Number(expense.amount) || 0;
     });
 
+    purchases.forEach(purchase => {
+      const day = purchase.purchaseDate.getDate();
+      dailyData[day].purchase += Number(purchase.grandTotal) || 0;
+    });
+
+    associatePayments.forEach(payment => {
+      const day = payment.date.getDate();
+      dailyData[day].associatePaid += Number(payment.amount) || 0;
+    });
+
     const chartData = [];
     for (let i = 1; i <= daysInMonth; i++) {
       const revenue = dailyData[i].revenue;
       const expense = dailyData[i].expense;
-      const profit = revenue - expense;
+      const purchase = dailyData[i].purchase;
+      const associatePaid = dailyData[i].associatePaid;
+      const totalExpense = expense + purchase + associatePaid;
+      const profit = revenue - totalExpense;
       chartData.push({
         name: `${i} ${startDate.toLocaleString('default', { month: 'short' })}`,
         revenue,
-        expense,
+        expense: totalExpense,
         profit
       });
     }
@@ -136,7 +162,7 @@ const handler = async (req, res) => {
       COMPLETED: 0,
       CANCELLED: 0
     };
-    associateProjects.forEach(project => {
+    projects.forEach(project => {
       if (projectCounts[project.status] !== undefined) {
         projectCounts[project.status]++;
       }
